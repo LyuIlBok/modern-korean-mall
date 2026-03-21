@@ -1,24 +1,87 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Product } from '@/data/mockData';
-import { Star, MessageSquare, Info } from 'lucide-react';
+import { Star, MessageSquare, Info, Loader2, User, Send } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ProductTabs({ product }: { product: Product }) {
   const [activeTab, setActiveTab] = useState<'detail' | 'review' | 'qa'>('detail');
+  const [reviews, setReviews] = useState<any[]>([]);
+  const [isReviewLoading, setIsReviewLoading] = useState(true);
+  const [reviewText, setReviewText] = useState('');
+  const [rating, setRating] = useState(5);
+  const [isSubmitting, setIsSending] = useState(false);
+  const [user, setUser] = useState<any>(null);
 
-  const tabs = [
-    { id: 'detail', label: '상세 정보', icon: Info },
-    { id: 'review', label: '리뷰 (12)', icon: Star },
-    { id: 'qa', label: '문의 (3)', icon: MessageSquare },
-  ];
+  useEffect(() => {
+    const checkUser = async () => {
+      const { data } = await supabase.auth.getSession();
+      setUser(data.session?.user || null);
+    };
+    checkUser();
+    fetchReviews();
+  }, [product.id]);
+
+  const fetchReviews = async () => {
+    setIsReviewLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false });
+      
+      if (!error) setReviews(data || []);
+    } catch (err) {
+      console.error('리뷰 로드 실패:', err);
+    } finally {
+      setIsReviewLoading(false);
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return alert('로그인 후 이용 가능합니다.');
+    if (!reviewText.trim()) return;
+
+    setIsSending(true);
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .insert([{
+          product_id: product.id,
+          user_id: user.id,
+          user_name: user.user_metadata?.full_name || user.email.split('@')[0],
+          rating,
+          content: reviewText
+        }])
+        .select();
+
+      if (error) throw error;
+      
+      setReviews([data[0], ...reviews]);
+      setReviewText('');
+      setRating(5);
+      alert('소중한 후기가 등록되었습니다.');
+    } catch (err: any) {
+      alert(`등록 실패: ${err.message}`);
+    } finally {
+      setIsSending(false);
+    }
+  };
 
   return (
     <div className="border-t border-border-light pt-16">
       {/* Tab Navigation */}
       <div className="flex justify-center gap-12 border-b border-border-light mb-16">
-        {tabs.map((tab) => (
+        {[
+          { id: 'detail', label: '상세 정보', icon: Info },
+          { id: 'review', label: `리뷰 (${reviews.length})`, icon: Star },
+          { id: 'qa', label: '문의', icon: MessageSquare },
+        ].map((tab) => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
@@ -28,79 +91,92 @@ export default function ProductTabs({ product }: { product: Product }) {
           >
             <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-terracotta' : 'text-muted'}`} />
             {tab.label}
-            {activeTab === tab.id && (
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-charcoal" />
-            )}
+            {activeTab === tab.id && <motion.div layoutId="tabLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-charcoal" />}
           </button>
         ))}
       </div>
 
-      {/* Tab Content */}
-      <div className="max-w-4xl mx-auto min-h-[400px]">
+      <div className="max-w-4xl mx-auto min-h-[400px] mb-32">
         {activeTab === 'detail' && (
           <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="relative aspect-[16/9] w-full rounded-sm overflow-hidden shadow-sm">
-              <Image src={product.imageUrl} alt="상세1" fill className="object-cover" />
+              <Image src={product.imageUrl} alt="상세이미지" fill className="object-cover" />
             </div>
             <div className="text-center space-y-6">
               <h3 className="font-serif text-3xl text-deep-sage tracking-tight">자연의 결이 약속하는 품질</h3>
-              <p className="text-lg text-charcoal/70 leading-relaxed font-light max-w-2xl mx-auto">
-                우리는 가장 정직한 방식으로 기른 산물만을 고집합니다.<br/>
-                인위적인 가공을 최소화하고, 자연이 준 모습 그대로를 전달하기 위해<br/>
-                수확부터 포장까지 모든 과정을 직접 관리합니다.
+              <p className="text-lg text-charcoal/70 leading-relaxed font-light max-w-2xl mx-auto italic">
+                "가장 정직한 땅에서 기른 것들만을 고집합니다."
               </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-border-light/20 p-8 rounded-sm">
-                <h4 className="font-serif text-xl mb-4">보관 방법</h4>
-                <p className="text-sm text-muted leading-relaxed">직사광선을 피하고 서늘한 곳에 보관해 주세요. 신선식품의 경우 수령 즉시 냉장 보관을 권장합니다.</p>
-              </div>
-              <div className="bg-border-light/20 p-8 rounded-sm">
-                <h4 className="font-serif text-xl mb-4">배송 안내</h4>
-                <p className="text-sm text-muted leading-relaxed">전국 어디든 꼼꼼하게 포장하여 발송합니다. 산지 직송 시스템으로 가장 신선한 상태를 유지합니다.</p>
-              </div>
             </div>
           </div>
         )}
 
         {activeTab === 'review' && (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-             {[1, 2, 3].map((i) => (
-               <div key={i} className="border-b border-border-light pb-8">
-                 <div className="flex items-center gap-2 mb-3">
-                   <div className="flex gap-0.5">
-                     {[1, 2, 3, 4, 5].map(s => <Star key={s} className="w-3.5 h-3.5 fill-terracotta text-terracotta" />)}
-                   </div>
-                   <span className="text-sm font-medium ml-2">김*현</span>
-                   <span className="text-xs text-muted">2026.03.20</span>
-                 </div>
-                 <p className="text-charcoal/80 text-sm leading-relaxed mb-4">
-                   역시 믿고 먹는 자연의 결입니다. 포장부터 명조체 폰트까지 정성이 가득 느껴져서 선물용으로도 너무 좋았어요. 
-                   제품 본연의 맛이 살아있어서 정말 만족합니다!
-                 </p>
-                 <div className="flex gap-2">
-                   <div className="relative w-16 h-16 rounded-sm overflow-hidden border border-border-light">
-                     <Image src={product.imageUrl} alt="리뷰" fill className="object-cover" />
-                   </div>
-                 </div>
-               </div>
-             ))}
-             <button className="w-full py-4 border border-border-light text-sm text-muted hover:text-charcoal transition-colors">리뷰 더보기 (9+)</button>
+          <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            {/* Review Form */}
+            {user ? (
+              <form onSubmit={handleReviewSubmit} className="bg-hanji-white p-8 border border-border-light rounded-sm">
+                <h4 className="font-serif text-lg mb-4">후기 남기기</h4>
+                <div className="flex gap-2 mb-4">
+                  {[1, 2, 3, 4, 5].map(s => (
+                    <button key={s} type="button" onClick={() => setRating(s)} className="p-1">
+                      <Star className={`w-5 h-5 ${rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} />
+                    </button>
+                  ))}
+                </div>
+                <textarea 
+                  value={reviewText}
+                  onChange={(e) => setReviewText(e.target.value)}
+                  placeholder="상품에 대한 소중한 의견을 들려주세요."
+                  className="w-full h-32 bg-white border border-border-light p-4 text-sm focus:outline-none focus:border-deep-sage resize-none rounded-sm"
+                />
+                <div className="flex justify-end mt-4">
+                  <button type="submit" disabled={isSubmitting} className="bg-charcoal text-white px-8 py-2.5 text-sm rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> 등록하기</>}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="text-center py-10 bg-hanji-white border border-border-light border-dashed rounded-sm">
+                <p className="text-muted text-sm mb-4">로그인 하시면 소중한 후기를 남기실 수 있습니다.</p>
+                <button onClick={() => window.location.href='/login'} className="text-deep-sage border-b border-deep-sage text-sm font-medium">로그인하기</button>
+              </div>
+            )}
+
+            {/* Review List */}
+            <div className="space-y-8 mt-12">
+              {isReviewLoading ? (
+                <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin text-deep-sage mx-auto" /></div>
+              ) : reviews.length === 0 ? (
+                <div className="text-center py-20 text-muted italic">아직 작성된 후기가 없습니다. 첫 번째 후기의 주인공이 되어보세요.</div>
+              ) : (
+                reviews.map((rev) => (
+                  <div key={rev.id} className="border-b border-border-light pb-8 last:border-none">
+                    <div className="flex justify-between items-start mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 bg-border-light/30 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-muted" /></div>
+                        <div>
+                          <p className="text-sm font-medium">{rev.user_name}</p>
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(s => <Star key={s} className={`w-3 h-3 ${rev.rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} />)}
+                          </div>
+                        </div>
+                      </div>
+                      <span className="text-[10px] text-muted">{new Date(rev.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <p className="text-charcoal/80 text-sm leading-relaxed">{rev.content}</p>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         )}
 
         {activeTab === 'qa' && (
-          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="bg-hanji-white border border-border-light p-12 text-center space-y-4">
-              <MessageSquare className="w-8 h-8 text-deep-sage mx-auto opacity-50" />
-              <p className="text-charcoal/60">상품에 대해 궁금한 점이 있으신가요?</p>
-              <Link 
-                href="/support"
-                className="inline-block bg-charcoal text-white px-8 py-3 text-sm rounded-sm hover:bg-deep-sage transition-colors"
-              >
-                1:1 대화로 문의하기
-              </Link>
-            </div>
+          <div className="text-center py-32 bg-hanji-white border border-border-light rounded-sm">
+            <MessageSquare className="w-10 h-10 text-deep-sage mx-auto opacity-30 mb-6" />
+            <p className="text-charcoal/60 mb-8">궁금한 점이 있으시면 언제든 1:1 대화를 신청해 주세요.</p>
+            <button onClick={() => window.location.href='/support'} className="bg-charcoal text-white px-10 py-3 rounded-sm hover:bg-deep-sage transition-all font-medium tracking-wide">1:1 상담 거닐기</button>
           </div>
         )}
       </div>

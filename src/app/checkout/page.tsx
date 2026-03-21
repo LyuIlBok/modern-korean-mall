@@ -5,7 +5,7 @@ import { useCartStore } from '@/store/useCartStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, Loader2, X, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, X, ShieldCheck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -28,19 +28,32 @@ export default function CheckoutPage() {
     postcode: '',
     address: '',
     detailAddress: '',
-    paymentMethod: 'credit_card'
+    paymentMethod: 'credit_card',
+    couponCode: ''
   });
 
+  const [discount, setDiscount] = useState(0);
+
   const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal > 50000 || items.length === 0 ? 0 : 3000;
-  const total = subtotal + shipping;
+  
+  const handleApplyCoupon = () => {
+    if (formData.couponCode.toUpperCase() === 'WELCOME5') {
+      setDiscount(Math.floor(subtotal * 0.05));
+      alert('첫 가입 축하 5% 할인 쿠폰이 적용되었습니다.');
+    } else {
+      alert('유효하지 않은 쿠폰 코드입니다.');
+    }
+  };
+
+  const shipping = (subtotal - discount) > 50000 || items.length === 0 ? 0 : 3000;
+  const total = subtotal - discount + shipping;
 
   useEffect(() => {
     const script = document.createElement('script');
     script.src = '//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js';
     script.async = true;
     document.body.appendChild(script);
-    return () => { document.body.removeChild(script); };
+    return () => { if (document.body.contains(script)) document.body.removeChild(script); };
   }, []);
 
   const handleAddressSearch = () => {
@@ -59,15 +72,9 @@ export default function CheckoutPage() {
     }
   };
 
-  const handlePaymentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setShowPaymentModal(true);
-  };
-
   const confirmActualPayment = async () => {
     setIsLoading(true);
     setShowPaymentModal(false);
-
     try {
       const { data: { session } } = await supabase.auth.getSession();
       const { data: orderData, error: orderError } = await supabase
@@ -86,20 +93,14 @@ export default function CheckoutPage() {
 
       const orderId = orderData[0].id;
       const orderItems = items.map(item => ({
-        order_id: orderId,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
+        order_id: orderId, product_id: item.id, quantity: item.quantity, price: item.price
       }));
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
       setIsCompleted(true);
-      setTimeout(() => {
-        clearCart();
-        router.push('/mypage');
-      }, 3000);
+      setTimeout(() => { clearCart(); router.push('/mypage'); }, 4000);
     } catch (error: any) {
       alert('주문 처리 중 오류가 발생했습니다.');
     } finally {
@@ -110,7 +111,7 @@ export default function CheckoutPage() {
   if (items.length === 0 && !isCompleted) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hanji-white h-screen">
-        <h1 className="font-serif text-2xl mb-6">주문하실 상품이 없습니다.</h1>
+        <h1 className="font-serif text-2xl mb-6 text-charcoal">주문하실 상품이 없습니다.</h1>
         <Link href="/shop" className="text-deep-sage border-b border-deep-sage pb-1 text-sm">만물상으로 돌아가기</Link>
       </div>
     );
@@ -122,21 +123,25 @@ export default function CheckoutPage() {
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 text-deep-sage">
           <CheckCircle2 className="w-20 h-20 mx-auto" />
         </motion.div>
-        <h1 className="font-serif text-4xl mb-4">주문이 완료되었습니다</h1>
-        <p className="text-muted mb-10 leading-relaxed">정성을 다해 준비하여 보내드리겠습니다.<br/>잠시 후 나의 서랍으로 이동합니다.</p>
+        <h1 className="font-serif text-4xl mb-4 text-charcoal">주문이 완료되었습니다</h1>
+        <p className="text-muted mb-10 leading-relaxed text-sm">
+          정성을 다해 준비하여 보내드리겠습니다.<br/>
+          주문 확인서가 <span className="font-bold text-deep-sage">{formData.name}</span> 님의 이메일로 발송되었습니다.
+        </p>
+        <Link href="/mypage" className="bg-charcoal text-white px-10 py-3 rounded-sm hover:bg-deep-sage transition-all text-sm tracking-widest">주문 내역 확인</Link>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen">
+    <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
       <div className="max-w-6xl mx-auto">
-        <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal mb-8 transition-colors text-sm">
-          <ArrowLeft className="w-4 h-4" /> 장바구니로 돌아가기
+        <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal mb-8 transition-colors text-xs uppercase tracking-widest">
+          <ArrowLeft className="w-4 h-4" /> Back to Cart
         </Link>
         <h1 className="font-serif text-4xl mb-12 text-charcoal">주문서 작성</h1>
 
-        <form onSubmit={handlePaymentSubmit} className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+        <form onSubmit={(e) => { e.preventDefault(); setShowPaymentModal(true); }} className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           <div className="space-y-12">
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
               <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">배송 정보</h2></div>
@@ -154,38 +159,46 @@ export default function CheckoutPage() {
                 <div className="space-y-3">
                   <label className="text-[10px] text-muted uppercase tracking-widest ml-1">배송 주소</label>
                   <div className="flex gap-2">
-                    <input readOnly required value={formData.postcode} placeholder="우편번호" className="w-32 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm focus:outline-none" />
-                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-xs rounded-sm hover:bg-deep-sage transition-colors flex items-center gap-2 font-medium tracking-tight">주소 검색</button>
+                    <input readOnly required value={formData.postcode} placeholder="우편번호" className="w-32 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-xs rounded-sm hover:bg-deep-sage transition-colors font-medium">주소 검색</button>
                   </div>
-                  <input readOnly required value={formData.address} placeholder="기본 주소" className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm focus:outline-none" />
-                  <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} placeholder="상세 주소" className="w-full bg-white border border-border-light px-4 py-3 rounded-sm focus:outline-none focus:border-deep-sage text-sm" />
+                  <input readOnly required value={formData.address} placeholder="기본 주소" className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} placeholder="상세 주소를 입력해주세요" className="w-full bg-white border border-border-light px-4 py-3 rounded-sm focus:outline-none focus:border-deep-sage text-sm" />
                 </div>
               </div>
             </section>
 
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
               <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Wallet className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">결제 수단</h2></div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 gap-3 mb-8">
                 {[
                   { id: 'credit_card', name: '신용/체크카드' },
                   { id: 'kakaopay', name: '카카오페이', color: 'bg-[#FEE500]' },
                   { id: 'naverpay', name: '네이버페이', color: 'bg-[#03C75A] text-white' },
                   { id: 'bank', name: '무통장 입금' },
                 ].map((method) => (
-                  <label key={method.id} className="relative cursor-pointer">
+                  <label key={method.id} className="relative cursor-pointer group">
                     <input type="radio" name="payment" checked={formData.paymentMethod === method.id} onChange={() => setFormData({...formData, paymentMethod: method.id})} className="peer sr-only" />
-                    <div className={`p-4 border border-border-light rounded-sm text-center text-sm transition-all peer-checked:border-deep-sage peer-checked:ring-1 peer-checked:ring-deep-sage ${method.color || 'bg-white'}`}>
+                    <div className={`p-4 border border-border-light rounded-sm text-center text-sm transition-all peer-checked:border-deep-sage peer-checked:bg-deep-sage/5 ${method.color || 'bg-white'}`}>
                       {method.name}
                     </div>
                   </label>
                 ))}
+              </div>
+              <div className="pt-6 border-t border-border-light">
+                <label className="text-[10px] text-muted uppercase tracking-widest mb-3 block">Discount Coupon</label>
+                <div className="flex gap-2">
+                  <input value={formData.couponCode} onChange={(e) => setFormData({...formData, couponCode: e.target.value})} placeholder="쿠폰 코드 입력" className="flex-1 bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm focus:outline-none focus:border-deep-sage" />
+                  <button type="button" onClick={handleApplyCoupon} className="px-6 py-2 bg-charcoal text-white text-xs rounded-sm hover:bg-deep-sage transition-all">적용</button>
+                </div>
+                <p className="mt-2 text-[10px] text-muted font-light">* 추천 코드: WELCOME5 (5% 할인)</p>
               </div>
             </section>
           </div>
 
           <div className="lg:sticky lg:top-32 h-fit">
             <div className="bg-white border border-border-light p-8 rounded-sm shadow-md">
-              <h2 className="font-serif text-2xl mb-8 border-b border-border-light pb-4 text-charcoal">주문 내역</h2>
+              <h2 className="font-serif text-2xl mb-8 border-b border-border-light pb-4 text-charcoal">주문 요약</h2>
               <div className="max-h-60 overflow-y-auto mb-8 pr-2 space-y-4 scrollbar-hide">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-4">
@@ -199,20 +212,20 @@ export default function CheckoutPage() {
               </div>
               <div className="space-y-4 text-sm mb-8 pt-6 border-t border-border-light">
                 <div className="flex justify-between text-muted"><span>상품 합계</span><span>₩{subtotal.toLocaleString()}</span></div>
+                {discount > 0 && <div className="flex justify-between text-terracotta font-medium"><span>쿠폰 할인</span><span>-₩{discount.toLocaleString()}</span></div>}
                 <div className="flex justify-between text-muted"><span>배송비</span><span>{shipping === 0 ? '무료' : `₩${shipping.toLocaleString()}`}</span></div>
                 <div className="pt-4 border-t border-border-light flex justify-between text-xl font-serif text-charcoal">
                   <span>총 결제 금액</span><span className="text-deep-sage font-bold">₩{total.toLocaleString()}</span>
                 </div>
               </div>
               <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all duration-500 font-serif text-xl shadow-lg flex items-center justify-center gap-3">
-                {total.toLocaleString()}원 결제하기 <ChevronRight className="w-5 h-5" />
+                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>{total.toLocaleString()}원 결제하기 <ChevronRight className="w-5 h-5" /></>}
               </button>
             </div>
           </div>
         </form>
       </div>
 
-      {/* 가상 결제 모달 (Toss Payments Style) */}
       <AnimatePresence>
         {showPaymentModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -223,19 +236,14 @@ export default function CheckoutPage() {
                 <button onClick={() => setShowPaymentModal(false)}><X className="w-5 h-5 text-muted" /></button>
               </div>
               <div className="p-8 space-y-8 text-center">
-                <div>
-                  <p className="text-muted text-xs uppercase tracking-widest mb-2">Total Amount</p>
-                  <h3 className="text-3xl font-bold text-charcoal tracking-tight">₩{total.toLocaleString()}</h3>
-                </div>
-                <div className="bg-hanji-white p-6 rounded-xl space-y-4 border border-border-light/50">
-                  <div className="flex items-center gap-3 text-left"><div className="w-10 h-10 bg-white rounded-lg border border-border-light flex items-center justify-center shadow-sm"><ShieldCheck className="w-6 h-6 text-deep-sage" /></div><div><p className="text-[13px] font-bold">보안 연결됨</p><p className="text-[11px] text-muted">256비트 암호화로 안전하게 결제됩니다.</p></div></div>
-                </div>
+                <div><p className="text-muted text-[10px] uppercase tracking-widest mb-2">Payment Amount</p><h3 className="text-3xl font-bold text-charcoal tracking-tight">₩{total.toLocaleString()}</h3></div>
+                <div className="bg-hanji-white p-6 rounded-xl border border-border-light/50"><div className="flex items-center gap-3 text-left"><div className="w-10 h-10 bg-white rounded-lg border border-border-light flex items-center justify-center shadow-sm"><ShieldCheck className="w-6 h-6 text-deep-sage" /></div><div><p className="text-[13px] font-bold">보안 연결됨</p><p className="text-[11px] text-muted tracking-tighter">정보가 암호화되어 안전하게 처리됩니다.</p></div></div></div>
                 <div className="space-y-3">
                   <button onClick={confirmActualPayment} className="w-full bg-charcoal text-white py-4 rounded-xl font-bold hover:bg-deep-sage transition-all shadow-lg active:scale-[0.98]">결제 승인</button>
                   <button onClick={() => setShowPaymentModal(false)} className="w-full bg-hanji-white text-muted py-4 rounded-xl text-sm hover:text-charcoal transition-colors">취소하기</button>
                 </div>
               </div>
-              <div className="bg-hanji-white/30 p-4 text-center border-t border-border-light"><p className="text-[10px] text-muted/60">본 결제창은 테스트용 가상 결제 화면입니다.</p></div>
+              <div className="bg-hanji-white/30 p-4 text-center border-t border-border-light font-light"><p className="text-[9px] text-muted/60 tracking-widest uppercase">Test Payment Gateway Simulation</p></div>
             </motion.div>
           </div>
         )}
