@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search, Heart } from 'lucide-react';
+import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search, Heart, Globe } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -14,6 +15,7 @@ import { useRouter } from 'next/navigation';
 export default function Header() {
   const { toggleCart, items, setUserId: setCartUserId } = useCartStore();
   const { setUserId: setWishUserId, items: wishItems } = useWishlistStore();
+  const { language, setLanguage, t } = useLanguageStore();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -46,7 +48,6 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, [setCartUserId, setWishUserId]);
 
-  // 검색창 열릴 때 포커스
   useEffect(() => {
     if (isSearchOpen && searchInputRef.current) {
       searchInputRef.current.focus();
@@ -55,7 +56,7 @@ export default function Header() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    alert('로그아웃 되었습니다.');
+    alert(language === 'ko' ? '로그아웃 되었습니다.' : 'Logged out successfully.');
   };
 
   const handleSearch = (e: React.FormEvent) => {
@@ -68,9 +69,8 @@ export default function Header() {
   };
 
   const navLinks = [
-    { name: 'Shop', href: '/shop' },
-    { name: 'About', href: '/about' },
-    { name: 'Cart', href: '/cart' },
+    { name: t.common.shop, href: '/shop', key: 'Shop' },
+    { name: t.common.about, href: '/about', key: 'About' },
   ];
 
   return (
@@ -93,6 +93,22 @@ export default function Header() {
             >
               <Search className="w-5 h-5" />
             </button>
+            
+            {/* Language Toggle (Desktop) */}
+            <div className="hidden md:flex items-center ml-4 bg-hanji-white border border-border-light rounded-full p-0.5 shadow-sm">
+              <button 
+                onClick={() => setLanguage('ko')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
+              >
+                KO
+              </button>
+              <button 
+                onClick={() => setLanguage('en')}
+                className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
+              >
+                EN
+              </button>
+            </div>
           </div>
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
@@ -109,8 +125,8 @@ export default function Header() {
           </Link>
 
           <nav className="hidden md:flex gap-8">
-            {navLinks.filter(link => link.name !== 'Cart').map(link => (
-              <Link key={link.name} href={link.href} className="text-sm text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-widest">
+            {navLinks.map(link => (
+              <Link key={link.key} href={link.href} className="text-sm text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-widest">
                 {link.name}
               </Link>
             ))}
@@ -134,12 +150,12 @@ export default function Header() {
                   onClick={handleLogout}
                   className="text-xs text-muted hover:text-terracotta transition-colors uppercase tracking-tighter"
                 >
-                  Logout
+                  {t.common.logout}
                 </button>
               </div>
             ) : (
               <Link href="/login" className="text-xs text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest">
-                Login
+                {t.common.login}
               </Link>
             )}
             
@@ -173,18 +189,12 @@ export default function Header() {
                   type="text" 
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="무엇을 찾으시나요? (예: 오대쌀, 호미)"
+                  placeholder={t.common.searchPlaceholder}
                   className="w-full bg-hanji-white border-none focus:ring-0 text-xl md:text-3xl font-serif py-4 pr-12 placeholder:text-muted/30"
                 />
                 <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-deep-sage">
                   <Search className="w-8 h-8" />
                 </button>
-                <div className="mt-4 flex gap-4 text-xs text-muted">
-                  <span>추천:</span>
-                  <button type="button" onClick={() => {setSearchQuery('쌀'); }} className="hover:text-charcoal">#쌀</button>
-                  <button type="button" onClick={() => {setSearchQuery('호미'); }} className="hover:text-charcoal">#호미</button>
-                  <button type="button" onClick={() => {setSearchQuery('친환경'); }} className="hover:text-charcoal">#친환경</button>
-                </div>
               </form>
             </motion.div>
           )}
@@ -195,7 +205,6 @@ export default function Header() {
       <AnimatePresence>
         {isMenuOpen && (
           <div className="fixed inset-0 z-[100] md:hidden">
-            {/* Backdrop */}
             <motion.div 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -204,7 +213,6 @@ export default function Header() {
               className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm"
             />
             
-            {/* Drawer */}
             <motion.div 
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
@@ -231,26 +239,45 @@ export default function Header() {
               <nav className="flex-1 px-6 py-12 space-y-8">
                 {navLinks.map((link) => (
                   <Link 
-                    key={link.name} 
+                    key={link.key} 
                     href={link.href} 
                     onClick={() => setIsMenuOpen(false)}
                     className="block text-2xl font-serif text-charcoal hover:text-deep-sage transition-colors"
                   >
-                    {link.name === 'Shop' ? '만물상' : link.name === 'About' ? '이야기' : '장바구니'}
-                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted mt-1 font-sans">{link.name}</span>
+                    {link.name}
+                    <span className="block text-[10px] uppercase tracking-[0.2em] text-muted mt-1 font-sans">{link.key}</span>
                   </Link>
                 ))}
+                
+                {/* Language Selector in Mobile */}
+                <div className="pt-8 border-t border-border-light">
+                  <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Language</p>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => setLanguage('ko')}
+                      className={`text-sm font-medium ${language === 'ko' ? 'text-charcoal border-b border-charcoal' : 'text-muted'}`}
+                    >
+                      한국어 (KO)
+                    </button>
+                    <button 
+                      onClick={() => setLanguage('en')}
+                      className={`text-sm font-medium ${language === 'en' ? 'text-charcoal border-b border-charcoal' : 'text-muted'}`}
+                    >
+                      English (EN)
+                    </button>
+                  </div>
+                </div>
               </nav>
 
               <div className="p-6 border-t border-border-light">
                 {user ? (
                   <div className="flex flex-col gap-4">
-                    <p className="text-xs text-muted">{user.email}님 반가워요</p>
+                    <p className="text-xs text-muted">{user.email}</p>
                     <button 
                       onClick={() => { handleLogout(); setIsMenuOpen(false); }}
                       className="text-sm font-medium text-terracotta w-fit"
                     >
-                      로그아웃
+                      {t.common.logout}
                     </button>
                   </div>
                 ) : (
@@ -259,7 +286,7 @@ export default function Header() {
                     onClick={() => setIsMenuOpen(false)}
                     className="text-sm font-medium text-charcoal border-b border-charcoal/20 pb-1"
                   >
-                    로그인하고 시작하기
+                    {t.common.login}
                   </Link>
                 )}
               </div>

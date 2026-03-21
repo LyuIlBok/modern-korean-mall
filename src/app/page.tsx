@@ -7,8 +7,10 @@ import { ArrowRight, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard, { ProductWithRating } from '@/components/ProductCard';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 export default function Home() {
+  const { t } = useLanguageStore();
   const [featuredProducts, setFeaturedProducts] = useState<ProductWithRating[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -67,17 +69,17 @@ export default function Home() {
         </div>
         
         <div className="relative z-10 text-center max-w-3xl px-4">
-          <h1 className="font-serif text-5xl md:text-7xl mb-8 text-charcoal leading-[1.2] tracking-tighter">
-            자연이 빚은<br />본연의 가치
+          <h1 className="font-serif text-5xl md:text-7xl mb-8 text-charcoal leading-[1.2] tracking-tighter whitespace-pre-line">
+            {t.home.heroTitle}
           </h1>
           <p className="text-lg md:text-xl text-charcoal/80 mb-12 max-w-xl mx-auto font-light leading-relaxed">
-            꾸밈없는 자연의 산물과 정직한 농산물을 제안합니다.
+            {t.home.heroDesc}
           </p>
           <Link 
             href="/shop" 
             className="inline-flex items-center gap-3 bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all duration-500 tracking-widest text-sm uppercase"
           >
-            만물상 탐색하기 <ArrowRight className="w-4 h-4" />
+            {t.home.exploreBtn} <ArrowRight className="w-4 h-4" />
           </Link>
         </div>
       </section>
@@ -86,11 +88,11 @@ export default function Home() {
       <section className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
           <div>
-            <h2 className="font-serif text-3xl md:text-4xl mb-4 text-charcoal">정성을 담은 산물</h2>
-            <p className="text-muted text-sm tracking-wide">이 계절, 자연의 결이 선별한 가장 귀한 제품들입니다.</p>
+            <h2 className="font-serif text-3xl md:text-4xl mb-4 text-charcoal">{t.home.featuredTitle}</h2>
+            <p className="text-muted text-sm tracking-wide">{t.home.featuredDesc}</p>
           </div>
           <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
-            View All <ArrowRight className="w-3.5 h-3.5" />
+            {t.home.viewAll} <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 
@@ -123,14 +125,12 @@ export default function Home() {
               />
             </div>
           </div>
-          <h2 className="font-serif text-3xl md:text-5xl mb-8 tracking-tight">비움으로써 채워지는 미학</h2>
-          <p className="text-lg md:text-xl/relaxed opacity-80 mb-12 font-light">
-            우리는 자연에서 얻은 것을 그대로 전하는 것에 가치를 둡니다.<br/>
-            필요 이상의 가공을 덜어내고, 본질에 집중하는 단아한 삶.<br/>
-            그것이 '자연의 결'이 추구하는 모던 코리안 미니멀리즘입니다.
+          <h2 className="font-serif text-3xl md:text-5xl mb-8 tracking-tight">{t.home.brandStoryTitle}</h2>
+          <p className="text-lg md:text-xl/relaxed opacity-80 mb-12 font-light leading-relaxed">
+            {t.home.brandStoryDesc}
           </p>
           <Link href="/about" className="text-xs uppercase tracking-[0.3em] border-b border-white/30 pb-2 hover:text-deep-sage hover:border-deep-sage transition-all">
-            Our Story
+            {t.common.about}
           </Link>
         </div>
       </section>
