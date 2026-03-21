@@ -74,24 +74,8 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Tabs / Extra Info - Coupang/Naver Style */}
-      <div className="border-t border-border-light pt-16">
-        <div className="flex gap-8 border-b border-border-light mb-12">
-          <button className="pb-4 border-b-2 border-charcoal font-serif text-xl px-2">상세 정보</button>
-          <button className="pb-4 text-muted font-serif text-xl px-2 hover:text-charcoal transition-colors">리뷰 (12)</button>
-          <button className="pb-4 text-muted font-serif text-xl px-2 hover:text-charcoal transition-colors">Q&A (3)</button>
-        </div>
-        
-        <div className="max-w-3xl mx-auto space-y-12">
-           <div className="relative aspect-[16/9] w-full mb-8">
-             <Image src={product.imageUrl} alt="상세1" fill className="object-cover rounded-sm" />
-           </div>
-           <p className="text-lg text-center font-light leading-relaxed">
-             자연의 결은 가장 자연스러운 방식을 지향합니다. <br/>
-             우리가 직접 먹고 쓰는 것과 동일한 기준으로 선별했습니다.
-           </p>
-        </div>
-      </div>
+      {/* Tabs / Extra Info - Dynamic Component */}
+      <ProductTabs product={product} />
     </div>
   );
 }
