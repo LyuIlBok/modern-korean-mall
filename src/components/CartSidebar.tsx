@@ -1,8 +1,9 @@
 'use client';
 
 import { useCartStore } from '@/store/useCartStore';
-import { X, Plus, Minus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Plus, Minus, Trash2, ShoppingBag, ArrowRight } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useState } from 'react';
 
@@ -114,25 +115,33 @@ export default function CartSidebar() {
               </div>
 
               {items.length > 0 && (
-                <div className="border-t border-border-light p-8 bg-white/50 backdrop-blur-md">
-                  <div className="flex justify-between text-sm text-muted mb-2">
-                    <span>주문 소계</span>
-                    <span>{totalAmount.toLocaleString()}원</span>
+                <div className="border-t border-border-light p-8 bg-white/50 backdrop-blur-md space-y-4">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm text-muted">
+                      <span>주문 소계</span>
+                      <span>{totalAmount.toLocaleString()}원</span>
+                    </div>
+                    <div className="flex justify-between text-lg font-serif">
+                      <span>총 합계</span>
+                      <span className="text-charcoal font-bold">{totalAmount.toLocaleString()}원</span>
+                    </div>
                   </div>
-                  <div className="flex justify-between text-sm text-muted mb-6 pb-6 border-b border-border-light/50">
-                    <span>배송비</span>
-                    <span className="text-deep-sage font-medium">무료</span>
+                  
+                  <div className="grid grid-cols-1 gap-3 pt-4">
+                    <Link 
+                      href="/cart"
+                      onClick={toggleCart}
+                      className="w-full bg-white border border-charcoal text-charcoal py-4 rounded-sm hover:bg-charcoal hover:text-white transition-all duration-300 text-center text-sm font-medium flex items-center justify-center gap-2"
+                    >
+                      장바구니 전체보기 <ArrowRight className="w-4 h-4" />
+                    </Link>
+                    <button 
+                      className="w-full bg-deep-sage hover:bg-deep-sage/90 text-white py-5 rounded-sm transition-all duration-300 text-lg font-medium shadow-lg active:scale-[0.98]"
+                      onClick={() => { alert('준비 중인 기능입니다.'); }}
+                    >
+                      주문서 작성하기
+                    </button>
                   </div>
-                  <div className="flex justify-between text-lg font-serif mb-8">
-                    <span>총 결제 금액</span>
-                    <span className="text-charcoal font-bold">{totalAmount.toLocaleString()}원</span>
-                  </div>
-                  <button 
-                    className="w-full bg-charcoal hover:bg-deep-sage text-white py-5 rounded-sm transition-all duration-300 text-lg font-medium shadow-lg active:scale-[0.98]"
-                    onClick={() => { alert('준비 중인 기능입니다.'); }}
-                  >
-                    주문서 작성하기
-                  </button>
                 </div>
               )}
             </div>
