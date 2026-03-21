@@ -274,15 +274,12 @@ export default function LoginPage() {
 
         {/* Toggle Mode */}
         <div className="mt-12 text-center pt-6 border-t border-border-light/50">
-          <button 
-            onClick={() => {
-              setIsLogin(!isLogin);
-              setErrors({});
-            }}
+          <Link 
+            href="/signup"
             className="text-xs text-muted hover:text-charcoal transition-colors border-b border-transparent hover:border-charcoal pb-1 font-medium"
           >
-            {isLogin ? '처음이신가요? 30초만에 회원가입하기' : '이미 계정이 있으신가요? 로그인하기'}
-          </button>
+            처음이신가요? 30초만에 회원가입하기
+          </Link>
         </div>
       </motion.div>
     </div>
