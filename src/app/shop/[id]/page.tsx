@@ -2,19 +2,62 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { products } from '@/data/mockData';
+import { products as mockProducts, Product } from '@/data/mockData';
 import { notFound, useParams } from 'next/navigation';
 import PurchaseButtons from './AddToCartButton';
 import ProductTabs from './ProductTabs';
 import ProductCard from '@/components/ProductCard';
-import { ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const product = products.find(p => p.id === params.id);
+  const [product, setProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+
+  useEffect(() => {
+    const fetchProduct = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .eq('id', params.id)
+          .single();
+        
+        if (error) throw error;
+        
+        if (data) {
+          setProduct(data);
+        } else {
+          // Fallback to mock data
+          const mockProduct = mockProducts.find(p => p.id === params.id);
+          setProduct(mockProduct || null);
+        }
+      } catch (err) {
+        console.error('Error fetching product:', err);
+        const mockProduct = mockProducts.find(p => p.id === params.id);
+        setProduct(mockProduct || null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (params.id) {
+      fetchProduct();
+    }
+  }, [params.id]);
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+      </div>
+    );
+  }
 
   if (!product) {
     notFound();
@@ -23,7 +66,7 @@ export default function ProductDetailPage() {
   const allImages = product.images || [product.imageUrl];
 
   // 연관 상품
-  const relatedProducts = products
+  const relatedProducts = mockProducts
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
@@ -155,7 +198,7 @@ export default function ProductDetailPage() {
           <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 text-xs uppercase tracking-widest">View All</Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-          {relatedProducts.length > 0 ? relatedProducts.map(p => <ProductCard key={p.id} product={p} />) : products.slice(0, 4).filter(p => p.id !== product.id).map(p => <ProductCard key={p.id} product={p} />)}
+          {relatedProducts.length > 0 ? relatedProducts.map(p => <ProductCard key={p.id} product={p} />) : mockProducts.slice(0, 4).filter(p => p.id !== product.id).map(p => <ProductCard key={p.id} product={p} />)}
         </div>
       </div>
     </div>

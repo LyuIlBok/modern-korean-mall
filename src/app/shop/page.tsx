@@ -1,16 +1,47 @@
 'use client';
 
-import { useState, Suspense } from 'react';
+import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { products, Category } from '@/data/mockData';
+import { products as mockProducts, Category, Product } from '@/data/mockData';
 import ProductCard from '@/components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X } from 'lucide-react';
+import { Search, X, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabaseClient';
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
   const [activeCategory, setActiveCategory] = useState<Category | '전체'>('전체');
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setProducts(data);
+        } else {
+          // Supabase에 데이터가 없으면 mock 데이터 사용
+          setProducts(mockProducts);
+        }
+      } catch (err) {
+        console.error('Error fetching products:', err);
+        setProducts(mockProducts);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
 
   // 검색어와 카테고리에 따른 필터링
   const filteredProducts = products.filter(p => {
@@ -22,6 +53,14 @@ function ShopContent() {
   });
 
   const categories: (Category | '전체')[] = ['전체', '농산물', '농자재'];
+
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center py-32">
+        <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-1">

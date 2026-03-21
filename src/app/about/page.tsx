@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import Link from 'next/link';
 import { Leaf, Heart, Sun, Droplets } from 'lucide-react';
 
 export const metadata = {
