@@ -120,9 +120,12 @@ export default function CartPage() {
                 </div>
               </div>
 
-              <button className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all duration-300 flex items-center justify-center gap-2 group font-medium tracking-wide">
+              <Link 
+                href="/checkout"
+                className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all duration-300 flex items-center justify-center gap-2 group font-medium tracking-wide"
+              >
                 결제하기 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </button>
+              </Link>
               
               <Link 
                 href="/shop" 
