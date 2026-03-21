@@ -52,3 +52,11 @@ ALTER TABLE order_items ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Users can view their own order items" ON order_items FOR SELECT 
 USING (EXISTS (SELECT 1 FROM orders WHERE orders.id = order_items.order_id AND orders.user_id = auth.uid()));
 CREATE POLICY "Allow public insert" ON order_items FOR INSERT WITH CHECK (true);
+
+-- 4. Storage Bucket Setup
+-- Supabase Dashboard의 Storage 메뉴에서 'product-images'라는 이름의 public 버킷을 생성해야 합니다.
+-- 생성 후 아래와 같은 정책을 추가하여 누구나 이미지를 볼 수 있게 설정하세요.
+/*
+  CREATE POLICY "Public Access" ON storage.objects FOR SELECT USING (bucket_id = 'product-images');
+  CREATE POLICY "Admin Upload" ON storage.objects FOR INSERT WITH CHECK (bucket_id = 'product-images' AND auth.role() = 'authenticated');
+*/

@@ -135,12 +135,13 @@ export default function CartSidebar() {
                     >
                       장바구니 전체보기 <ArrowRight className="w-4 h-4" />
                     </Link>
-                    <button 
-                      className="w-full bg-deep-sage hover:bg-deep-sage/90 text-white py-5 rounded-sm transition-all duration-300 text-lg font-medium shadow-lg active:scale-[0.98]"
-                      onClick={() => { alert('준비 중인 기능입니다.'); }}
+                    <Link 
+                      href="/checkout"
+                      onClick={toggleCart}
+                      className="w-full bg-deep-sage hover:bg-deep-sage/90 text-white py-5 rounded-sm transition-all duration-300 text-lg font-medium shadow-lg active:scale-[0.98] text-center"
                     >
                       주문서 작성하기
-                    </button>
+                    </Link>
                   </div>
                 </div>
               )}

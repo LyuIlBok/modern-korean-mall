@@ -1,11 +1,44 @@
+'use client';
+
 import Image from 'next/image';
 import Link from 'next/link';
-import { products } from '@/data/mockData';
+import { products as mockProducts, Product } from '@/data/mockData';
 import ProductCard from '@/components/ProductCard';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Loader2 } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Home() {
-  const featuredProducts = products.slice(0, 3);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      setLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('products')
+          .select('*')
+          .limit(3)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        if (data && data.length > 0) {
+          setFeaturedProducts(data);
+        } else {
+          setFeaturedProducts(mockProducts.slice(0, 3));
+        }
+      } catch (err) {
+        console.error('Error fetching featured products:', err);
+        setFeaturedProducts(mockProducts.slice(0, 3));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
 
   return (
     <>
@@ -51,10 +84,16 @@ export default function Home() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20">
-          {featuredProducts.map(product => (
-            <ProductCard key={product.id} product={product} />
-          ))}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20 min-h-[400px]">
+          {loading ? (
+            <div className="col-span-full flex items-center justify-center py-20">
+              <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+            </div>
+          ) : (
+            featuredProducts.map(product => (
+              <ProductCard key={product.id} product={product} />
+            ))
+          )}
         </div>
       </section>
       
