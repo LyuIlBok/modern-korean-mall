@@ -7,6 +7,7 @@ export interface Product {
   price: number;
   category: Category;
   imageUrl: string;
+  images?: string[]; // 추가된 이미지 배열
   is_sold_out?: boolean;
 }
 
@@ -18,6 +19,11 @@ export const products: Product[] = [
     price: 45000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=800',
+    images: [
+      'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1527333656061-ca7adf608ae1?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1536304993881-ff6e9e524177?auto=format&fit=crop&q=80&w=800'
+    ],
     is_sold_out: false,
   },
   {
@@ -27,7 +33,11 @@ export const products: Product[] = [
     price: 32000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1587049352847-8d4e8941b958?auto=format&fit=crop&q=80&w=800',
-    is_sold_out: true, // 예시로 품절 처리
+    images: [
+      'https://images.unsplash.com/photo-1587049352847-8d4e8941b958?auto=format&fit=crop&q=80&w=800',
+      'https://images.unsplash.com/photo-1471943311424-646960669fba?auto=format&fit=crop&q=80&w=800'
+    ],
+    is_sold_out: true,
   },
   {
     id: 'p3',

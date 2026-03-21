@@ -151,6 +151,8 @@ export default function AdminDashboard() {
           {activeTab === 'dashboard' && (
             <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <h1 className="font-serif text-4xl mb-12 text-charcoal">운영 현황</h1>
+              
+              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-hanji-white p-8 border border-border-light rounded-sm">
                   <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Total Sales</p>
@@ -174,8 +176,54 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
-              <div className="bg-white p-12 border border-border-light rounded-sm text-center">
-                <p className="text-muted italic">실시간 판매 분석 그래프가 준비 중입니다.</p>
+
+              {/* Sales Chart (Custom Bar Chart) */}
+              <div className="bg-white p-10 border border-border-light rounded-sm">
+                <div className="flex justify-between items-center mb-12">
+                  <h3 className="font-serif text-xl">최근 매출 추이</h3>
+                  <div className="flex gap-4 text-[10px] text-muted uppercase tracking-widest">
+                    <div className="flex items-center gap-2"><div className="w-2 h-2 bg-deep-sage rounded-full" /> Sales</div>
+                  </div>
+                </div>
+                
+                <div className="h-64 flex items-end justify-between gap-4 border-b border-border-light pb-2 relative">
+                  {/* Grid Lines */}
+                  <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
+                    {[1, 2, 3, 4].map(i => <div key={i} className="border-t border-muted border-dashed w-full" />)}
+                  </div>
+                  
+                  {/* Bars (Mock Daily Data based on total) */}
+                  {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 1.0].map((val, idx) => (
+                    <div key={idx} className="flex-1 flex flex-col items-center gap-4 group relative">
+                      <motion.div 
+                        initial={{ height: 0 }}
+                        animate={{ height: `${val * 100}%` }}
+                        transition={{ delay: idx * 0.1, duration: 1 }}
+                        className="w-full max-w-[40px] bg-deep-sage/20 group-hover:bg-deep-sage/40 transition-colors rounded-t-sm"
+                      />
+                      <span className="text-[9px] text-muted uppercase tracking-tighter">Day {idx + 1}</span>
+                      
+                      {/* Tooltip */}
+                      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-charcoal text-white text-[10px] px-2 py-1 rounded-sm whitespace-nowrap z-10">
+                        ₩{Math.floor(totalSales * val / 2).toLocaleString()}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Recent Orders Summary */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="bg-hanji-white/50 p-8 border border-border-light rounded-sm">
+                  <h4 className="font-serif text-lg mb-6">최근 가입자</h4>
+                  <div className="space-y-4">
+                    <p className="text-xs text-muted italic">최근 24시간 동안 새로운 연 맺기가 3건 있었습니다.</p>
+                  </div>
+                </div>
+                <div className="bg-hanji-white/50 p-8 border border-border-light rounded-sm">
+                  <h4 className="font-serif text-lg mb-6">공지사항 관리</h4>
+                  <p className="text-xs text-muted italic">등록된 최근 공지가 없습니다.</p>
+                </div>
               </div>
             </motion.div>
           )}
