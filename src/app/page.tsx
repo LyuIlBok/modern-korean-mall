@@ -68,11 +68,10 @@ export default function Home() {
         
         <div className="relative z-10 text-center max-w-3xl px-4">
           <h1 className="font-serif text-5xl md:text-7xl mb-8 text-charcoal leading-[1.2] tracking-tighter">
-            결결이 살아있는<br />자연의 진심
+            자연이 빚은<br />본연의 가치
           </h1>
           <p className="text-lg md:text-xl text-charcoal/80 mb-12 max-w-xl mx-auto font-light leading-relaxed">
-            과한 것은 덜어내고 본질만을 남긴 정직한 산물을 제안합니다.<br/>
-            당신의 일상에 단아한 자연의 결이 깃들기를 바랍니다.
+            꾸밈없는 자연의 산물과 정직한 농산물을 제안합니다.
           </p>
           <Link 
             href="/shop" 

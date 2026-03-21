@@ -96,9 +96,9 @@ export default function Header() {
           </div>
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-            <div className="relative h-10 w-32">
+            <div className="relative h-10 w-48">
               <Image 
-                src="/logo.bmp" 
+                src="/logo_horizontal.jfif" 
                 alt="자연의 결" 
                 fill 
                 className="object-contain"
@@ -213,9 +213,9 @@ export default function Header() {
             >
               <div className="flex items-center justify-between px-6 py-6 border-b border-border-light">
                 <Link href="/" onClick={() => setIsMenuOpen(false)}>
-                  <div className="relative h-8 w-24">
+                  <div className="relative h-8 w-32">
                     <Image 
-                      src="/logo.bmp" 
+                      src="/logo_horizontal.jfif" 
                       alt="자연의 결" 
                       fill 
                       className="object-contain"
