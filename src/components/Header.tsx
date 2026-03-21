@@ -10,7 +10,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const { toggleCart, items } = useCartStore();
+  const { toggleCart, items, setUserId } = useCartStore();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -21,20 +21,22 @@ export default function Header() {
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
-    // 세션 정보 가져오기
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      setUserId(currentUser?.id ?? null); // 장바구니 유저 ID 설정
     };
     getSession();
 
-    // 상태 변경 감지
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+      const currentUser = session?.user ?? null;
+      setUser(currentUser);
+      setUserId(currentUser?.id ?? null); // 장바구니 유저 ID 설정
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setUserId]);
 
   // 검색창 열릴 때 포커스
   useEffect(() => {
