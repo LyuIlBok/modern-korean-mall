@@ -2,15 +2,17 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { products as mockProducts, Category } from '@/data/mockData';
+import { products as mockProducts } from '@/data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard, { ProductWithRating } from '@/components/ProductCard';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 function ShopContent() {
   const { t, language } = useLanguageStore();
+  const hasMounted = useHasMounted();
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
   const [activeCategory, setActiveCategory] = useState<string>('all');
@@ -42,11 +44,11 @@ function ShopContent() {
           });
           setProducts(productsWithRatings);
         } else {
-          setProducts(mockProducts);
+          setProducts(mockProducts.map(p => ({ ...p, avgRating: 0, reviewCount: 0 })));
         }
       } catch (err) {
         console.error('Error fetching products:', err);
-        setProducts(mockProducts);
+        setProducts(mockProducts.map(p => ({ ...p, avgRating: 0, reviewCount: 0 })));
       } finally {
         setLoading(false);
       }
@@ -67,14 +69,14 @@ function ShopContent() {
   });
 
   const categories = [
-    { id: 'all', label: t.shop.all },
-    { id: 'produce', label: t.shop.category1 },
-    { id: 'materials', label: t.shop.category2 },
+    { id: 'all', label: t?.shop?.all || 'All' },
+    { id: 'produce', label: t?.shop?.category1 || 'Produce' },
+    { id: 'materials', label: t?.shop?.category2 || 'Materials' },
   ];
 
-  if (loading) {
+  if (loading || !hasMounted) {
     return (
-      <div className="flex-1 flex items-center justify-center py-32 bg-hanji-white">
+      <div className="flex-1 flex items-center justify-center py-32 bg-hanji-white min-h-screen">
         <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
       </div>
     );
@@ -84,7 +86,7 @@ function ShopContent() {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-1 bg-hanji-white">
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
-          <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.shop.title}</h1>
+          <h1 className="font-serif text-4xl mb-4 text-charcoal">{t?.shop?.title || 'Shop'}</h1>
           {query ? (
             <div className="flex items-center gap-2 text-deep-sage">
               <Search className="w-4 h-4" />
@@ -97,7 +99,7 @@ function ShopContent() {
               </button>
             </div>
           ) : (
-            <p className="text-muted">{t.shop.desc}</p>
+            <p className="text-muted">{t?.shop?.desc || ''}</p>
           )}
         </div>
 
@@ -146,13 +148,13 @@ function ShopContent() {
 
       {filteredProducts.length === 0 && (
         <div className="py-24 text-center">
-          <p className="text-muted italic">{t.shop.noResult}</p>
+          <p className="text-muted italic">{t?.shop?.noResult || 'No results found.'}</p>
           {query && (
             <button 
               onClick={() => window.location.href = '/shop'}
               className="mt-6 text-sm text-deep-sage border-b border-deep-sage pb-1"
             >
-              {t.home.viewAll}
+              {t?.home?.viewAll || 'View All'}
             </button>
           )}
         </div>
@@ -163,7 +165,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="p-24 text-center bg-hanji-white">Loading...</div>}>
+    <Suspense fallback={<div className="flex-1 flex items-center justify-center py-32 bg-hanji-white min-h-screen"><Loader2 className="w-8 h-8 animate-spin text-deep-sage" /></div>}>
       <ShopContent />
     </Suspense>
   );
