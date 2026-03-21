@@ -18,7 +18,7 @@ export default function Header() {
           <Link href="/shop" className="text-charcoal/80 hover:text-terracotta transition-colors">
             상품보기
           </Link>
-          <Link href="#" className="text-charcoal/80 hover:text-terracotta transition-colors">
+          <Link href="/about" className="text-charcoal/80 hover:text-terracotta transition-colors">
             브랜드 철학
           </Link>
         </nav>
