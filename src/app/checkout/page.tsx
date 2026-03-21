@@ -99,6 +99,26 @@ export default function CheckoutPage() {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // 재고 차감 로직 추가
+      for (const item of items) {
+        const { data: prodData } = await supabase
+          .from('products')
+          .select('stock')
+          .eq('id', item.id)
+          .single();
+        
+        if (prodData) {
+          const newStock = Math.max(0, prodData.stock - item.quantity);
+          await supabase
+            .from('products')
+            .update({ 
+              stock: newStock,
+              is_sold_out: newStock <= 0 
+            })
+            .eq('id', item.id);
+        }
+      }
+
       setIsCompleted(true);
       setTimeout(() => { clearCart(); router.push('/mypage'); }, 4000);
     } catch (error: any) {

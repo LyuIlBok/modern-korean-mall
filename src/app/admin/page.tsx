@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Plus, LayoutDashboard, Settings, LogOut, Loader2, 
   ShieldAlert, ShoppingCart, Truck, CheckCircle, Search, Filter, Image as ImageIcon,
-  MessageSquare, Send, User, Trash2, Edit3, X, TrendingUp, DollarSign
+  MessageSquare, Send, User, Trash2, Edit3, X, TrendingUp, DollarSign, ExternalLink
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -25,10 +25,14 @@ export default function AdminDashboard() {
 
   // Editing state
   const [editingProduct, setEditingProduct] = useState<any>(null);
+  
+  // Tracking number state
+  const [trackingNumbers, setTrackingNumbers] = useState<{[key: string]: string}>({});
 
   // New product form state
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
+  const [newStock, setNewStock] = useState('100');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -48,7 +52,15 @@ export default function AdminDashboard() {
       if (prodData) setProducts(prodData);
       
       const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-      if (orderData) setOrders(orderData);
+      if (orderData) {
+        setOrders(orderData);
+        // 기존 운송장 번호가 있다면 상태에 반영
+        const existingTracking: {[key: string]: string} = {};
+        orderData.forEach(o => {
+          if (o.tracking_number) existingTracking[o.id] = o.tracking_number;
+        });
+        setTrackingNumbers(existingTracking);
+      }
       
       setIsCheckingAuth(false);
     };
@@ -80,13 +92,19 @@ export default function AdminDashboard() {
         imageUrl = publicUrl;
       }
       const { data, error } = await supabase.from('products').insert([{
-        name: newName, price: Number(newPrice), category: newCategory, description: newDesc, imageUrl
+        name: newName, 
+        price: Number(newPrice), 
+        stock: Number(newStock),
+        category: newCategory, 
+        description: newDesc, 
+        imageUrl,
+        is_sold_out: Number(newStock) <= 0
       }]).select();
       if (error) throw error;
       alert('상품이 등록되었습니다!');
       if (data) setProducts([data[0], ...products]);
       setIsAdding(false);
-      setNewName(''); setNewPrice(''); setNewDesc(''); setImageFile(null); setImagePreview(null);
+      setNewName(''); setNewPrice(''); setNewStock('100'); setNewDesc(''); setImageFile(null); setImagePreview(null);
     } catch (error: any) { alert(`오류: ${error.message}`); } finally { setIsLoading(false); }
   };
 
@@ -107,8 +125,10 @@ export default function AdminDashboard() {
       const { error } = await supabase.from('products').update({
         name: editingProduct.name,
         price: Number(editingProduct.price),
+        stock: Number(editingProduct.stock),
         category: editingProduct.category,
-        description: editingProduct.description
+        description: editingProduct.description,
+        is_sold_out: Number(editingProduct.stock) <= 0
       }).eq('id', editingProduct.id);
       if (error) throw error;
       setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
@@ -117,12 +137,15 @@ export default function AdminDashboard() {
     } catch (error: any) { alert(`수정 실패: ${error.message}`); } finally { setIsLoading(false); }
   };
 
-  const updateOrderStatus = async (id: string, newStatus: string) => {
+  const updateOrderStatus = async (id: string, newStatus: string, trackingNumber?: string) => {
     try {
-      const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
+      const updateData: any = { status: newStatus };
+      if (trackingNumber) updateData.tracking_number = trackingNumber;
+      
+      const { error } = await supabase.from('orders').update(updateData).eq('id', id);
       if (error) throw error;
-      setOrders(orders.map(o => o.id === id ? { ...o, status: newStatus } : o));
-      alert('상태가 업데이트되었습니다.');
+      setOrders(orders.map(o => o.id === id ? { ...o, ...updateData } : o));
+      alert(`${newStatus} 상태로 업데이트되었습니다.`);
     } catch (error: any) { alert(`업데이트 실패: ${error.message}`); }
   };
 
@@ -152,7 +175,6 @@ export default function AdminDashboard() {
             <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
               <h1 className="font-serif text-4xl mb-12 text-charcoal">운영 현황</h1>
               
-              {/* Stats Cards */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-hanji-white p-8 border border-border-light rounded-sm">
                   <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Total Sales</p>
@@ -177,59 +199,25 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              {/* Sales Chart (Custom Bar Chart) */}
               <div className="bg-white p-10 border border-border-light rounded-sm">
-                <div className="flex justify-between items-center mb-12">
-                  <h3 className="font-serif text-xl">최근 매출 추이</h3>
-                  <div className="flex gap-4 text-[10px] text-muted uppercase tracking-widest">
-                    <div className="flex items-center gap-2"><div className="w-2 h-2 bg-deep-sage rounded-full" /> Sales</div>
-                  </div>
-                </div>
-                
+                <h3 className="font-serif text-xl mb-12">최근 매출 추이</h3>
                 <div className="h-64 flex items-end justify-between gap-4 border-b border-border-light pb-2 relative">
-                  {/* Grid Lines */}
                   <div className="absolute inset-0 flex flex-col justify-between pointer-events-none opacity-20">
                     {[1, 2, 3, 4].map(i => <div key={i} className="border-t border-muted border-dashed w-full" />)}
                   </div>
-                  
-                  {/* Bars (Mock Daily Data based on total) */}
                   {[0.4, 0.7, 0.3, 0.9, 0.5, 0.8, 1.0].map((val, idx) => (
                     <div key={idx} className="flex-1 flex flex-col items-center gap-4 group relative">
-                      <motion.div 
-                        initial={{ height: 0 }}
-                        animate={{ height: `${val * 100}%` }}
-                        transition={{ delay: idx * 0.1, duration: 1 }}
-                        className="w-full max-w-[40px] bg-deep-sage/20 group-hover:bg-deep-sage/40 transition-colors rounded-t-sm"
-                      />
+                      <motion.div initial={{ height: 0 }} animate={{ height: `${val * 100}%` }} transition={{ delay: idx * 0.1, duration: 1 }} className="w-full max-w-[40px] bg-deep-sage/20 group-hover:bg-deep-sage/40 transition-colors rounded-t-sm" />
                       <span className="text-[9px] text-muted uppercase tracking-tighter">Day {idx + 1}</span>
-                      
-                      {/* Tooltip */}
-                      <div className="absolute -top-10 opacity-0 group-hover:opacity-100 transition-opacity bg-charcoal text-white text-[10px] px-2 py-1 rounded-sm whitespace-nowrap z-10">
-                        ₩{Math.floor(totalSales * val / 2).toLocaleString()}
-                      </div>
                     </div>
                   ))}
-                </div>
-              </div>
-
-              {/* Recent Orders Summary */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <div className="bg-hanji-white/50 p-8 border border-border-light rounded-sm">
-                  <h4 className="font-serif text-lg mb-6">최근 가입자</h4>
-                  <div className="space-y-4">
-                    <p className="text-xs text-muted italic">최근 24시간 동안 새로운 연 맺기가 3건 있었습니다.</p>
-                  </div>
-                </div>
-                <div className="bg-hanji-white/50 p-8 border border-border-light rounded-sm">
-                  <h4 className="font-serif text-lg mb-6">공지사항 관리</h4>
-                  <p className="text-xs text-muted italic">등록된 최근 공지가 없습니다.</p>
                 </div>
               </div>
             </motion.div>
           )}
 
           {activeTab === 'products' && (
-            <motion.div key="products" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
+            <motion.div key="products" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
               <div className="flex justify-between items-center mb-12">
                 <h1 className="font-serif text-4xl">상품 관리</h1>
                 <button onClick={() => setIsAdding(!isAdding)} className="bg-charcoal text-white px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all">{isAdding ? '닫기' : '새 상품 등록'}</button>
@@ -239,7 +227,10 @@ export default function AdminDashboard() {
                   <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
                       <input required value={newName} onChange={(e) => setNewName(e.target.value)} type="text" placeholder="상품명" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage" />
-                      <input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가 (원)" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage" />
+                      <div className="grid grid-cols-2 gap-4">
+                        <input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가 (원)" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage" />
+                        <input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="재고 수량" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage" />
+                      </div>
                       <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage cursor-pointer">
                         <option value="농산물">농산물</option><option value="농자재">농자재</option>
                       </select>
@@ -258,7 +249,13 @@ export default function AdminDashboard() {
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
-                    <tr><th className="px-8 py-5">Product Info</th><th className="px-8 py-5">Category</th><th className="px-8 py-5 text-right">Price</th><th className="px-8 py-5 text-center">Action</th></tr>
+                    <tr>
+                      <th className="px-8 py-5">Product Info</th>
+                      <th className="px-8 py-5">Category</th>
+                      <th className="px-8 py-5 text-right">Price</th>
+                      <th className="px-8 py-5 text-right">Stock</th>
+                      <th className="px-8 py-5 text-center">Action</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {products.map((p) => (
@@ -266,6 +263,11 @@ export default function AdminDashboard() {
                         <td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light"><Image src={p.imageUrl} alt={p.name} fill className="object-cover" /></div><span className="font-serif text-lg">{p.name}</span></div></td>
                         <td className="px-8 py-6 text-xs font-bold text-deep-sage">{p.category}</td>
                         <td className="px-8 py-6 text-right font-medium">{p.price.toLocaleString()}원</td>
+                        <td className="px-8 py-6 text-right">
+                          <span className={`font-mono ${p.stock <= 5 ? 'text-terracotta font-bold' : 'text-charcoal'}`}>
+                            {p.stock.toLocaleString()}
+                          </span>
+                        </td>
                         <td className="px-8 py-6 text-center">
                           <div className="flex justify-center gap-3">
                             <button onClick={() => setEditingProduct(p)} className="p-2 hover:text-deep-sage transition-colors"><Edit3 className="w-4 h-4" /></button>
@@ -279,49 +281,85 @@ export default function AdminDashboard() {
               </div>
             </motion.div>
           )}
-{activeTab === 'orders' && (
-  <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
-    <div className="flex justify-between items-center mb-12">
-      <h1 className="font-serif text-4xl">주문 관리</h1>
-      <button 
-        onClick={() => {
-          const headers = ['Order ID', 'Customer Name', 'Phone', 'Total Price', 'Status', 'Date'];
-          const rows = orders.map(o => [
-            o.id, o.customer_name, o.customer_phone, o.total_price, o.status, new Date(o.created_at).toLocaleDateString()
-          ]);
-          const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
-          const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.setAttribute("href", url);
-          link.setAttribute("download", `orders_${new Date().toLocaleDateString()}.csv`);
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-        }}
-        className="bg-deep-sage text-white px-6 py-2 rounded-sm text-xs uppercase tracking-widest hover:bg-charcoal transition-all shadow-sm flex items-center gap-2"
-      >
-        Excel Download
-      </button>
-    </div>
-    <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
-...
 
+          {activeTab === 'orders' && (
+            <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+              <div className="flex justify-between items-center mb-12">
+                <h1 className="font-serif text-4xl">주문 관리</h1>
+                <div className="flex gap-4">
+                  <span className="flex items-center gap-2 text-xs text-muted"><div className="w-2 h-2 bg-deep-sage rounded-full" /> 배송중</span>
+                  <span className="flex items-center gap-2 text-xs text-muted"><div className="w-2 h-2 bg-green-500 rounded-full" /> 배송완료</span>
+                </div>
+              </div>
+              <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
-                    <tr><th className="px-8 py-5">Order ID</th><th className="px-8 py-5">Customer</th><th className="px-8 py-5 text-right">Total</th><th className="px-8 py-5 text-center">Status</th><th className="px-8 py-5 text-center">Actions</th></tr>
+                    <tr>
+                      <th className="px-8 py-5">Order ID</th>
+                      <th className="px-8 py-5">Customer</th>
+                      <th className="px-8 py-5">Total</th>
+                      <th className="px-8 py-5">Status</th>
+                      <th className="px-8 py-5">Tracking</th>
+                      <th className="px-8 py-5 text-center">Actions</th>
+                    </tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {orders.map((o) => (
                       <tr key={o.id} className="hover:bg-hanji-white/50 transition-colors text-sm">
                         <td className="px-8 py-6 font-serif">{o.id.slice(0, 8).toUpperCase()}</td>
-                        <td className="px-8 py-6">{o.customer_name}<br/><span className="text-[10px] text-muted">{o.customer_phone}</span></td>
+                        <td className="px-8 py-6">
+                          <div className="font-medium">{o.customer_name}</div>
+                          <div className="text-[10px] text-muted">{o.customer_phone}</div>
+                        </td>
                         <td className="px-8 py-6 text-right font-medium">{o.total_price.toLocaleString()}원</td>
-                        <td className="px-8 py-6 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${o.status === '배송중' ? 'bg-deep-sage/10 text-deep-sage' : o.status === '배송완료' ? 'bg-green-50 text-green-600' : 'bg-charcoal/10 text-charcoal'}`}>{o.status}</span></td>
+                        <td className="px-8 py-6">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${
+                            o.status === '배송중' ? 'bg-deep-sage/10 text-deep-sage' : 
+                            o.status === '배송완료' ? 'bg-green-50 text-green-600' : 
+                            'bg-charcoal/10 text-charcoal'
+                          }`}>
+                            {o.status}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6">
+                          {o.status === '결제완료' ? (
+                            <input 
+                              type="text" 
+                              placeholder="운송장 번호" 
+                              value={trackingNumbers[o.id] || ''}
+                              onChange={(e) => setTrackingNumbers({...trackingNumbers, [o.id]: e.target.value})}
+                              className="text-[11px] border-b border-border-light bg-transparent py-1 focus:outline-none focus:border-deep-sage w-32"
+                            />
+                          ) : (
+                            <span className="text-[11px] font-mono text-muted">{o.tracking_number || '-'}</span>
+                          )}
+                        </td>
                         <td className="px-8 py-6 text-center">
                           <div className="flex justify-center gap-2">
-                            {o.status === '결제완료' && <button onClick={() => updateOrderStatus(o.id, '배송중')} className="p-2 hover:bg-deep-sage/10 text-deep-sage rounded-full"><Truck className="w-4 h-4" /></button>}
-                            {o.status === '배송중' && <button onClick={() => updateOrderStatus(o.id, '배송완료')} className="p-2 hover:bg-green-100 text-green-700 rounded-full"><CheckCircle className="w-4 h-4" /></button>}
+                            {o.status === '결제완료' && (
+                              <button 
+                                onClick={() => {
+                                  if (!trackingNumbers[o.id]) return alert('운송장 번호를 입력해주세요.');
+                                  updateOrderStatus(o.id, '배송중', trackingNumbers[o.id]);
+                                }} 
+                                className="p-2 hover:bg-deep-sage text-muted hover:text-white rounded-full transition-all"
+                                title="배송 시작 (운송장 등록)"
+                              >
+                                <Truck className="w-4 h-4" />
+                              </button>
+                            )}
+                            {o.status === '배송중' && (
+                              <button 
+                                onClick={() => updateOrderStatus(o.id, '배송완료')} 
+                                className="p-2 hover:bg-green-500 text-muted hover:text-white rounded-full transition-all"
+                                title="배송 완료 처리"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                            )}
+                            {o.status === '배송완료' && (
+                              <CheckCircle className="w-4 h-4 text-green-500 opacity-50" />
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -358,9 +396,15 @@ export default function AdminDashboard() {
                     <label className="text-[10px] uppercase tracking-widest text-muted">Product Name</label>
                     <input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[10px] uppercase tracking-widest text-muted">Price</label>
-                    <input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-widest text-muted">Price</label>
+                      <input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
+                    </div>
+                    <div className="space-y-1">
+                      <label className="text-[10px] uppercase tracking-widest text-muted">Stock</label>
+                      <input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
+                    </div>
                   </div>
                   <div className="space-y-1">
                     <label className="text-[10px] uppercase tracking-widest text-muted">Category</label>

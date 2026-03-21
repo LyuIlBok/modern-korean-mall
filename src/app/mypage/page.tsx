@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import ProductCard from '@/components/ProductCard';
 
@@ -220,9 +220,26 @@ function MyPageContent() {
                             ))}
                           </div>
                           
-                          <div className="mt-8 pt-6 border-t border-border-light flex justify-between items-center">
-                            <p className="text-[10px] text-muted uppercase tracking-widest font-medium">Total Amount</p>
-                            <p className="text-xl font-serif font-bold text-charcoal tracking-tight">₩{order.total_price.toLocaleString()}</p>
+                          <div className="mt-8 pt-6 border-t border-border-light flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                            <div>
+                              <p className="text-[10px] text-muted uppercase tracking-widest font-medium mb-1">Total Amount</p>
+                              <p className="text-xl font-serif font-bold text-charcoal tracking-tight">₩{order.total_price.toLocaleString()}</p>
+                            </div>
+                            
+                            {order.tracking_number && (
+                              <div className="w-full sm:w-auto bg-hanji-white px-4 py-3 rounded-sm border border-border-light flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                                <div>
+                                  <p className="text-[9px] text-muted uppercase tracking-tighter">Tracking Number</p>
+                                  <p className="text-xs font-mono font-medium text-charcoal">{order.tracking_number}</p>
+                                </div>
+                                <button 
+                                  onClick={() => window.open(`https://search.naver.com/search.naver?query=${order.tracking_number}`, '_blank')}
+                                  className="text-[10px] bg-charcoal text-white px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-deep-sage transition-colors"
+                                >
+                                  <ExternalLink className="w-3 h-3" /> 배송 조회
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>

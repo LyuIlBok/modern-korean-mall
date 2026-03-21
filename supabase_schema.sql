@@ -9,6 +9,7 @@ CREATE TABLE products (
   category TEXT NOT NULL, -- '농산물', '농자재' 등
   imageUrl TEXT,
   images TEXT[] DEFAULT '{}', -- 추가 이미지 배열
+  stock INTEGER DEFAULT 0, -- 재고 수량 추가
   is_sold_out BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT now()
 );
@@ -22,6 +23,7 @@ CREATE TABLE orders (
   address TEXT NOT NULL,
   total_price NUMERIC NOT NULL,
   status TEXT DEFAULT '결제완료', -- '결제완료', '배송중', '배송완료'
+  tracking_number TEXT, -- 운송장 번호 추가
   created_at TIMESTAMPTZ DEFAULT now()
 );
 
