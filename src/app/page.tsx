@@ -103,6 +103,16 @@ export default function Home() {
            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[120%] bg-hanji-white blur-[120px] rounded-full rotate-12" />
         </div>
         <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
+          <div className="flex justify-center mb-8">
+            <div className="relative w-24 h-24 opacity-80">
+              <Image 
+                src="/seal.png" 
+                alt="복이네농장 인감" 
+                fill 
+                className="object-contain filter brightness-0 invert" 
+              />
+            </div>
+          </div>
           <h2 className="font-serif text-3xl md:text-5xl mb-8 tracking-tight">비움으로써 채워지는 미학</h2>
           <p className="text-lg md:text-xl/relaxed opacity-80 mb-12 font-light">
             우리는 자연에서 얻은 것을 그대로 전하는 것에 가치를 둡니다.<br/>

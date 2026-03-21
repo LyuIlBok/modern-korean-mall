@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
 import { useEffect, useState, useRef } from 'react';
@@ -87,8 +88,16 @@ export default function Header() {
             </button>
           </div>
 
-          <Link href="/" className="font-serif text-2xl tracking-tighter text-deep-sage absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-            자연의 결
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
+            <div className="relative h-10 w-32">
+              <Image 
+                src="/logo.bmp" 
+                alt="자연의 결" 
+                fill 
+                className="object-contain"
+                priority
+              />
+            </div>
           </Link>
 
           <nav className="hidden md:flex gap-8">
@@ -189,9 +198,15 @@ export default function Header() {
               className="absolute inset-y-0 left-0 w-[280px] bg-hanji-white shadow-2xl flex flex-col"
             >
               <div className="flex items-center justify-between px-6 py-6 border-b border-border-light">
-                <Link href="/" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2 text-deep-sage">
-                  <Leaf className="w-5 h-5" />
-                  <span className="font-serif text-xl">자연의 결</span>
+                <Link href="/" onClick={() => setIsMenuOpen(false)}>
+                  <div className="relative h-8 w-24">
+                    <Image 
+                      src="/logo.bmp" 
+                      alt="자연의 결" 
+                      fill 
+                      className="object-contain"
+                    />
+                  </div>
                 </Link>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 text-muted hover:text-charcoal">
                   <X className="w-6 h-6" />
