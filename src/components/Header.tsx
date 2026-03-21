@@ -101,7 +101,7 @@ export default function Header() {
           <div className="flex items-center gap-1 sm:gap-4">
             {user ? (
               <div className="flex items-center gap-1 sm:gap-3">
-                <Link href="/admin" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="관리자 센터">
+                <Link href="/mypage" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="마이페이지">
                   <User className="w-5 h-5" />
                 </Link>
                 <button 
