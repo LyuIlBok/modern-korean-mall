@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { products } from '@/data/mockData';
 import { notFound } from 'next/navigation';
 import PurchaseButtons from './AddToCartButton';
+import ProductTabs from './ProductTabs';
 import { ArrowLeft, Truck, ShieldCheck, Heart } from 'lucide-react';
 
 export async function generateStaticParams() {
