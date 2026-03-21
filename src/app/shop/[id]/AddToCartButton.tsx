@@ -28,22 +28,24 @@ export default function PurchaseButtons({ product }: { product: Product }) {
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-3 w-full">
-      <button 
-        onClick={handleAddToCart}
-        disabled={isAdding}
-        className="flex-1 flex items-center justify-center gap-2 py-4 border border-charcoal text-charcoal hover:bg-charcoal hover:text-white transition-all duration-300 rounded-sm font-medium"
-      >
-        <ShoppingCart className="w-5 h-5" />
-        {isAdding ? '담는 중...' : '장바구니'}
-      </button>
-      <button 
-        onClick={handleBuyNow}
-        className="flex-1 flex items-center justify-center gap-2 py-4 bg-deep-sage text-white hover:bg-deep-sage/90 transition-all duration-300 rounded-sm font-medium shadow-sm"
-      >
-        <CreditCard className="w-5 h-5" />
-        바로 구매하기
-      </button>
+    <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white/80 backdrop-blur-md border-t border-border-light md:static md:p-0 md:bg-transparent md:border-none md:z-auto">
+      <div className="max-w-7xl mx-auto flex flex-col sm:flex-row gap-3 w-full">
+        <button 
+          onClick={handleAddToCart}
+          disabled={isAdding}
+          className="flex-1 flex items-center justify-center gap-2 py-4 border border-charcoal text-charcoal hover:bg-charcoal hover:text-white transition-all duration-300 rounded-sm font-medium bg-white"
+        >
+          <ShoppingCart className="w-5 h-5" />
+          {isAdding ? '담는 중...' : '장바구니'}
+        </button>
+        <button 
+          onClick={handleBuyNow}
+          className="flex-1 flex items-center justify-center gap-2 py-4 bg-deep-sage text-white hover:bg-deep-sage/90 transition-all duration-300 rounded-sm font-medium shadow-sm"
+        >
+          <CreditCard className="w-5 h-5" />
+          바로 구매하기
+        </button>
+      </div>
     </div>
   );
 }

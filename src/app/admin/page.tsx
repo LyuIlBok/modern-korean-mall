@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Plus, LayoutDashboard, Settings, LogOut, Loader2, 
   ShieldAlert, ShoppingCart, Truck, CheckCircle, Search, Filter, Image as ImageIcon,
-  MessageSquare, Send, User
+  MessageSquare, Send, User, Trash2, Edit3, X, TrendingUp, DollarSign
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -14,7 +14,7 @@ import { supabase } from '@/lib/supabaseClient';
 const ADMIN_EMAILS = ['grow930706@gmail.com'];
 
 export default function AdminDashboard() {
-  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'qna' | 'dashboard'>('products');
+  const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'qna' | 'dashboard'>('dashboard');
   const [products, setProducts] = useState<any[]>([]);
   const [orders, setOrders] = useState<any[]>([]);
   const [isAdding, setIsAdding] = useState(false);
@@ -23,9 +23,8 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
-  // Chat/QnA State
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  const [replyText, setReplyText] = useState('');
+  // Editing state
+  const [editingProduct, setEditingProduct] = useState<any>(null);
 
   // New product form state
   const [newName, setNewName] = useState('');
@@ -44,10 +43,13 @@ export default function AdminDashboard() {
         return;
       }
       setIsAdmin(true);
+      
       const { data: prodData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
       if (prodData) setProducts(prodData);
+      
       const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
       if (orderData) setOrders(orderData);
+      
       setIsCheckingAuth(false);
     };
     fetchData();
@@ -88,6 +90,33 @@ export default function AdminDashboard() {
     } catch (error: any) { alert(`오류: ${error.message}`); } finally { setIsLoading(false); }
   };
 
+  const handleDeleteProduct = async (id: string) => {
+    if (!confirm('정말로 이 상품을 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('products').delete().eq('id', id);
+      if (error) throw error;
+      setProducts(products.filter(p => p.id !== id));
+      alert('상품이 삭제되었습니다.');
+    } catch (error: any) { alert(`삭제 실패: ${error.message}`); }
+  };
+
+  const handleUpdateProduct = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('products').update({
+        name: editingProduct.name,
+        price: Number(editingProduct.price),
+        category: editingProduct.category,
+        description: editingProduct.description
+      }).eq('id', editingProduct.id);
+      if (error) throw error;
+      setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
+      setEditingProduct(null);
+      alert('상품 정보가 수정되었습니다.');
+    } catch (error: any) { alert(`수정 실패: ${error.message}`); } finally { setIsLoading(false); }
+  };
+
   const updateOrderStatus = async (id: string, newStatus: string) => {
     try {
       const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', id);
@@ -97,11 +126,15 @@ export default function AdminDashboard() {
     } catch (error: any) { alert(`업데이트 실패: ${error.message}`); }
   };
 
-  if (isCheckingAuth) return <div className="min-h-screen flex items-center justify-center bg-hanji-white text-deep-sage">불러오는 중...</div>;
+  if (isCheckingAuth) return <div className="min-h-screen flex items-center justify-center bg-hanji-white text-deep-sage tracking-widest uppercase text-xs">Connecting to Dashboard...</div>;
   if (!isAdmin) return null;
+
+  const totalSales = orders.reduce((sum, o) => sum + o.total_price, 0);
+  const pendingOrders = orders.filter(o => o.status === '결제완료').length;
 
   return (
     <div className="flex-1 flex min-h-screen bg-white">
+      {/* Sidebar */}
       <aside className="w-64 border-r border-border-light bg-hanji-white flex flex-col p-8 sticky top-0 h-screen shadow-sm">
         <h2 className="font-serif text-2xl text-deep-sage mb-12">관리자 센터</h2>
         <nav className="space-y-6 flex-1 text-sm">
@@ -115,6 +148,38 @@ export default function AdminDashboard() {
 
       <main className="flex-1 p-12 overflow-y-auto">
         <AnimatePresence mode="wait">
+          {activeTab === 'dashboard' && (
+            <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-12">
+              <h1 className="font-serif text-4xl mb-12 text-charcoal">운영 현황</h1>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div className="bg-hanji-white p-8 border border-border-light rounded-sm">
+                  <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Total Sales</p>
+                  <div className="flex items-end justify-between">
+                    <h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3>
+                    <TrendingUp className="w-6 h-6 text-deep-sage opacity-40" />
+                  </div>
+                </div>
+                <div className="bg-hanji-white p-8 border border-border-light rounded-sm">
+                  <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Total Orders</p>
+                  <div className="flex items-end justify-between">
+                    <h3 className="text-3xl font-serif text-charcoal">{orders.length}건</h3>
+                    <ShoppingCart className="w-6 h-6 text-deep-sage opacity-40" />
+                  </div>
+                </div>
+                <div className="bg-hanji-white p-8 border border-border-light rounded-sm">
+                  <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Pending Shipment</p>
+                  <div className="flex items-end justify-between">
+                    <h3 className="text-3xl font-serif text-charcoal">{pendingOrders}건</h3>
+                    <Truck className="w-6 h-6 text-terracotta opacity-40" />
+                  </div>
+                </div>
+              </div>
+              <div className="bg-white p-12 border border-border-light rounded-sm text-center">
+                <p className="text-muted italic">실시간 판매 분석 그래프가 준비 중입니다.</p>
+              </div>
+            </motion.div>
+          )}
+
           {activeTab === 'products' && (
             <motion.div key="products" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
               <div className="flex justify-between items-center mb-12">
@@ -149,11 +214,16 @@ export default function AdminDashboard() {
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {products.map((p) => (
-                      <tr key={p.id} className="hover:bg-hanji-white/50 transition-colors">
+                      <tr key={p.id} className="hover:bg-hanji-white/50 transition-colors group">
                         <td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light"><Image src={p.imageUrl} alt={p.name} fill className="object-cover" /></div><span className="font-serif text-lg">{p.name}</span></div></td>
                         <td className="px-8 py-6 text-xs font-bold text-deep-sage">{p.category}</td>
                         <td className="px-8 py-6 text-right font-medium">{p.price.toLocaleString()}원</td>
-                        <td className="px-8 py-6 text-center text-[11px] text-muted hover:text-charcoal cursor-pointer">Edit</td>
+                        <td className="px-8 py-6 text-center">
+                          <div className="flex justify-center gap-3">
+                            <button onClick={() => setEditingProduct(p)} className="p-2 hover:text-deep-sage transition-colors"><Edit3 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteProduct(p.id)} className="p-2 hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -176,11 +246,13 @@ export default function AdminDashboard() {
                         <td className="px-8 py-6 font-serif">{o.id.slice(0, 8).toUpperCase()}</td>
                         <td className="px-8 py-6">{o.customer_name}<br/><span className="text-[10px] text-muted">{o.customer_phone}</span></td>
                         <td className="px-8 py-6 text-right font-medium">{o.total_price.toLocaleString()}원</td>
-                        <td className="px-8 py-6 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${o.status === '배송중' ? 'bg-deep-sage/10 text-deep-sage' : 'bg-charcoal/10 text-charcoal'}`}>{o.status}</span></td>
-                        <td className="px-8 py-6 text-center"><div className="flex justify-center gap-2">
-                          {o.status === '결제완료' && <button onClick={() => updateOrderStatus(o.id, '배송중')} className="p-2 hover:bg-deep-sage/10 text-deep-sage rounded-full"><Truck className="w-4 h-4" /></button>}
-                          {o.status === '배송중' && <button onClick={() => updateOrderStatus(o.id, '배송완료')} className="p-2 hover:bg-green-100 text-green-700 rounded-full"><CheckCircle className="w-4 h-4" /></button>}
-                        </div></td>
+                        <td className="px-8 py-6 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${o.status === '배송중' ? 'bg-deep-sage/10 text-deep-sage' : o.status === '배송완료' ? 'bg-green-50 text-green-600' : 'bg-charcoal/10 text-charcoal'}`}>{o.status}</span></td>
+                        <td className="px-8 py-6 text-center">
+                          <div className="flex justify-center gap-2">
+                            {o.status === '결제완료' && <button onClick={() => updateOrderStatus(o.id, '배송중')} className="p-2 hover:bg-deep-sage/10 text-deep-sage rounded-full"><Truck className="w-4 h-4" /></button>}
+                            {o.status === '배송중' && <button onClick={() => updateOrderStatus(o.id, '배송완료')} className="p-2 hover:bg-green-100 text-green-700 rounded-full"><CheckCircle className="w-4 h-4" /></button>}
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -192,54 +264,52 @@ export default function AdminDashboard() {
           {activeTab === 'qna' && (
             <motion.div key="qna" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="h-[calc(100vh-100px)] flex flex-col">
               <h1 className="font-serif text-4xl mb-8">문의 관리</h1>
-              <div className="flex-1 flex gap-8 min-h-0">
-                {/* Chat List */}
-                <div className="w-1/3 bg-white border border-border-light rounded-sm overflow-y-auto shadow-sm">
-                  {[
-                    { id: '1', name: '김철수', last: '배송 언제 되나요?', time: '10:30 AM', unread: true },
-                    { id: '2', name: '이영희', last: '상품 너무 좋아요!', time: '어제', unread: false },
-                  ].map(chat => (
-                    <div key={chat.id} onClick={() => setSelectedChat(chat.id)} className={`p-6 border-b border-border-light cursor-pointer hover:bg-hanji-white transition-colors ${selectedChat === chat.id ? 'bg-hanji-white' : ''}`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <span className="font-serif text-lg">{chat.name}</span>
-                        <span className="text-[10px] text-muted">{chat.time}</span>
-                      </div>
-                      <p className="text-sm text-muted line-clamp-1">{chat.last}</p>
-                      {chat.unread && <div className="mt-2 w-2 h-2 bg-deep-sage rounded-full" />}
-                    </div>
-                  ))}
-                </div>
-                {/* Chat View */}
-                <div className="flex-1 bg-hanji-white border border-border-light rounded-sm flex flex-col shadow-sm">
-                  {selectedChat ? (
-                    <>
-                      <div className="p-6 border-b border-border-light bg-white flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-deep-sage/10 flex items-center justify-center"><User className="w-5 h-5 text-deep-sage" /></div>
-                        <div><h3 className="font-serif text-xl">김철수 님과의 대화</h3><p className="text-[10px] text-deep-sage uppercase tracking-widest">Customer ID: {selectedChat}</p></div>
-                      </div>
-                      <div className="flex-1 p-8 overflow-y-auto space-y-6">
-                        <div className="flex justify-start"><div className="max-w-[70%] bg-white border border-border-light p-4 rounded-2xl rounded-tl-none text-sm shadow-sm">배송 언제 되나요? 쌀이 똑 떨어졌어요!</div></div>
-                        <div className="flex justify-end"><div className="max-w-[70%] bg-charcoal text-white p-4 rounded-2xl rounded-tr-none text-sm shadow-md">안녕하세요 김철수 고객님! 오늘 오후 발송 예정입니다. 조금만 기다려주세요!</div></div>
-                      </div>
-                      <div className="p-6 bg-white border-t border-border-light">
-                        <div className="flex gap-3 relative">
-                          <input type="text" value={replyText} onChange={(e) => setReplyText(e.target.value)} placeholder="답장을 입력하세요..." className="flex-1 bg-hanji-white px-5 py-3 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-deep-sage pr-12" />
-                          <button className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 bg-charcoal text-white rounded-full flex items-center justify-center hover:bg-deep-sage transition-colors"><Send className="w-4 h-4" /></button>
-                        </div>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="flex-1 flex flex-col items-center justify-center text-muted">
-                      <MessageSquare className="w-12 h-12 mb-4 opacity-20" />
-                      <p className="font-serif italic text-lg">대화방을 선택해 주세요</p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <p className="text-muted italic">실시간 채팅 리스트가 준비 중입니다.</p>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
+
+      {/* Edit Product Modal */}
+      <AnimatePresence>
+        {editingProduct && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingProduct(null)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative bg-white w-full max-w-2xl rounded-sm shadow-2xl p-12 overflow-hidden">
+              <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
+              <div className="flex justify-between items-center mb-8">
+                <h2 className="font-serif text-3xl">상품 정보 수정</h2>
+                <button onClick={() => setEditingProduct(null)} className="p-2 hover:bg-hanji-white rounded-full"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleUpdateProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-widest text-muted">Product Name</label>
+                    <input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-widest text-muted">Price</label>
+                    <input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-widest text-muted">Category</label>
+                    <select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage">
+                      <option value="농산물">농산물</option><option value="농자재">농자재</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  <div className="space-y-1">
+                    <label className="text-[10px] uppercase tracking-widest text-muted">Description</label>
+                    <textarea required rows={5} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full border border-border-light p-4 text-sm focus:outline-none focus:border-deep-sage resize-none bg-hanji-white/30" />
+                  </div>
+                  <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-4 hover:bg-deep-sage transition-all font-medium">수정 내용 저장</button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
