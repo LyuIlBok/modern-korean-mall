@@ -116,7 +116,7 @@ export default function Header() {
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
             <div className="relative h-12 w-56 sm:w-64">
               <Image 
-                src="/logo_horizontal.jfif" 
+                src="/logo_main.png" 
                 alt="자연의 결" 
                 fill 
                 className="object-contain"
@@ -226,7 +226,7 @@ export default function Header() {
                 <Link href="/" onClick={() => setIsMenuOpen(false)}>
                   <div className="relative h-8 w-32">
                     <Image 
-                      src="/logo_horizontal.jfif" 
+                      src="/logo_main.png" 
                       alt="자연의 결" 
                       fill 
                       className="object-contain"
