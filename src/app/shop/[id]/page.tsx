@@ -95,6 +95,9 @@ export default function ProductDetailPage() {
                   fill 
                   className="object-cover"
                   priority
+                  onError={(e: any) => {
+                    e.target.src = 'https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=800';
+                  }}
                 />
               </motion.div>
             </AnimatePresence>
