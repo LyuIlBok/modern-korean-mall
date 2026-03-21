@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Product } from '@/data/mockData';
-import { Star, MessageSquare, Info, Loader2, User, Send, ImageIcon, X } from 'lucide-react';
+import { Star, MessageSquare, Info, Loader2, User, Send, ImageIcon, X, Edit3, Trash2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -19,6 +19,9 @@ export default function ProductTabs({ product }: { product: Product }) {
   // Photo Review State
   const [reviewFile, setReviewFile] = useState<File | null>(null);
   const [reviewPreview, setReviewPreview] = useState<string | null>(null);
+
+  // Editing State
+  const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -62,42 +65,74 @@ export default function ProductTabs({ product }: { product: Product }) {
 
     setIsSubmitting(true);
     try {
-      let photoUrl = null;
+      if (editingReviewId) {
+        // UPDATE 로직
+        const { error } = await supabase
+          .from('reviews')
+          .update({ content: reviewText, rating })
+          .eq('id', editingReviewId);
+        if (error) throw error;
+        setReviews(reviews.map(r => r.id === editingReviewId ? { ...r, content: reviewText, rating } : r));
+        setEditingReviewId(null);
+        alert('후기가 수정되었습니다.');
+      } else {
+        // INSERT 로직
+        let photoUrl = null;
+        if (reviewFile) {
+          const fileExt = reviewFile.name.split('.').pop();
+          const fileName = `${Math.random()}.${fileExt}`;
+          const filePath = `reviews/${fileName}`;
+          const { error: uploadError } = await supabase.storage.from('review-images').upload(filePath, reviewFile);
+          if (uploadError) throw uploadError;
+          const { data: { publicUrl } } = supabase.storage.from('review-images').getPublicUrl(filePath);
+          photoUrl = publicUrl;
+        }
 
-      if (reviewFile) {
-        const fileExt = reviewFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `reviews/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('review-images').upload(filePath, reviewFile);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('review-images').getPublicUrl(filePath);
-        photoUrl = publicUrl;
+        const { data, error } = await supabase
+          .from('reviews')
+          .insert([{
+            product_id: product.id,
+            user_id: user.id,
+            user_name: user.user_metadata?.full_name || user.email.split('@')[0],
+            rating,
+            content: reviewText,
+            photo_url: photoUrl
+          }])
+          .select();
+
+        if (error) throw error;
+        setReviews([data[0], ...reviews]);
+        alert('후기가 등록되었습니다.');
       }
-
-      const { data, error } = await supabase
-        .from('reviews')
-        .insert([{
-          product_id: product.id,
-          user_id: user.id,
-          user_name: user.user_metadata?.full_name || user.email.split('@')[0],
-          rating,
-          content: reviewText,
-          photo_url: photoUrl
-        }])
-        .select();
-
-      if (error) throw error;
-      setReviews([data[0], ...reviews]);
+      
       setReviewText('');
       setRating(5);
       setReviewFile(null);
       setReviewPreview(null);
-      alert('정성스러운 사진 후기가 등록되었습니다!');
     } catch (err: any) {
-      alert(`등록 실패: ${err.message}`);
+      alert(`처리 실패: ${err.message}`);
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (!confirm('정말로 이 후기를 삭제하시겠습니까?')) return;
+    try {
+      const { error } = await supabase.from('reviews').delete().eq('id', id);
+      if (error) throw error;
+      setReviews(reviews.filter(r => r.id !== id));
+      alert('후기가 삭제되었습니다.');
+    } catch (err: any) {
+      alert(`삭제 실패: ${err.message}`);
+    }
+  };
+
+  const startEdit = (review: any) => {
+    setEditingReviewId(review.id);
+    setReviewText(review.content);
+    setRating(review.rating);
+    window.scrollTo({ top: document.querySelector('form')?.offsetTop ? document.querySelector('form')!.offsetTop - 100 : 0, behavior: 'smooth' });
   };
 
   return (
@@ -137,7 +172,7 @@ export default function ProductTabs({ product }: { product: Product }) {
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
             {user ? (
               <form onSubmit={handleReviewSubmit} className="bg-hanji-white p-8 border border-border-light rounded-sm relative">
-                <h4 className="font-serif text-lg mb-4">후기 남기기</h4>
+                <h4 className="font-serif text-lg mb-4">{editingReviewId ? '후기 수정하기' : '후기 남기기'}</h4>
                 <div className="flex gap-2 mb-6">
                   {[1, 2, 3, 4, 5].map(s => (
                     <button key={s} type="button" onClick={() => setRating(s)} className="p-1"><Star className={`w-5 h-5 ${rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} /></button>
@@ -145,28 +180,31 @@ export default function ProductTabs({ product }: { product: Product }) {
                 </div>
                 <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="상품에 대한 소중한 의견을 들려주세요." className="w-full h-32 bg-white border border-border-light p-4 text-sm focus:outline-none focus:border-deep-sage resize-none rounded-sm mb-4" />
                 
-                {/* Photo Upload UI */}
                 <div className="flex items-end justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="relative w-16 h-16 bg-white border border-border-light rounded-sm overflow-hidden flex-shrink-0">
-                      {reviewPreview ? (
-                        <>
-                          <Image src={reviewPreview} alt="Preview" fill className="object-cover" />
-                          <button onClick={() => {setReviewFile(null); setReviewPreview(null);}} className="absolute top-0 right-0 p-0.5 bg-black/50 text-white rounded-bl-sm"><X className="w-3 h-3" /></button>
-                        </>
-                      ) : (
-                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-hanji-white transition-colors">
-                          <ImageIcon className="w-5 h-5 text-muted/40" />
-                          <span className="text-[8px] text-muted uppercase mt-1">Photo</span>
-                          <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
-                        </label>
-                      )}
-                    </div>
-                    {reviewFile && <p className="text-[10px] text-muted italic">{reviewFile.name.slice(0, 15)}...</p>}
+                    {!editingReviewId && (
+                      <div className="relative w-16 h-16 bg-white border border-border-light rounded-sm overflow-hidden flex-shrink-0">
+                        {reviewPreview ? (
+                          <>
+                            <Image src={reviewPreview} alt="Preview" fill className="object-cover" />
+                            <button type="button" onClick={() => {setReviewFile(null); setReviewPreview(null);}} className="absolute top-0 right-0 p-0.5 bg-black/50 text-white rounded-bl-sm"><X className="w-3 h-3" /></button>
+                          </>
+                        ) : (
+                          <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-hanji-white transition-colors">
+                            <ImageIcon className="w-5 h-5 text-muted/40" />
+                            <span className="text-[8px] text-muted uppercase mt-1">Photo</span>
+                            <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                          </label>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <button type="submit" disabled={isSubmitting} className="bg-charcoal text-white px-8 py-3 text-sm rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2 font-medium">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> 후기 등록</>}
-                  </button>
+                  <div className="flex gap-2">
+                    {editingReviewId && <button type="button" onClick={() => {setEditingReviewId(null); setReviewText('');}} className="px-6 py-3 text-sm text-muted hover:text-charcoal transition-colors">취소</button>}
+                    <button type="submit" disabled={isSubmitting} className="bg-charcoal text-white px-8 py-3 text-sm rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2 font-medium">
+                      {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : editingReviewId ? '수정 완료' : '후기 등록'}
+                    </button>
+                  </div>
                 </div>
               </form>
             ) : (
@@ -194,7 +232,15 @@ export default function ProductTabs({ product }: { product: Product }) {
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] text-muted tracking-widest">{new Date(rev.created_at).toLocaleDateString()}</span>
+                      <div className="flex items-center gap-4">
+                        {user?.id === rev.user_id && (
+                          <div className="flex gap-2">
+                            <button onClick={() => startEdit(rev)} className="text-[10px] text-muted hover:text-deep-sage flex items-center gap-1"><Edit3 className="w-3 h-3" /> 수정</button>
+                            <button onClick={() => handleDeleteReview(rev.id)} className="text-[10px] text-muted hover:text-terracotta flex items-center gap-1"><Trash2 className="w-3 h-3" /> 삭제</button>
+                          </div>
+                        )}
+                        <span className="text-[10px] text-muted tracking-widest">{new Date(rev.created_at).toLocaleDateString()}</span>
+                      </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-6">
                       {rev.photo_url && (
