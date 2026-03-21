@@ -10,8 +10,7 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
-
-const ADMIN_EMAILS = ['grow930706@gmail.com'];
+import { CONFIG } from '@/lib/config';
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<'products' | 'orders' | 'qna' | 'dashboard'>('dashboard');
@@ -41,7 +40,7 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !ADMIN_EMAILS.includes(session.user.email || '')) {
+      if (!session || !CONFIG.ADMIN_EMAILS.includes(session.user.email || '')) {
         alert('관리자 권한이 없습니다.');
         router.push('/');
         return;

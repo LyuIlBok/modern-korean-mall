@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { useHasMounted } from '@/hooks/useHasMounted';
 
 export default function Header() {
   const { toggleCart, items, setUserId: setCartUserId } = useCartStore();
@@ -22,9 +23,10 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const hasMounted = useHasMounted();
   
-  const itemCount = items.reduce((total, item) => total + item.quantity, 0);
-  const wishCount = wishItems.length;
+  const itemCount = hasMounted ? items.reduce((total, item) => total + item.quantity, 0) : 0;
+  const wishCount = hasMounted ? wishItems.length : 0;
 
   useEffect(() => {
     const getSession = async () => {
@@ -76,7 +78,7 @@ export default function Header() {
   return (
     <>
       <header className="sticky top-0 z-50 bg-hanji-white/90 backdrop-blur-md border-b border-border-light">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           {/* Left: Menu & Search */}
           <div className="flex items-center gap-1 sm:gap-2">
             <button 
@@ -95,16 +97,16 @@ export default function Header() {
             </button>
             
             {/* Language Toggle (Desktop) */}
-            <div className="hidden md:flex items-center ml-4 bg-hanji-white border border-border-light rounded-full p-0.5 shadow-sm">
+            <div className="hidden lg:flex items-center ml-4 bg-white border border-border-light rounded-full p-0.5 shadow-sm">
               <button 
                 onClick={() => setLanguage('ko')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
+                className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
               >
                 KO
               </button>
               <button 
                 onClick={() => setLanguage('en')}
-                className={`px-3 py-1 text-[10px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
+                className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}
               >
                 EN
               </button>
@@ -126,7 +128,7 @@ export default function Header() {
 
           <nav className="hidden md:flex gap-8">
             {navLinks.map(link => (
-              <Link key={link.key} href={link.href} className="text-sm text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-widest">
+              <Link key={link.key} href={link.href} className="text-xs text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-medium">
                 {link.name}
               </Link>
             ))}
@@ -148,13 +150,13 @@ export default function Header() {
                 </Link>
                 <button 
                   onClick={handleLogout}
-                  className="text-xs text-muted hover:text-terracotta transition-colors uppercase tracking-tighter"
+                  className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter"
                 >
                   {t.common.logout}
                 </button>
               </div>
             ) : (
-              <Link href="/login" className="text-xs text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest">
+              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest">
                 {t.common.login}
               </Link>
             )}

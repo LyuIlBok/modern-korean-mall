@@ -7,11 +7,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard, { ProductWithRating } from '@/components/ProductCard';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 function ShopContent() {
+  const { t, language } = useLanguageStore();
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
-  const [activeCategory, setActiveCategory] = useState<Category | '전체'>('전체');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [products, setProducts] = useState<ProductWithRating[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -40,7 +42,6 @@ function ShopContent() {
           });
           setProducts(productsWithRatings);
         } else {
-          // Supabase에 데이터가 없으면 mock 데이터 사용
           setProducts(mockProducts);
         }
       } catch (err) {
@@ -56,32 +57,38 @@ function ShopContent() {
 
   // 검색어와 카테고리에 따른 필터링
   const filteredProducts = products.filter(p => {
-    const matchesCategory = activeCategory === '전체' || p.category === activeCategory;
-    const matchesQuery = !query || 
+    const catMatch = activeCategory === 'all' || 
+                    (activeCategory === 'produce' && p.category === '농산물') ||
+                    (activeCategory === 'materials' && p.category === '농자재');
+    const queryMatch = !query || 
       p.name.toLowerCase().includes(query.toLowerCase()) || 
       p.description.toLowerCase().includes(query.toLowerCase());
-    return matchesCategory && matchesQuery;
+    return catMatch && queryMatch;
   });
 
-  const categories: (Category | '전체')[] = ['전체', '농산물', '농자재'];
+  const categories = [
+    { id: 'all', label: t.shop.all },
+    { id: 'produce', label: t.shop.category1 },
+    { id: 'materials', label: t.shop.category2 },
+  ];
 
   if (loading) {
     return (
-      <div className="flex-1 flex items-center justify-center py-32">
+      <div className="flex-1 flex items-center justify-center py-32 bg-hanji-white">
         <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-1">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full flex-1 bg-hanji-white">
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
-          <h1 className="font-serif text-4xl mb-4">만물상</h1>
+          <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.shop.title}</h1>
           {query ? (
             <div className="flex items-center gap-2 text-deep-sage">
               <Search className="w-4 h-4" />
-              <span className="text-lg">"{query}"에 대한 검색 결과</span>
+              <span className="text-lg">"{query}" {language === 'ko' ? '검색 결과' : 'Search Results'}</span>
               <button 
                 onClick={() => window.history.pushState(null, '', '/shop')}
                 className="ml-2 p-1 hover:bg-deep-sage/10 rounded-full transition-colors"
@@ -90,24 +97,23 @@ function ShopContent() {
               </button>
             </div>
           ) : (
-            <p className="text-muted">자연의 결이 꼼꼼하게 선별한 농산물과 농자재를 만나보세요.</p>
+            <p className="text-muted">{t.shop.desc}</p>
           )}
         </div>
 
-        {/* Category Tabs */}
         <div className="flex gap-2 border-b border-border-light pb-1 overflow-x-auto scrollbar-hide">
           {categories.map((cat) => (
             <button
-              key={cat}
-              onClick={() => setActiveCategory(cat)}
+              key={cat.id}
+              onClick={() => setActiveCategory(cat.id)}
               className={`px-6 py-2 text-sm tracking-widest transition-all duration-300 relative whitespace-nowrap ${
-                activeCategory === cat 
+                activeCategory === cat.id 
                   ? 'text-deep-sage font-medium' 
                   : 'text-muted hover:text-charcoal'
               }`}
             >
-              {cat}
-              {activeCategory === cat && (
+              {cat.label}
+              {activeCategory === cat.id && (
                 <motion.div 
                   layoutId="activeTab"
                   className="absolute bottom-[-1px] left-0 right-0 h-0.5 bg-deep-sage"
@@ -140,15 +146,13 @@ function ShopContent() {
 
       {filteredProducts.length === 0 && (
         <div className="py-24 text-center">
-          <p className="text-muted italic">
-            {query ? `"${query}"에 대한 검색 결과가 없습니다.` : '해당 카테고리의 상품이 곧 준비될 예정입니다.'}
-          </p>
+          <p className="text-muted italic">{t.shop.noResult}</p>
           {query && (
             <button 
               onClick={() => window.location.href = '/shop'}
               className="mt-6 text-sm text-deep-sage border-b border-deep-sage pb-1"
             >
-              전체 상품 보기
+              {t.home.viewAll}
             </button>
           )}
         </div>
@@ -159,7 +163,7 @@ function ShopContent() {
 
 export default function ShopPage() {
   return (
-    <Suspense fallback={<div className="p-24 text-center">불러오는 중...</div>}>
+    <Suspense fallback={<div className="p-24 text-center bg-hanji-white">Loading...</div>}>
       <ShopContent />
     </Suspense>
   );
