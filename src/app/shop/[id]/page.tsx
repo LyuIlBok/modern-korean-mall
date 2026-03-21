@@ -4,6 +4,7 @@ import { products } from '@/data/mockData';
 import { notFound } from 'next/navigation';
 import PurchaseButtons from './AddToCartButton';
 import ProductTabs from './ProductTabs';
+import ProductCard from '@/components/ProductCard';
 import { ArrowLeft, Truck, ShieldCheck, Heart } from 'lucide-react';
 
 export async function generateStaticParams() {
@@ -19,6 +20,11 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
   if (!product) {
     notFound();
   }
+
+  // 연관 상품 (같은 카테고리에서 현재 상품 제외하고 최대 4개)
+  const relatedProducts = products
+    .filter(p => p.category === product.category && p.id !== product.id)
+    .slice(0, 4);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
@@ -50,19 +56,19 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
             <p className="text-2xl font-serif text-charcoal">{product.price.toLocaleString()}원</p>
           </div>
           
-          {/* Trust Indicators (Shipping, Benefit) - Naver Style */}
+          {/* Trust Indicators */}
           <div className="bg-hanji-white border border-border-light p-5 rounded-sm space-y-4 mb-10 text-sm">
             <div className="flex gap-4">
               <Truck className="w-5 h-5 text-deep-sage flex-shrink-0" />
               <div>
-                <p className="font-medium text-charcoal">오늘 주문 시, 내일(3/22) 도착 보장 (배송비 무료)</p>
-                <p className="text-muted text-xs mt-1">지역에 따라 상이할 수 있습니다.</p>
+                <p className="font-medium text-charcoal">오늘 주문 시, 내일 도착 보장 (배송비 무료)</p>
+                <p className="text-muted text-xs mt-1">5만원 이상 구매 시 전 지역 무료 배송입니다.</p>
               </div>
             </div>
             <div className="flex gap-4 border-t border-border-light pt-4">
               <ShieldCheck className="w-5 h-5 text-deep-sage flex-shrink-0" />
               <div>
-                <p className="font-medium text-charcoal">네이버 포인트 최대 1,200원 적립 (회원가입 시)</p>
+                <p className="font-medium text-charcoal">회원가입 시 첫 구매 5% 할인 혜택</p>
               </div>
             </div>
           </div>
@@ -75,8 +81,33 @@ export default async function ProductDetailPage({ params }: { params: Promise<{ 
         </div>
       </div>
 
-      {/* Tabs / Extra Info - Dynamic Component */}
+      {/* Tabs / Extra Info */}
       <ProductTabs product={product} />
+
+      {/* Related Products Section */}
+      <div className="mt-32 pt-24 border-t border-border-light">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4">
+          <div>
+            <h2 className="font-serif text-3xl md:text-4xl mb-3 text-charcoal">함께하면 좋은 산물</h2>
+            <p className="text-muted text-sm">자연의 결이 추천하는 어우러짐이 좋은 상품들입니다.</p>
+          </div>
+          <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 text-xs uppercase tracking-widest">
+            View All
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+          {relatedProducts.length > 0 ? (
+            relatedProducts.map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))
+          ) : (
+            products.slice(0, 4).filter(p => p.id !== product.id).map(p => (
+              <ProductCard key={p.id} product={p} />
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
