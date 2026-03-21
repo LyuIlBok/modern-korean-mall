@@ -1,16 +1,25 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { products, Category } from '@/data/mockData';
 import ProductCard from '@/components/ProductCard';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Search, X } from 'lucide-react';
 
-export default function ShopPage() {
+function ShopContent() {
+  const searchParams = useSearchParams();
+  const query = searchParams.get('q');
   const [activeCategory, setActiveCategory] = useState<Category | '전체'>('전체');
 
-  const filteredProducts = activeCategory === '전체' 
-    ? products 
-    : products.filter(p => p.category === activeCategory);
+  // 검색어와 카테고리에 따른 필터링
+  const filteredProducts = products.filter(p => {
+    const matchesCategory = activeCategory === '전체' || p.category === activeCategory;
+    const matchesQuery = !query || 
+      p.name.toLowerCase().includes(query.toLowerCase()) || 
+      p.description.toLowerCase().includes(query.toLowerCase());
+    return matchesCategory && matchesQuery;
+  });
 
   const categories: (Category | '전체')[] = ['전체', '농산물', '농자재'];
 
@@ -19,16 +28,29 @@ export default function ShopPage() {
       <div className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-8">
         <div>
           <h1 className="font-serif text-4xl mb-4">만물상</h1>
-          <p className="text-muted">자연의 결이 꼼꼼하게 선별한 농산물과 농자재를 만나보세요.</p>
+          {query ? (
+            <div className="flex items-center gap-2 text-deep-sage">
+              <Search className="w-4 h-4" />
+              <span className="text-lg">"{query}"에 대한 검색 결과</span>
+              <button 
+                onClick={() => window.history.pushState(null, '', '/shop')}
+                className="ml-2 p-1 hover:bg-deep-sage/10 rounded-full transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <p className="text-muted">자연의 결이 꼼꼼하게 선별한 농산물과 농자재를 만나보세요.</p>
+          )}
         </div>
 
         {/* Category Tabs */}
-        <div className="flex gap-2 border-b border-border-light pb-1">
+        <div className="flex gap-2 border-b border-border-light pb-1 overflow-x-auto scrollbar-hide">
           {categories.map((cat) => (
             <button
               key={cat}
               onClick={() => setActiveCategory(cat)}
-              className={`px-6 py-2 text-sm tracking-widest transition-all duration-300 relative ${
+              className={`px-6 py-2 text-sm tracking-widest transition-all duration-300 relative whitespace-nowrap ${
                 activeCategory === cat 
                   ? 'text-deep-sage font-medium' 
                   : 'text-muted hover:text-charcoal'
@@ -68,9 +90,27 @@ export default function ShopPage() {
 
       {filteredProducts.length === 0 && (
         <div className="py-24 text-center">
-          <p className="text-muted italic">해당 카테고리의 상품이 곧 준비될 예정입니다.</p>
+          <p className="text-muted italic">
+            {query ? `"${query}"에 대한 검색 결과가 없습니다.` : '해당 카테고리의 상품이 곧 준비될 예정입니다.'}
+          </p>
+          {query && (
+            <button 
+              onClick={() => window.location.href = '/shop'}
+              className="mt-6 text-sm text-deep-sage border-b border-deep-sage pb-1"
+            >
+              전체 상품 보기
+            </button>
+          )}
         </div>
       )}
     </div>
+  );
+}
+
+export default function ShopPage() {
+  return (
+    <Suspense fallback={<div className="p-24 text-center">불러오는 중...</div>}>
+      <ShopContent />
+    </Suspense>
   );
 }

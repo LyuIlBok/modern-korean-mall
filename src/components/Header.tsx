@@ -1,17 +1,23 @@
 'use client';
 
 import Link from 'next/link';
-import { ShoppingBag, LogOut, User, Menu, X, Leaf } from 'lucide-react';
+import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const { toggleCart, items } = useCartStore();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
 
   useEffect(() => {
@@ -30,9 +36,25 @@ export default function Header() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 검색창 열릴 때 포커스
+  useEffect(() => {
+    if (isSearchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [isSearchOpen]);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     alert('로그아웃 되었습니다.');
+  };
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/shop?q=${encodeURIComponent(searchQuery.trim())}`);
+      setIsSearchOpen(false);
+      setSearchQuery('');
+    }
   };
 
   const navLinks = [
@@ -45,14 +67,23 @@ export default function Header() {
     <>
       <header className="sticky top-0 z-50 bg-hanji-white/90 backdrop-blur-md border-b border-border-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Mobile Menu Button */}
-          <button 
-            onClick={() => setIsMenuOpen(true)}
-            className="md:hidden p-2 -ml-2 text-charcoal/80 hover:text-deep-sage transition-colors"
-            aria-label="메뉴 열기"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          {/* Left: Menu & Search */}
+          <div className="flex items-center gap-1 sm:gap-2">
+            <button 
+              onClick={() => setIsMenuOpen(true)}
+              className="md:hidden p-2 -ml-2 text-charcoal/80 hover:text-deep-sage transition-colors"
+              aria-label="메뉴 열기"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <button 
+              onClick={() => setIsSearchOpen(!isSearchOpen)}
+              className="p-2 text-charcoal/80 hover:text-deep-sage transition-colors"
+              aria-label="검색 열기"
+            >
+              <Search className="w-5 h-5" />
+            </button>
+          </div>
 
           <Link href="/" className="font-serif text-2xl tracking-tighter text-deep-sage absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
             자연의 결
@@ -66,9 +97,10 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-2 sm:gap-4">
+          {/* Right: User & Cart */}
+          <div className="flex items-center gap-1 sm:gap-4">
             {user ? (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-1 sm:gap-3">
                 <Link href="/admin" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="관리자 센터">
                   <User className="w-5 h-5" />
                 </Link>
@@ -99,6 +131,38 @@ export default function Header() {
             </button>
           </div>
         </div>
+
+        {/* Search Overlay */}
+        <AnimatePresence>
+          {isSearchOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute inset-x-0 top-full bg-white border-b border-border-light shadow-xl p-4 md:p-8"
+            >
+              <form onSubmit={handleSearch} className="max-w-3xl mx-auto relative">
+                <input 
+                  ref={searchInputRef}
+                  type="text" 
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="무엇을 찾으시나요? (예: 오대쌀, 호미)"
+                  className="w-full bg-hanji-white border-none focus:ring-0 text-xl md:text-3xl font-serif py-4 pr-12 placeholder:text-muted/30"
+                />
+                <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-deep-sage">
+                  <Search className="w-8 h-8" />
+                </button>
+                <div className="mt-4 flex gap-4 text-xs text-muted">
+                  <span>추천:</span>
+                  <button type="button" onClick={() => {setSearchQuery('쌀'); }} className="hover:text-charcoal">#쌀</button>
+                  <button type="button" onClick={() => {setSearchQuery('호미'); }} className="hover:text-charcoal">#호미</button>
+                  <button type="button" onClick={() => {setSearchQuery('친환경'); }} className="hover:text-charcoal">#친환경</button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </header>
 
       {/* Mobile Navigation Drawer */}
