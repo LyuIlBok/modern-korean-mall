@@ -5,7 +5,7 @@ import { useCartStore } from '@/store/useCartStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, X, ShieldCheck, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, X, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -21,6 +21,7 @@ export default function CheckoutPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [stockError, setStockError] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -72,11 +73,45 @@ export default function CheckoutPage() {
     }
   };
 
+  // 결제 전 최종 재고 확인
+  const checkStockBeforePayment = async () => {
+    setStockError(null);
+    setIsLoading(true);
+    
+    try {
+      for (const item of items) {
+        const { data, error } = await supabase
+          .from('products')
+          .select('name, stock')
+          .eq('id', item.id)
+          .single();
+        
+        if (error || !data) throw new Error('상품 정보를 불러올 수 없습니다.');
+        
+        if (data.stock < item.quantity) {
+          setStockError(` 죄송합니다. [${data.name}] 상품의 재고가 부족합니다. (현재 재고: ${data.stock}개)`);
+          setIsLoading(false);
+          return false;
+        }
+      }
+      setShowPaymentModal(true);
+      return true;
+    } catch (err: any) {
+      alert(err.message);
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const confirmActualPayment = async () => {
     setIsLoading(true);
     setShowPaymentModal(false);
+    
     try {
       const { data: { session } } = await supabase.auth.getSession();
+      
+      // 1. 주문 메인 데이터 생성
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -93,22 +128,30 @@ export default function CheckoutPage() {
 
       const orderId = orderData[0].id;
       const orderItems = items.map(item => ({
-        order_id: orderId, product_id: item.id, quantity: item.quantity, price: item.price
+        order_id: orderId, 
+        product_id: item.id, 
+        quantity: item.quantity, 
+        price: item.price
       }));
 
+      // 2. 주문 상세 내역(Items) 생성
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
+      if (itemsError) {
+        // 상세 내역 저장 실패 시 주문 번호와 함께 수동 복구 여지 남김 (실제 환경에선 트랜잭션 처리 권장)
+        console.error('Order items insert failed:', itemsError);
+        throw new Error('주문 상세 정보 저장에 실패했습니다. 고객센터로 문의해주세요.');
+      }
 
-      // 재고 차감 로직 추가
+      // 3. 실시간 재고 차감 및 품절 업데이트
       for (const item of items) {
-        const { data: prodData } = await supabase
+        const { data: currentProd } = await supabase
           .from('products')
           .select('stock')
           .eq('id', item.id)
           .single();
         
-        if (prodData) {
-          const newStock = Math.max(0, prodData.stock - item.quantity);
+        if (currentProd) {
+          const newStock = Math.max(0, currentProd.stock - item.quantity);
           await supabase
             .from('products')
             .update({ 
@@ -122,7 +165,7 @@ export default function CheckoutPage() {
       setIsCompleted(true);
       setTimeout(() => { clearCart(); router.push('/mypage'); }, 4000);
     } catch (error: any) {
-      alert('주문 처리 중 오류가 발생했습니다.');
+      alert(error.message || '주문 처리 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -146,7 +189,7 @@ export default function CheckoutPage() {
         <h1 className="font-serif text-4xl mb-4 text-charcoal">주문이 완료되었습니다</h1>
         <p className="text-muted mb-10 leading-relaxed text-sm">
           정성을 다해 준비하여 보내드리겠습니다.<br/>
-          주문 확인서가 <span className="font-bold text-deep-sage">{formData.name}</span> 님의 이메일로 발송되었습니다.
+          주문 확인 내역은 <span className="font-bold text-deep-sage">마이페이지</span>에서 확인하실 수 있습니다.
         </p>
         <Link href="/mypage" className="bg-charcoal text-white px-10 py-3 rounded-sm hover:bg-deep-sage transition-all text-sm tracking-widest">주문 내역 확인</Link>
       </div>
@@ -161,7 +204,14 @@ export default function CheckoutPage() {
         </Link>
         <h1 className="font-serif text-4xl mb-12 text-charcoal">주문서 작성</h1>
 
-        <form onSubmit={(e) => { e.preventDefault(); setShowPaymentModal(true); }} className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+        {stockError && (
+          <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-8 bg-terracotta/10 border border-terracotta/20 p-4 rounded-sm flex items-center gap-3 text-terracotta text-sm">
+            <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+            <p>{stockError}</p>
+          </motion.div>
+        )}
+
+        <form onSubmit={(e) => { e.preventDefault(); checkStockBeforePayment(); }} className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           <div className="space-y-12">
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
               <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">배송 정보</h2></div>

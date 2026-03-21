@@ -96,13 +96,14 @@ export default function Header() {
           </div>
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-            <div className="relative h-10 w-48">
+            <div className="relative h-12 w-56 sm:w-64">
               <Image 
                 src="/logo_horizontal.jfif" 
                 alt="자연의 결" 
                 fill 
                 className="object-contain"
                 priority
+                quality={100}
               />
             </div>
           </Link>
