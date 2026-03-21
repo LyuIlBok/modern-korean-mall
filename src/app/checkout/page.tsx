@@ -17,15 +17,57 @@ export default function CheckoutPage() {
   const shipping = subtotal > 50000 || items.length === 0 ? 0 : 3000;
   const total = subtotal + shipping;
 
-  const handlePayment = (e: React.FormEvent) => {
+  const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    // 실제 결제 로직이 들어갈 자리 (PG사 연동 등)
-    setIsCompleted(true);
-    setTimeout(() => {
-      clearCart();
-      router.push('/');
-    }, 3000);
+    setLoading(true);
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      // 1. 주문 메인 정보 저장 (orders)
+      const { data: orderData, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          user_id: session?.user?.id || null,
+          customer_name: (e.target as any)[0].value,
+          customer_phone: (e.target as any)[1].value,
+          address: (e.target as any)[2].value,
+          total_price: total,
+          status: '결제완료'
+        }])
+        .select();
+
+      if (orderError) throw orderError;
+
+      // 2. 주문 상세 상품 저장 (order_items)
+      const orderId = orderData[0].id;
+      const orderItems = items.map(item => ({
+        order_id: orderId,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
+
+      const { error: itemsError } = await supabase
+        .from('order_items')
+        .insert(orderItems);
+
+      if (itemsError) throw itemsError;
+
+      setIsCompleted(true);
+      setTimeout(() => {
+        clearCart();
+        router.push('/mypage');
+      }, 3000);
+    } catch (error: any) {
+      console.error('주문 저장 오류:', error.message);
+      alert('주문 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해 주세요.');
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const [loading, setLoading] = useState(false);
 
   if (items.length === 0 && !isCompleted) {
     return (
