@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Product } from '@/data/mockData';
-import { Star, MessageSquare, Info, Loader2, User, Send } from 'lucide-react';
+import { Star, MessageSquare, Info, Loader2, User, Send, ImageIcon, X } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -13,8 +13,12 @@ export default function ProductTabs({ product }: { product: Product }) {
   const [isReviewLoading, setIsReviewLoading] = useState(true);
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(5);
-  const [isSubmitting, setIsSending] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [user, setUser] = useState<any>(null);
+
+  // Photo Review State
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
+  const [reviewPreview, setReviewPreview] = useState<string | null>(null);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -33,7 +37,6 @@ export default function ProductTabs({ product }: { product: Product }) {
         .select('*')
         .eq('product_id', product.id)
         .order('created_at', { ascending: false });
-      
       if (!error) setReviews(data || []);
     } catch (err) {
       console.error('리뷰 로드 실패:', err);
@@ -42,13 +45,35 @@ export default function ProductTabs({ product }: { product: Product }) {
     }
   };
 
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReviewFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => setReviewPreview(reader.result as string);
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return alert('로그인 후 이용 가능합니다.');
     if (!reviewText.trim()) return;
 
-    setIsSending(true);
+    setIsSubmitting(true);
     try {
+      let photoUrl = null;
+
+      if (reviewFile) {
+        const fileExt = reviewFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `reviews/${fileName}`;
+        const { error: uploadError } = await supabase.storage.from('review-images').upload(filePath, reviewFile);
+        if (uploadError) throw uploadError;
+        const { data: { publicUrl } } = supabase.storage.from('review-images').getPublicUrl(filePath);
+        photoUrl = publicUrl;
+      }
+
       const { data, error } = await supabase
         .from('reviews')
         .insert([{
@@ -56,26 +81,27 @@ export default function ProductTabs({ product }: { product: Product }) {
           user_id: user.id,
           user_name: user.user_metadata?.full_name || user.email.split('@')[0],
           rating,
-          content: reviewText
+          content: reviewText,
+          photo_url: photoUrl
         }])
         .select();
 
       if (error) throw error;
-      
       setReviews([data[0], ...reviews]);
       setReviewText('');
       setRating(5);
-      alert('소중한 후기가 등록되었습니다.');
+      setReviewFile(null);
+      setReviewPreview(null);
+      alert('정성스러운 사진 후기가 등록되었습니다!');
     } catch (err: any) {
       alert(`등록 실패: ${err.message}`);
     } finally {
-      setIsSending(false);
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="border-t border-border-light pt-16">
-      {/* Tab Navigation */}
       <div className="flex justify-center gap-12 border-b border-border-light mb-16">
         {[
           { id: 'detail', label: '상세 정보', icon: Info },
@@ -85,9 +111,7 @@ export default function ProductTabs({ product }: { product: Product }) {
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
-            className={`pb-4 px-2 font-serif text-xl flex items-center gap-2 transition-all relative ${
-              activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'
-            }`}
+            className={`pb-4 px-2 font-serif text-xl flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}
           >
             <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? 'text-terracotta' : 'text-muted'}`} />
             {tab.label}
@@ -99,40 +123,49 @@ export default function ProductTabs({ product }: { product: Product }) {
       <div className="max-w-4xl mx-auto min-h-[400px] mb-32">
         {activeTab === 'detail' && (
           <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="relative aspect-[16/9] w-full rounded-sm overflow-hidden shadow-sm">
+            <div className="relative aspect-[16/9] w-full rounded-sm overflow-hidden shadow-sm border border-border-light/50">
               <Image src={product.imageUrl} alt="상세이미지" fill className="object-cover" />
             </div>
             <div className="text-center space-y-6">
               <h3 className="font-serif text-3xl text-deep-sage tracking-tight">자연의 결이 약속하는 품질</h3>
-              <p className="text-lg text-charcoal/70 leading-relaxed font-light max-w-2xl mx-auto italic">
-                "가장 정직한 땅에서 기른 것들만을 고집합니다."
-              </p>
+              <p className="text-lg text-charcoal/70 leading-relaxed font-light max-w-2xl mx-auto italic">"가장 정직한 땅에서 기른 것들만을 고집합니다."</p>
             </div>
           </div>
         )}
 
         {activeTab === 'review' && (
           <div className="space-y-12 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            {/* Review Form */}
             {user ? (
-              <form onSubmit={handleReviewSubmit} className="bg-hanji-white p-8 border border-border-light rounded-sm">
+              <form onSubmit={handleReviewSubmit} className="bg-hanji-white p-8 border border-border-light rounded-sm relative">
                 <h4 className="font-serif text-lg mb-4">후기 남기기</h4>
-                <div className="flex gap-2 mb-4">
+                <div className="flex gap-2 mb-6">
                   {[1, 2, 3, 4, 5].map(s => (
-                    <button key={s} type="button" onClick={() => setRating(s)} className="p-1">
-                      <Star className={`w-5 h-5 ${rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} />
-                    </button>
+                    <button key={s} type="button" onClick={() => setRating(s)} className="p-1"><Star className={`w-5 h-5 ${rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} /></button>
                   ))}
                 </div>
-                <textarea 
-                  value={reviewText}
-                  onChange={(e) => setReviewText(e.target.value)}
-                  placeholder="상품에 대한 소중한 의견을 들려주세요."
-                  className="w-full h-32 bg-white border border-border-light p-4 text-sm focus:outline-none focus:border-deep-sage resize-none rounded-sm"
-                />
-                <div className="flex justify-end mt-4">
-                  <button type="submit" disabled={isSubmitting} className="bg-charcoal text-white px-8 py-2.5 text-sm rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> 등록하기</>}
+                <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="상품에 대한 소중한 의견을 들려주세요." className="w-full h-32 bg-white border border-border-light p-4 text-sm focus:outline-none focus:border-deep-sage resize-none rounded-sm mb-4" />
+                
+                {/* Photo Upload UI */}
+                <div className="flex items-end justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="relative w-16 h-16 bg-white border border-border-light rounded-sm overflow-hidden flex-shrink-0">
+                      {reviewPreview ? (
+                        <>
+                          <Image src={reviewPreview} alt="Preview" fill className="object-cover" />
+                          <button onClick={() => {setReviewFile(null); setReviewPreview(null);}} className="absolute top-0 right-0 p-0.5 bg-black/50 text-white rounded-bl-sm"><X className="w-3 h-3" /></button>
+                        </>
+                      ) : (
+                        <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-hanji-white transition-colors">
+                          <ImageIcon className="w-5 h-5 text-muted/40" />
+                          <span className="text-[8px] text-muted uppercase mt-1">Photo</span>
+                          <input type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+                        </label>
+                      )}
+                    </div>
+                    {reviewFile && <p className="text-[10px] text-muted italic">{reviewFile.name.slice(0, 15)}...</p>}
+                  </div>
+                  <button type="submit" disabled={isSubmitting} className="bg-charcoal text-white px-8 py-3 text-sm rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2 font-medium">
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Send className="w-4 h-4" /> 후기 등록</>}
                   </button>
                 </div>
               </form>
@@ -143,28 +176,34 @@ export default function ProductTabs({ product }: { product: Product }) {
               </div>
             )}
 
-            {/* Review List */}
-            <div className="space-y-8 mt-12">
+            <div className="space-y-10 mt-12">
               {isReviewLoading ? (
                 <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin text-deep-sage mx-auto" /></div>
               ) : reviews.length === 0 ? (
                 <div className="text-center py-20 text-muted italic">아직 작성된 후기가 없습니다. 첫 번째 후기의 주인공이 되어보세요.</div>
               ) : (
                 reviews.map((rev) => (
-                  <div key={rev.id} className="border-b border-border-light pb-8 last:border-none">
+                  <div key={rev.id} className="border-b border-border-light pb-10 last:border-none">
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 bg-border-light/30 rounded-full flex items-center justify-center"><User className="w-4 h-4 text-muted" /></div>
+                        <div className="w-9 h-9 bg-border-light/30 rounded-full flex items-center justify-center border border-border-light"><User className="w-5 h-5 text-muted" /></div>
                         <div>
-                          <p className="text-sm font-medium">{rev.user_name}</p>
+                          <p className="text-sm font-medium text-charcoal">{rev.user_name}</p>
                           <div className="flex gap-0.5">
                             {[1, 2, 3, 4, 5].map(s => <Star key={s} className={`w-3 h-3 ${rev.rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} />)}
                           </div>
                         </div>
                       </div>
-                      <span className="text-[10px] text-muted">{new Date(rev.created_at).toLocaleDateString()}</span>
+                      <span className="text-[10px] text-muted tracking-widest">{new Date(rev.created_at).toLocaleDateString()}</span>
                     </div>
-                    <p className="text-charcoal/80 text-sm leading-relaxed">{rev.content}</p>
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {rev.photo_url && (
+                        <div className="relative w-32 h-32 md:w-40 md:h-40 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0">
+                          <Image src={rev.photo_url} alt="Review Photo" fill className="object-cover hover:scale-110 transition-transform duration-500" />
+                        </div>
+                      )}
+                      <p className="text-charcoal/80 text-[15px] leading-relaxed flex-1 whitespace-pre-line">{rev.content}</p>
+                    </div>
                   </div>
                 ))
               )}

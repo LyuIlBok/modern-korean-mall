@@ -231,11 +231,34 @@ export default function AdminDashboard() {
               </div>
             </motion.div>
           )}
+{activeTab === 'orders' && (
+  <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
+    <div className="flex justify-between items-center mb-12">
+      <h1 className="font-serif text-4xl">주문 관리</h1>
+      <button 
+        onClick={() => {
+          const headers = ['Order ID', 'Customer Name', 'Phone', 'Total Price', 'Status', 'Date'];
+          const rows = orders.map(o => [
+            o.id, o.customer_name, o.customer_phone, o.total_price, o.status, new Date(o.created_at).toLocaleDateString()
+          ]);
+          const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+          const blob = new Blob(["\uFEFF" + csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.setAttribute("href", url);
+          link.setAttribute("download", `orders_${new Date().toLocaleDateString()}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+        }}
+        className="bg-deep-sage text-white px-6 py-2 rounded-sm text-xs uppercase tracking-widest hover:bg-charcoal transition-all shadow-sm flex items-center gap-2"
+      >
+        Excel Download
+      </button>
+    </div>
+    <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
+...
 
-          {activeTab === 'orders' && (
-            <motion.div key="orders" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }}>
-              <h1 className="font-serif text-4xl mb-12">주문 관리</h1>
-              <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
                     <tr><th className="px-8 py-5">Order ID</th><th className="px-8 py-5">Customer</th><th className="px-8 py-5 text-right">Total</th><th className="px-8 py-5 text-center">Status</th><th className="px-8 py-5 text-center">Actions</th></tr>

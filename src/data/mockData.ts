@@ -7,6 +7,7 @@ export interface Product {
   price: number;
   category: Category;
   imageUrl: string;
+  is_sold_out?: boolean;
 }
 
 export const products: Product[] = [
@@ -17,6 +18,7 @@ export const products: Product[] = [
     price: 45000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   },
   {
     id: 'p2',
@@ -25,6 +27,7 @@ export const products: Product[] = [
     price: 32000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1587049352847-8d4e8941b958?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: true, // 예시로 품절 처리
   },
   {
     id: 'p3',
@@ -33,6 +36,7 @@ export const products: Product[] = [
     price: 18000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   },
   {
     id: 'p4',
@@ -41,6 +45,7 @@ export const products: Product[] = [
     price: 25000,
     category: '농산물',
     imageUrl: 'https://images.unsplash.com/photo-1556801712-76c8eb07bbc9?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   },
   {
     id: 'm1',
@@ -49,6 +54,7 @@ export const products: Product[] = [
     price: 12000,
     category: '농자재',
     imageUrl: 'https://images.unsplash.com/photo-1416879598555-337b58c56cc5?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   },
   {
     id: 'm2',
@@ -57,6 +63,7 @@ export const products: Product[] = [
     price: 15000,
     category: '농자재',
     imageUrl: 'https://images.unsplash.com/photo-1585428453472-8eebe0661ff7?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   },
   {
     id: 'm3',
@@ -65,5 +72,6 @@ export const products: Product[] = [
     price: 28000,
     category: '농자재',
     imageUrl: 'https://images.unsplash.com/photo-1592085198818-727878844883?auto=format&fit=crop&q=80&w=800',
+    is_sold_out: false,
   }
 ];
