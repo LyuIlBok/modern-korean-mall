@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as mockProducts, Product } from '@/data/mockData';
+import { products as mockProducts } from '@/data/mockData';
 import { notFound, useParams } from 'next/navigation';
 import PurchaseButtons from './AddToCartButton';
 import ProductTabs from './ProductTabs';
@@ -17,18 +17,20 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 
 export default function ProductDetailPage() {
   const params = useParams();
-  const { t } = useLanguageStore();
-  const { items: wishItems, toggleWish, isInWishlist } = useWishlistStore();
+  const { t, language } = useLanguageStore();
+  const { toggleWish, isInWishlist } = useWishlistStore();
   const hasMounted = useHasMounted();
   
   const [product, setProduct] = useState<ProductWithRating | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
 
-  const isWished = hasMounted && product ? isInWishlist(product.id) : false;
+  // 찜하기 상태 - 마운트 후에만 정확한 값 계산
+  const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
 
   useEffect(() => {
     const fetchProduct = async () => {
+      if (!params?.id) return;
       setLoading(true);
       try {
         const { data, error } = await supabase
@@ -51,21 +53,19 @@ export default function ProductDetailPage() {
           });
         } else {
           const mockProduct = mockProducts.find(p => p.id === params.id);
-          setProduct(mockProduct || null);
+          setProduct(mockProduct ? { ...mockProduct, avgRating: 0, reviewCount: 0 } : null);
         }
       } catch (err) {
         console.error('Error fetching product:', err);
         const mockProduct = mockProducts.find(p => p.id === params.id);
-        setProduct(mockProduct || null);
+        setProduct(mockProduct ? { ...mockProduct, avgRating: 0, reviewCount: 0 } : null);
       } finally {
         setLoading(false);
       }
     };
 
-    if (params.id) {
-      fetchProduct();
-    }
-  }, [params.id]);
+    fetchProduct();
+  }, [params?.id]);
 
   if (loading) {
     return (
@@ -80,15 +80,18 @@ export default function ProductDetailPage() {
   }
 
   const allImages = product.images || [product.imageUrl];
-
   const relatedProducts = mockProducts
     .filter(p => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
+  // 다국어 텍스트 안전 참조
+  const deliveryText = language === 'ko' ? '오늘 주문 시, 내일 도착 보장' : 'Guaranteed delivery tomorrow';
+  const originText = language === 'ko' ? '정직한 원산지 보장제' : 'Honest Origin Guarantee';
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-1 bg-hanji-white">
       <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-8 group text-xs uppercase tracking-widest">
-        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> {t.common.shop}
+        <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> {t?.common?.shop || 'Shop'}
       </Link>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-24 mb-24">
@@ -111,7 +114,7 @@ export default function ProductDetailPage() {
                   className="object-cover"
                   priority
                   onError={(e: any) => {
-                    e.target.src = 'https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=800';
+                    e.currentTarget.src = 'https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=800';
                   }}
                 />
               </motion.div>
@@ -120,7 +123,7 @@ export default function ProductDetailPage() {
             {product.is_sold_out && (
               <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/10 backdrop-blur-[1px]">
                 <div className="bg-white/90 border border-charcoal/10 px-6 py-3 shadow-sm">
-                  <span className="font-serif text-sm tracking-[0.4em] text-charcoal uppercase">{t.common.soldOut}</span>
+                  <span className="font-serif text-sm tracking-[0.4em] text-charcoal uppercase">{t?.common?.soldOut || 'Sold Out'}</span>
                 </div>
               </div>
             )}
@@ -186,14 +189,14 @@ export default function ProductDetailPage() {
             <div className="flex gap-4">
               <Truck className="w-5 h-5 text-deep-sage flex-shrink-0" />
               <div>
-                <p className="font-medium text-charcoal">{t.home.heroDesc.includes('꾸밈없는') ? '오늘 주문 시, 내일 도착 보장' : 'Guaranteed delivery tomorrow'}</p>
-                <p className="text-muted text-[11px] mt-1">{t.common.footerDesc}</p>
+                <p className="font-medium text-charcoal">{deliveryText}</p>
+                <p className="text-muted text-[11px] mt-1">{t?.common?.footerDesc || ''}</p>
               </div>
             </div>
             <div className="flex gap-4 border-t border-border-light pt-5">
               <ShieldCheck className="w-5 h-5 text-deep-sage flex-shrink-0" />
               <div>
-                <p className="font-medium text-charcoal">{t.common.businessInfo.includes('사업자') ? '정직한 원산지 보장제' : 'Honest Origin Guarantee'}</p>
+                <p className="font-medium text-charcoal">{originText}</p>
                 <p className="text-muted text-[11px] mt-1">Direct from the farm.</p>
               </div>
             </div>
@@ -205,18 +208,18 @@ export default function ProductDetailPage() {
 
           {/* Mandatory Product Info Table */}
           <div className="mb-16">
-            <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted font-bold mb-4">{t.shop.specs}</h3>
+            <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted font-bold mb-4">{t?.shop?.specs || 'Specifications'}</h3>
             <div className="border-t border-border-light text-[12px]">
               <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
-                <span className="text-muted">{t.shop.origin}</span>
+                <span className="text-muted">{t?.shop?.origin || 'Origin'}</span>
                 <span className="col-span-2 text-charcoal font-medium">경기도 연천군 군남면 청정로2194번길 366-59 (Korea)</span>
               </div>
               <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
-                <span className="text-muted">{t.shop.storage}</span>
+                <span className="text-muted">{t?.shop?.storage || 'Storage'}</span>
                 <span className="col-span-2 text-charcoal font-medium">직사광선을 피하고 서늘한 곳에 보관 (Keep in a cool place)</span>
               </div>
               <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
-                <span className="text-muted">{t.shop.producer}</span>
+                <span className="text-muted">{t?.shop?.producer || 'Producer'}</span>
                 <span className="col-span-2 text-charcoal font-medium">농업회사법인 복이네농장(주)</span>
               </div>
             </div>
@@ -231,10 +234,10 @@ export default function ProductDetailPage() {
       <div className="mt-32 pt-24 border-t border-border-light">
         <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
           <div>
-            <h2 className="font-serif text-3xl md:text-4xl mb-4 text-charcoal">{t.shop.relatedTitle}</h2>
+            <h2 className="font-serif text-3xl md:text-4xl mb-4 text-charcoal">{t?.shop?.relatedTitle || 'Related'}</h2>
             <p className="text-muted text-sm tracking-wide">Nature Texture's recommendation.</p>
           </div>
-          <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 text-xs uppercase tracking-widest">{t.home.viewAll}</Link>
+          <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 text-xs uppercase tracking-widest">{t?.home?.viewAll || 'View All'}</Link>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
           {relatedProducts.length > 0 ? relatedProducts.map(p => <ProductCard key={p.id} product={p} />) : mockProducts.slice(0, 4).filter(p => p.id !== product.id).map(p => <ProductCard key={p.id} product={p} />)}
