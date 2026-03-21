@@ -4,151 +4,144 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Leaf, ArrowRight, Chrome, MessageCircle, Mail, Lock, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import Image from 'next/image';
 
 export default function LoginPage() {
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
 
-  // Form States
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
-
-  // 이미 로그인된 경우 메인으로 이동
+  // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session) router.push('/');
+      if (data.session) router.push('/mypage');
     };
     checkUser();
   }, [router]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleAuth = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setIsLoading(true);
+    setErrorMsg('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({ 
-        email: formData.email, 
-        password: formData.password 
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
+
       if (error) throw error;
-      router.push('/');
-    } catch (error: any) {
-      alert(error.message);
+      router.push('/mypage');
+    } catch (err: any) {
+      setErrorMsg(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : err.message);
     } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: { 
-          redirectTo: window.location.origin,
-          queryParams: {
-            prompt: 'select_account', // 항상 계정 선택창을 띄워 기존/새 계정 구분 가능하게 함
-          }
-        },
-      });
-      if (error) throw error;
-    } catch (error: any) {
-      alert(error.message);
+      setIsLoading(false);
     }
   };
 
   return (
-    <div className="flex-1 flex items-center justify-center px-4 py-24 bg-hanji-white min-h-screen">
+    <div className="flex-1 flex items-center justify-center bg-hanji-white py-20 px-4">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="max-w-md w-full bg-white p-8 sm:p-12 border border-border-light shadow-sm rounded-sm"
+        className="w-full max-w-md"
       >
         <div className="text-center mb-12">
-          <Link href="/" className="inline-block mb-6 text-deep-sage">
-            <Leaf className="w-10 h-10 mx-auto" />
+          <Link href="/" className="inline-block mb-8">
+            <div className="relative h-12 w-48">
+              <Image 
+                src="/logo_horizontal.jfif" 
+                alt="자연의 결" 
+                fill 
+                className="object-contain"
+              />
+            </div>
           </Link>
-          <h1 className="font-serif text-3xl mb-3 text-charcoal tracking-tight">자연의 결</h1>
-          <p className="text-muted text-[10px] tracking-[0.2em] uppercase">
-            Member Login
-          </p>
+          <h1 className="font-serif text-2xl text-charcoal mb-2">다시 만나서 반가워요</h1>
+          <p className="text-sm text-muted">당신의 일상에 자연의 결을 더해보세요.</p>
         </div>
 
-        {/* Email Form */}
-        <form onSubmit={handleAuth} className="space-y-5">
-          <div className="space-y-1">
-            <label className="text-[10px] text-muted ml-1 uppercase tracking-tighter">Email Address</label>
-            <div className="relative">
-              <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-              <input name="email" type="email" required value={formData.email} onChange={handleChange} placeholder="이메일을 입력해주세요" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm" />
+        <div className="bg-white p-10 border border-border-light rounded-sm shadow-sm">
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div className="space-y-2">
+              <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                <input 
+                  required
+                  type="email" 
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="example@email.com"
+                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label className="text-[10px] text-muted ml-1 uppercase tracking-tighter">Password</label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-              <input name="password" type={showPassword ? "text" : "password"} required value={formData.password} onChange={handleChange} placeholder="비밀번호를 입력해주세요" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm" />
-              <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-4 top-1/2 -translate-y-1/2 text-muted/40 hover:text-charcoal transition-colors">
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
+            <div className="space-y-2">
+              <div className="flex justify-between items-center px-1">
+                <label className="text-[10px] uppercase tracking-widest text-muted">Password</label>
+                <Link href="#" className="text-[10px] text-deep-sage hover:underline">비밀번호 찾기</Link>
+              </div>
+              <div className="relative">
+                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                <input 
+                  required
+                  type="password" 
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                />
+              </div>
             </div>
-          </div>
 
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-500 flex items-center justify-center gap-2 group font-medium mt-8 shadow-lg shadow-charcoal/5 active:scale-[0.98]"
-          >
-            {loading ? '처리 중...' : '로그인하기'}
-            {!loading && <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />}
-          </button>
-        </form>
+            {errorMsg && (
+              <motion.p 
+                initial={{ opacity: 0, x: -5 }} 
+                animate={{ opacity: 1, x: 0 }} 
+                className="text-xs text-terracotta bg-terracotta/5 p-3 rounded-sm border border-terracotta/10"
+              >
+                {errorMsg}
+              </motion.p>
+            )}
 
-        {/* Social Login Section */}
-        <div className="mt-10">
-          <div className="relative flex items-center justify-center mb-8">
-            <div className="border-t border-border-light w-full absolute" />
-            <span className="bg-white px-4 text-[9px] text-muted uppercase tracking-[0.3em] relative z-10">Simple Login</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
             <button 
-              onClick={() => handleSocialLogin('kakao')}
-              className="flex items-center justify-center gap-2 py-3 bg-[#FEE500] text-charcoal rounded-sm text-xs hover:opacity-90 transition-opacity font-medium"
+              type="submit" 
+              disabled={isLoading}
+              className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
             >
-              <MessageCircle className="w-4 h-4 fill-charcoal" /> 카카오톡
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>로그인하기 <ArrowRight className="w-4 h-4" /></>}
             </button>
-            <button 
-              onClick={() => handleSocialLogin('google')}
-              className="flex items-center justify-center gap-2 py-3 bg-white border border-border-light text-charcoal rounded-sm text-xs hover:bg-hanji-white transition-colors font-medium"
-            >
-              <Chrome className="w-4 h-4 text-[#4285F4]" /> 구글
+          </form>
+
+          <div className="relative my-10 text-center">
+            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-light"></div></div>
+            <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <button className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-medium">
+              <Chrome className="w-4 h-4 text-[#4285F4]" /> Google
+            </button>
+            <button className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-xs font-medium">
+              <MessageCircle className="w-4 h-4 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
             </button>
           </div>
-          <p className="text-[9px] text-center text-muted mt-4 font-light italic">
-            * 클릭 시 다른 계정으로 로그인하거나 기존 계정을 선택할 수 있습니다.
-          </p>
         </div>
 
-        {/* Toggle Mode */}
-        <div className="mt-12 text-center pt-6 border-t border-border-light/50">
-          <Link 
-            href="/signup"
-            className="text-xs text-muted hover:text-charcoal transition-colors border-b border-transparent hover:border-charcoal pb-1 font-medium"
-          >
-            처음이신가요? 30초만에 회원가입하기
-          </Link>
+        <div className="text-center mt-10">
+          <p className="text-sm text-muted">
+            아직 회원이 아니신가요?{' '}
+            <Link href="/signup" className="text-deep-sage border-b border-deep-sage pb-0.5 font-medium hover:text-charcoal hover:border-charcoal transition-colors">
+              30초만에 회원가입하기
+            </Link>
+          </p>
         </div>
       </motion.div>
     </div>
