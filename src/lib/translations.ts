@@ -19,6 +19,12 @@ export const translations = {
       addToCart: '장바구니 담기',
       buyNow: '바로 구매하기',
       soldOut: '품절',
+      escrowTitle: '구매안전(에스크로) 서비스 가입',
+      escrowDesc: '고객님의 안전거래를 위해 현금 결제 시 저희 사이트에서 가입한 구매안전 서비스를 이용하실 수 있습니다.',
+      escrowConfirm: '서비스 가입사실 확인',
+      refundPolicy: '교환 및 반품 정책',
+      privacyPolicy: '개인정보처리방침',
+      termsOfService: '이용약관',
     },
     home: {
       heroTitle: '자연이 빚은\n본연의 가치',
@@ -38,6 +44,10 @@ export const translations = {
       category2: '농자재',
       noResult: '검색 결과가 없습니다.',
       relatedTitle: '이런 산물은 어떠세요?',
+      specs: '상품 고시 정보',
+      origin: '원산지',
+      producer: '생산자',
+      storage: '보관방법',
     },
     cart: {
       title: '장바구니',
@@ -57,6 +67,7 @@ export const translations = {
       payBtn: '원 결제하기',
       successTitle: '주문이 완료되었습니다',
       successDesc: '정성을 다해 준비하여 보내드리겠습니다.',
+      agreement: '구매하실 상품의 결제정보를 확인하였으며, 정책 및 결제 진행에 동의합니다.',
     },
     mypage: {
       title: '나의 서랍',
@@ -87,6 +98,12 @@ export const translations = {
       addToCart: 'Add to Cart',
       buyNow: 'Buy Now',
       soldOut: 'Sold Out',
+      escrowTitle: 'Escrow Service Joined',
+      escrowDesc: 'For your safe transaction, you can use our escrow service for cash payments.',
+      escrowConfirm: 'Verify Service',
+      refundPolicy: 'Refund Policy',
+      privacyPolicy: 'Privacy Policy',
+      termsOfService: 'Terms of Service',
     },
     home: {
       heroTitle: 'The Inherent Value\nof Nature',
@@ -106,6 +123,10 @@ export const translations = {
       category2: 'Materials',
       noResult: 'No results found.',
       relatedTitle: 'Recommended for You',
+      specs: 'Product Specifications',
+      origin: 'Origin',
+      producer: 'Producer',
+      storage: 'Storage',
     },
     cart: {
       title: 'Cart',
@@ -125,6 +146,7 @@ export const translations = {
       payBtn: 'Pay',
       successTitle: 'Order Completed',
       successDesc: 'We will prepare and send your order with care.',
+      agreement: 'I have confirmed the payment information and agree to the policies and payment process.',
     },
     mypage: {
       title: 'My Drawer',
