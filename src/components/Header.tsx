@@ -2,8 +2,9 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search } from 'lucide-react';
+import { ShoppingBag, LogOut, User, Menu, X, Leaf, Search, Heart } from 'lucide-react';
 import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
 import { useEffect, useState, useRef } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User as SupabaseUser } from '@supabase/supabase-js';
@@ -11,7 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 
 export default function Header() {
-  const { toggleCart, items, setUserId } = useCartStore();
+  const { toggleCart, items, setUserId: setCartUserId } = useCartStore();
+  const { setUserId: setWishUserId, items: wishItems } = useWishlistStore();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -20,24 +22,29 @@ export default function Header() {
   const router = useRouter();
   
   const itemCount = items.reduce((total, item) => total + item.quantity, 0);
+  const wishCount = wishItems.length;
 
   useEffect(() => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setUserId(currentUser?.id ?? null); // 장바구니 유저 ID 설정
+      const uid = currentUser?.id ?? null;
+      setCartUserId(uid);
+      setWishUserId(uid);
     };
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       const currentUser = session?.user ?? null;
       setUser(currentUser);
-      setUserId(currentUser?.id ?? null); // 장바구니 유저 ID 설정
+      const uid = currentUser?.id ?? null;
+      setCartUserId(uid);
+      setWishUserId(uid);
     });
 
     return () => subscription.unsubscribe();
-  }, [setUserId]);
+  }, [setCartUserId, setWishUserId]);
 
   // 검색창 열릴 때 포커스
   useEffect(() => {
@@ -110,6 +117,13 @@ export default function Header() {
 
           {/* Right: User & Cart */}
           <div className="flex items-center gap-1 sm:gap-4">
+            <Link href="/mypage?tab=wishlist" className="relative p-2 text-charcoal/60 hover:text-terracotta transition-colors" title="관심 상품">
+              <Heart className="w-5 h-5" />
+              {wishCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full shadow-sm" />
+              )}
+            </Link>
+
             {user ? (
               <div className="flex items-center gap-1 sm:gap-3">
                 <Link href="/mypage" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="마이페이지">

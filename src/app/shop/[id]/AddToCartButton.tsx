@@ -4,16 +4,20 @@ import { useState } from 'react';
 import { Product } from '@/data/mockData';
 import { useCartStore } from '@/store/useCartStore';
 import { useToastStore } from '@/store/useToastStore';
-import { ShoppingCart, CreditCard, AlertCircle, Bell, X, Check } from 'lucide-react';
+import { useWishlistStore } from '@/store/useWishlistStore';
+import { ShoppingCart, CreditCard, AlertCircle, Bell, X, Check, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function PurchaseButtons({ product }: { product: Product }) {
   const { addItem } = useCartStore();
   const { addToast } = useToastStore();
+  const { toggleWish, isInWishlist } = useWishlistStore();
   const [isAdding, setIsAdding] = useState(false);
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [restockPhone, setRestockPhone] = useState('');
   const [isRestockSubmitting, setIsRestockSubmitting] = useState(false);
+
+  const isWished = isInWishlist(product.id);
 
   const handleAddToCart = () => {
     if (product.is_sold_out) return;
@@ -26,6 +30,14 @@ export default function PurchaseButtons({ product }: { product: Product }) {
   const handleBuyNow = () => {
     if (product.is_sold_out) return;
     alert('결제 페이지로 이동합니다. (가상 결제창)');
+  };
+
+  const handleToggleWish = () => {
+    toggleWish(product);
+    addToast(
+      isWished ? '관심 상품에서 제거되었습니다.' : '관심 상품에 추가되었습니다.',
+      isWished ? 'info' : 'success'
+    );
   };
 
   const handleRestockSubmit = async (e: React.FormEvent) => {
@@ -45,7 +57,19 @@ export default function PurchaseButtons({ product }: { product: Product }) {
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 p-4 bg-white/80 backdrop-blur-md border-t border-border-light md:static md:p-0 md:bg-transparent md:border-none md:z-auto">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row gap-3 w-full">
+        <div className="max-w-7xl mx-auto flex gap-3 w-full">
+          <button 
+            onClick={handleToggleWish}
+            className={`px-4 flex items-center justify-center border transition-all duration-300 rounded-sm ${
+              isWished 
+                ? 'bg-terracotta border-terracotta text-white shadow-md' 
+                : 'border-border-light text-muted hover:text-terracotta hover:border-terracotta bg-white'
+            }`}
+            title="관심 상품"
+          >
+            <Heart className={`w-5 h-5 ${isWished ? 'fill-current' : ''}`} />
+          </button>
+
           {product.is_sold_out ? (
             <div className="flex flex-col sm:flex-row gap-3 w-full">
               <div className="flex-[2] py-4 bg-hanji-white border border-border-light text-muted flex items-center justify-center gap-2 rounded-sm font-medium italic text-sm">

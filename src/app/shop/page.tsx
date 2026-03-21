@@ -2,17 +2,17 @@
 
 import { useState, Suspense, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { products as mockProducts, Category, Product } from '@/data/mockData';
-import ProductCard from '@/components/ProductCard';
+import { products as mockProducts, Category } from '@/data/mockData';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Search, X, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import ProductCard, { ProductWithRating } from '@/components/ProductCard';
 
 function ShopContent() {
   const searchParams = useSearchParams();
   const query = searchParams.get('q');
   const [activeCategory, setActiveCategory] = useState<Category | '전체'>('전체');
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithRating[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -21,13 +21,24 @@ function ShopContent() {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('*, reviews(rating)')
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
         if (data && data.length > 0) {
-          setProducts(data);
+          const productsWithRatings = data.map((p: any) => {
+            const ratings = p.reviews?.map((r: any) => r.rating) || [];
+            const avgRating = ratings.length > 0 
+              ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+              : 0;
+            return {
+              ...p,
+              avgRating,
+              reviewCount: ratings.length
+            };
+          });
+          setProducts(productsWithRatings);
         } else {
           // Supabase에 데이터가 없으면 mock 데이터 사용
           setProducts(mockProducts);

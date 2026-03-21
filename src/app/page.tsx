@@ -2,14 +2,14 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as mockProducts, Product } from '@/data/mockData';
-import ProductCard from '@/components/ProductCard';
+import { products as mockProducts } from '@/data/mockData';
 import { ArrowRight, Loader2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabaseClient';
+import ProductCard, { ProductWithRating } from '@/components/ProductCard';
 
 export default function Home() {
-  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [featuredProducts, setFeaturedProducts] = useState<ProductWithRating[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -18,14 +18,25 @@ export default function Home() {
       try {
         const { data, error } = await supabase
           .from('products')
-          .select('*')
+          .select('*, reviews(rating)')
           .limit(3)
           .order('created_at', { ascending: false });
         
         if (error) throw error;
         
         if (data && data.length > 0) {
-          setFeaturedProducts(data);
+          const productsWithRatings = data.map((p: any) => {
+            const ratings = p.reviews?.map((r: any) => r.rating) || [];
+            const avgRating = ratings.length > 0 
+              ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+              : 0;
+            return {
+              ...p,
+              avgRating,
+              reviewCount: ratings.length
+            };
+          });
+          setFeaturedProducts(productsWithRatings);
         } else {
           setFeaturedProducts(mockProducts.slice(0, 3));
         }

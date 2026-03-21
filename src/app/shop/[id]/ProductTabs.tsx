@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { Product } from '@/data/mockData';
-import { Star, MessageSquare, Info, Loader2, User, Send, ImageIcon, X, Edit3, Trash2 } from 'lucide-react';
+import { Star, MessageSquare, Info, Loader2, User, Send, ImageIcon, X, Edit3, Trash2, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -88,6 +88,26 @@ export default function ProductTabs({ product }: { product: Product }) {
           photoUrl = publicUrl;
         }
 
+        const { data: orderData } = await supabase
+          .from('orders')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('status', '배송완료');
+        
+        let isVerified = false;
+        if (orderData && orderData.length > 0) {
+          const orderIds = orderData.map(o => o.id);
+          const { data: itemData } = await supabase
+            .from('order_items')
+            .select('id')
+            .in('order_id', orderIds)
+            .eq('product_id', product.id);
+          
+          if (itemData && itemData.length > 0) {
+            isVerified = true;
+          }
+        }
+
         const { data, error } = await supabase
           .from('reviews')
           .insert([{
@@ -96,7 +116,8 @@ export default function ProductTabs({ product }: { product: Product }) {
             user_name: user.user_metadata?.full_name || user.email.split('@')[0],
             rating,
             content: reviewText,
-            photo_url: photoUrl
+            photo_url: photoUrl,
+            is_verified: isVerified
           }])
           .select();
 
@@ -226,7 +247,14 @@ export default function ProductTabs({ product }: { product: Product }) {
                       <div className="flex items-center gap-3">
                         <div className="w-9 h-9 bg-border-light/30 rounded-full flex items-center justify-center border border-border-light"><User className="w-5 h-5 text-muted" /></div>
                         <div>
-                          <p className="text-sm font-medium text-charcoal">{rev.user_name}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="text-sm font-medium text-charcoal">{rev.user_name}</p>
+                            {rev.is_verified && (
+                              <span className="flex items-center gap-0.5 px-1.5 py-0.5 bg-deep-sage/10 text-deep-sage text-[9px] font-bold rounded-full uppercase tracking-tighter">
+                                <Check className="w-2.5 h-2.5" /> 구매 인증
+                              </span>
+                            )}
+                          </div>
                           <div className="flex gap-0.5">
                             {[1, 2, 3, 4, 5].map(s => <Star key={s} className={`w-3 h-3 ${rev.rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} />)}
                           </div>
