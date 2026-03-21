@@ -22,18 +22,23 @@ export default function Header() {
             브랜드 철학
           </Link>
         </nav>
-        <button 
-          onClick={toggleCart}
-          className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors"
-          aria-label="장바구니 열기"
-        >
-          <ShoppingBag className="w-6 h-6" />
-          {itemCount > 0 && (
-            <span className="absolute top-0 right-0 bg-terracotta text-white text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full">
-              {itemCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-4">
+          <Link href="/login" className="text-sm text-charcoal/60 hover:text-charcoal transition-colors">
+            로그인
+          </Link>
+          <button 
+            onClick={toggleCart}
+            className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors"
+            aria-label="장바구니 열기"
+          >
+            <ShoppingBag className="w-6 h-6" />
+            {itemCount > 0 && (
+              <span className="absolute top-0 right-0 bg-terracotta text-white text-xs font-medium w-5 h-5 flex items-center justify-center rounded-full shadow-sm">
+                {itemCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </header>
   );
