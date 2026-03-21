@@ -36,6 +36,8 @@ export default function AdminDashboard() {
   const [newPrice, setNewPrice] = useState('');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -52,19 +54,52 @@ export default function AdminDashboard() {
     checkAdmin();
   }, [router]);
 
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
-    const newProd = {
-      name: newName,
-      price: Number(newPrice),
-      category: newCategory,
-      description: newDesc,
-      imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800'
-    };
-
     try {
+      let imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800';
+
+      // 이미지 파일이 있으면 Supabase Storage에 업로드
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `products/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+        
+        imageUrl = publicUrl;
+      }
+
+      const newProd = {
+        name: newName,
+        price: Number(newPrice),
+        category: newCategory,
+        description: newDesc,
+        imageUrl: imageUrl
+      };
+
       const { data, error } = await supabase
         .from('products')
         .insert([newProd])
@@ -72,13 +107,16 @@ export default function AdminDashboard() {
 
       if (error) throw error;
 
-      alert('데이터베이스에 상품이 성공적으로 등록되었습니다!');
+      alert('상품이 성공적으로 등록되었습니다!');
       if (data) setProducts([data[0] as any, ...products]);
+      
+      // 폼 초기화
       setIsAdding(false);
-      setNewName(''); setNewPrice(''); setNewDesc('');
+      setNewName(''); setNewPrice(''); setNewDesc(''); 
+      setImageFile(null); setImagePreview(null);
     } catch (error: any) {
-      console.error('DB 저장 오류:', error.message);
-      alert('데이터베이스 오류: 테이블 설정을 확인해 주세요.');
+      console.error('등록 오류:', error.message);
+      alert(`오류가 발생했습니다: ${error.message}\n(Storage에 'product-images' 버킷이 있는지 확인해주세요)`);
     } finally {
       setIsLoading(false);
     }
@@ -185,8 +223,27 @@ export default function AdminDashboard() {
                           <option value="농자재">농자재</option>
                         </select>
                       </div>
-                    </div>
-                    <div className="space-y-6">
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase tracking-widest text-muted">상품 이미지</label>
+                        <div className="flex items-center gap-4 mt-2">
+                          <div className="relative w-20 h-24 bg-white border border-border-light rounded-sm overflow-hidden flex-shrink-0">
+                            {imagePreview ? (
+                              <Image src={imagePreview} alt="Preview" fill className="object-cover" />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center text-muted/30">
+                                <ImageIcon className="w-6 h-6" />
+                              </div>
+                            )}
+                          </div>
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            onChange={handleImageChange}
+                            className="text-xs text-muted file:mr-4 file:py-2 file:px-4 file:rounded-sm file:border-0 file:text-xs file:font-semibold file:bg-deep-sage/10 file:text-deep-sage hover:file:bg-deep-sage/20 cursor-pointer" 
+                          />
+                        </div>
+                      </div>
+                      </div>                    <div className="space-y-6">
                       <div className="space-y-1">
                         <label className="text-[10px] uppercase tracking-widest text-muted">상품 상세 설명</label>
                         <textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품의 특징과 장점을 적어주세요." className="w-full h-32 border border-border-light bg-white/50 p-4 rounded-sm focus:outline-none focus:border-deep-sage transition-colors resize-none text-sm leading-relaxed" />
