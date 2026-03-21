@@ -93,8 +93,13 @@ export default function ProductTabs({ product }: { product: Product }) {
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="bg-hanji-white border border-border-light p-12 text-center space-y-4">
               <MessageSquare className="w-8 h-8 text-deep-sage mx-auto opacity-50" />
-              <p className="text-charcoal/60">등록된 문의사항이 없습니다.</p>
-              <button className="bg-charcoal text-white px-6 py-2.5 text-sm rounded-sm hover:bg-deep-sage transition-colors">문의하기</button>
+              <p className="text-charcoal/60">상품에 대해 궁금한 점이 있으신가요?</p>
+              <Link 
+                href="/support"
+                className="inline-block bg-charcoal text-white px-8 py-3 text-sm rounded-sm hover:bg-deep-sage transition-colors"
+              >
+                1:1 대화로 문의하기
+              </Link>
             </div>
           </div>
         )}
