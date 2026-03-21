@@ -3,19 +3,24 @@
 import { useState } from 'react';
 import { Product } from '@/data/mockData';
 import { useCartStore } from '@/store/useCartStore';
+import { useToastStore } from '@/store/useToastStore';
 import { ShoppingCart, CreditCard } from 'lucide-react';
 
 export default function PurchaseButtons({ product }: { product: Product }) {
-  const { addItem, toggleCart } = useCartStore();
+  const { addItem } = useCartStore();
+  const { addToast } = useToastStore();
   const [isAdding, setIsAdding] = useState(false);
 
   const handleAddToCart = () => {
     setIsAdding(true);
     addItem(product);
+    
+    // 알림 띄우기
+    addToast(`${product.name}이(가) 장바구니에 담겼습니다.`, 'success');
+    
     setTimeout(() => {
       setIsAdding(false);
-      toggleCart();
-    }, 200);
+    }, 500);
   };
 
   const handleBuyNow = () => {

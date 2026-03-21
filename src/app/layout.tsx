@@ -4,6 +4,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartSidebar from "@/components/CartSidebar";
+import ToastContainer from "@/components/Toast";
 
 const notoSerifKr = Noto_Serif_KR({
   weight: ["200", "400", "700"],
@@ -36,6 +37,7 @@ export default function RootLayout({
         </main>
         <Footer />
         <CartSidebar />
+        <ToastContainer />
       </body>
     </html>
   );
