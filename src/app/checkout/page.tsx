@@ -100,21 +100,27 @@ export default function CheckoutPage() {
       const { IMP } = window;
       const merchant_uid = `ORD-${new Date().getTime()}`;
 
-      // 포트원 V2 권장 파라미터 구조
+      // 포트원 V2 표준 파라미터 구조
       const payParams: any = {
+        storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || 'store-d4dc5027-72ba-4c9e-bf91-d6f87ec3f32b',
         channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || 'channel-key-70674bb7-a72c-417d-b34f-f33a42a6de51',
-        pay_method: formData.paymentMethod.toUpperCase(),
-        merchant_uid: merchant_uid,
-        name: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
-        amount: total,
-        buyer_email: formData.email || 'customer@nature-texture.com',
-        buyer_name: formData.name,
-        buyer_tel: formData.phone,
-        buyer_addr: `${formData.address} ${formData.detailAddress}`,
-        buyer_postcode: formData.postcode,
-        m_redirect_url: `${window.location.origin}/mypage`,
-        // 테스트 결제 시 추가 옵션 (필요시)
-        confirm_url: `${window.location.origin}/api/webhook/portone`, 
+        payMethod: formData.paymentMethod.toUpperCase(), // V2 표준: payMethod
+        orderId: merchant_uid, // V2 표준: orderId
+        productName: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
+        totalAmount: total,
+        currency: 'CURRENCY_KRW',
+        buyer: {
+          email: formData.email || 'customer@nature-texture.com',
+          name: formData.name,
+          tel: formData.phone,
+          address: `${formData.address} ${formData.detailAddress}`,
+          postcode: formData.postcode,
+        },
+        windowType: {
+          pc: 'IFRAME',
+          mobile: 'PAYMENT',
+        },
+        redirectUrl: `${window.location.origin}/mypage`,
       };
 
       IMP.request_pay(payParams, async (rsp: any) => {
