@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map, ShoppingCart, ChevronRight } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -252,7 +252,15 @@ function MyPageContent() {
           {activeTab === 'orders' && (
             <section className="space-y-8">
               {orders.length === 0 ? (
-                <div className="py-32 text-center text-muted font-light italic bg-white border border-border-light rounded-sm">{t.mypage.noOrder}</div>
+                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
+                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted">
+                    <Package className="w-8 h-8" />
+                  </div>
+                  <p className="text-muted font-light italic">{t.mypage.noOrder}</p>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    <ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
               ) : (
                 orders.map((order) => (
                   <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
@@ -291,11 +299,21 @@ function MyPageContent() {
           )}
 
           {activeTab === 'wishlist' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div>
               {wishItems.length === 0 ? (
-                <div className="col-span-full py-32 text-center bg-white border border-border-light rounded-sm text-muted font-light italic">{t.mypage.noWish}</div>
+                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
+                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted">
+                    <Heart className="w-8 h-8" />
+                  </div>
+                  <p className="text-muted font-light italic">{t.mypage.noWish}</p>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2">
+                    <ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" />
+                  </Link>
+                </div>
               ) : (
-                wishItems.map(p => <ProductCard key={p.id} product={p} />)
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+                  {wishItems.map(p => <ProductCard key={p.id} product={p} />)}
+                </div>
               )}
             </div>
           )}
@@ -411,12 +429,21 @@ function MyPageContent() {
                   </div>
                 </div>
                 <div className="space-y-3">
-                  <div className="flex gap-2">
-                    <input readOnly required value={newAddr.postcode} placeholder={t.checkout.postcode} className="w-24 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
-                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2"><Search className="w-3 h-3" /> {t.checkout.searchAddress}</button>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.postcode}</label>
+                    <div className="flex gap-2">
+                      <input readOnly required value={newAddr.postcode} placeholder={t.checkout.postcode} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                      <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0"><Search className="w-3 h-3" /> {t.checkout.searchAddress}</button>
+                    </div>
                   </div>
-                  <input readOnly required value={newAddr.address} placeholder={t.checkout.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
-                  <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.address}</label>
+                    <input readOnly required value={newAddr.address} placeholder={t.checkout.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.detailAddress}</label>
+                    <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  </div>
                 </div>
                 <div className="pt-2">
                   <label className="flex items-center gap-2 cursor-pointer">
@@ -424,7 +451,7 @@ function MyPageContent() {
                     <span className="text-[11px] text-muted">{t.mypage.setDefault}</span>
                   </label>
                 </div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all font-serif text-lg flex items-center justify-center gap-3">
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all font-serif text-lg flex items-center justify-center gap-3 shadow-md">
                   {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
                   {t.mypage.saveBtn}
                 </button>

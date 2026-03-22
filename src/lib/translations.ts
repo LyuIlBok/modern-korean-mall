@@ -96,6 +96,7 @@ export const translations = {
       defaultAddress: '기본 배송지',
       setDefault: '기본 배송지로 설정',
       addressName: '배송지 별칭 (예: 집, 회사)',
+      goToShop: '산물 구경하러 가기',
     }
   },
   en: {
@@ -195,6 +196,7 @@ export const translations = {
       defaultAddress: 'Default',
       setDefault: 'Set as Default',
       addressName: 'Alias (e.g. Home, Work)',
+      goToShop: 'Go to Shop',
     }
   }
 };
