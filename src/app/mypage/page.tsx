@@ -324,9 +324,9 @@ function MyPageContent() {
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
                 <button 
                   onClick={() => setIsAddrModalOpen(true)}
-                  className="text-[10px] bg-deep-sage text-white px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-charcoal transition-all uppercase tracking-widest"
+                  className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"
                 >
-                  <Plus className="w-3 h-3" /> {t.mypage.addAddress}
+                  <Plus className="w-4 h-4" /> {language === 'ko' ? '새 배송지 추가' : 'Add New Address'}
                 </button>
               </div>
               {addresses.length === 0 ? (
@@ -368,7 +368,7 @@ function MyPageContent() {
               <form onSubmit={handleUpdateProfile} className="space-y-8">
                 <div className="space-y-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name}</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name} <span className="text-[9px] lowercase opacity-60">(성함 또는 닉네임)</span></label>
                     <input 
                       required 
                       value={profile.full_name} 
@@ -377,7 +377,7 @@ function MyPageContent() {
                     />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone}</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone} <span className="text-[9px] lowercase opacity-60">(- 제외하고 입력)</span></label>
                     <input 
                       required 
                       value={profile.phone} 
@@ -386,7 +386,7 @@ function MyPageContent() {
                     />
                   </div>
                   <div className="space-y-2 opacity-50">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email (Read-only)</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email <span className="text-[9px] lowercase opacity-60">(수정 불가)</span></label>
                     <input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" />
                   </div>
                 </div>
@@ -408,52 +408,58 @@ function MyPageContent() {
         {isAddrModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center mb-8 pb-4 border-b border-border-light">
-                <h3 className="font-serif text-2xl">{t.mypage.addAddress}</h3>
-                <button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:text-terracotta transition-colors"><X className="w-6 h-6" /></button>
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
+                <h3 className="font-serif text-3xl">{language === 'ko' ? '새 배송지 등록' : 'New Address'}</h3>
+                <button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:text-terracotta transition-colors"><X className="w-7 h-7" /></button>
               </div>
-              <form onSubmit={handleSaveAddress} className="space-y-6">
+              <form onSubmit={handleSaveAddress} className="space-y-8">
                 <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.mypage.addressName}</label>
-                  <input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">배송지 별칭 <span className="text-[9px] lowercase opacity-60">(예: 우리 집, 회사, 친구 집)</span></label>
+                  <input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="어디로 보내드릴까요?" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                 </div>
-                <div className="grid grid-cols-2 gap-4">
+                
+                <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name}</label>
-                    <input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">받는 분 성함</label>
+                    <input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                   </div>
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone}</label>
-                    <input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">연락처</label>
+                    <input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                   </div>
                 </div>
-                <div className="space-y-3">
+
+                <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.postcode}</label>
-                    <div className="flex gap-2">
-                      <input readOnly required value={newAddr.postcode} placeholder={t.checkout.postcode} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
-                      <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0"><Search className="w-3 h-3" /> {t.checkout.searchAddress}</button>
+                    <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">우편번호</label>
+                    <div className="flex gap-3">
+                      <input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" />
+                      <button type="button" onClick={handleAddressSearch} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase tracking-widest"><Search className="w-3.5 h-3.5" /> 주소 찾기</button>
                     </div>
                   </div>
+                  
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.address}</label>
-                    <input readOnly required value={newAddr.address} placeholder={t.checkout.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">주소</label>
+                    <input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" />
                   </div>
+                  
                   <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.detailAddress}</label>
-                    <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">상세 주소 <span className="text-[9px] lowercase opacity-60">(동, 호수 등)</span></label>
+                    <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder="상세 정보를 입력해 주세요" className="w-full border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                   </div>
                 </div>
-                <div className="pt-2">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-4 h-4 accent-deep-sage" />
-                    <span className="text-[11px] text-muted">{t.mypage.setDefault}</span>
+
+                <div className="pt-4">
+                  <label className="flex items-center gap-3 cursor-pointer group">
+                    <input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-5 h-5 accent-deep-sage cursor-pointer" />
+                    <span className="text-xs text-muted group-hover:text-charcoal transition-colors">이 주소를 기본 배송지로 설정합니다.</span>
                   </label>
                 </div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all font-serif text-lg flex items-center justify-center gap-3 shadow-md">
-                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
-                  {t.mypage.saveBtn}
+
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-4">
+                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
+                  주소 저장하기
                 </button>
               </form>
             </motion.div>
