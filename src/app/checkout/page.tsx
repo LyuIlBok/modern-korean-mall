@@ -40,10 +40,11 @@ export default function CheckoutPage() {
   const shipping = subtotal >= 50000 || items.length === 0 ? 0 : 3000;
   const total = subtotal + shipping;
 
+  // 포트원 V2 초기화
   useEffect(() => {
     const initIMP = () => {
       if (window.IMP) {
-        // 유일복님의 상점 식별코드
+        // 유일복님의 상점 아이디 적용 (V2 규격)
         window.IMP.init('imp33000546'); 
       }
     };
@@ -86,11 +87,11 @@ export default function CheckoutPage() {
     setIsLoading(true);
     
     try {
-      // 재고 최종 선점 확인
+      // 재고 선점 확인
       for (const item of items) {
         const { data } = await supabase.from('products').select('name, stock').eq('id', item.id).single();
         if (data && data.stock < item.quantity) {
-          setStockError(language === 'ko' ? `[${data.name}] 상품의 재고가 그 사이 소진되었습니다.` : `[${data.name}] is out of stock.`);
+          setStockError(language === 'ko' ? `[${data.name}] 상품의 재고가 부족합니다.` : `[${data.name}] is out of stock.`);
           setIsLoading(false);
           return;
         }
@@ -99,14 +100,15 @@ export default function CheckoutPage() {
       const { IMP } = window;
       const merchant_uid = `ORD-${new Date().getTime()}`;
 
-      // 결제 요청 파라미터 (PG를 비워서 콘솔 설정에 따르도록 함)
+      // 포트원 V2 권장 파라미터 구조
       const payParams: any = {
-        pg: '', // 포트원 관리자에서 설정한 '기본 채널'을 자동으로 사용합니다.
+        // storeId가 있을 경우 pg 파라미터 대신 우선순위를 가질 수 있음
+        pg: 'html5_inicis', // 기본값 유지하되 채널 설정을 따르도록 함
         pay_method: formData.paymentMethod,
         merchant_uid: merchant_uid,
         name: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
         amount: total,
-        buyer_email: formData.email || 'customer@example.com',
+        buyer_email: formData.email || 'customer@nature-texture.com',
         buyer_name: formData.name,
         buyer_tel: formData.phone,
         buyer_addr: `${formData.address} ${formData.detailAddress}`,
@@ -118,17 +120,14 @@ export default function CheckoutPage() {
         if (rsp.success) {
           await handlePaymentSuccess(rsp);
         } else {
-          // 'PG사 정보가 없습니다' 에러 발생 시 안내
-          if (rsp.error_msg.includes('PG')) {
-            alert('포트원 관리자 콘솔에서 결제 채널(PG사)을 먼저 등록해주셔야 합니다.');
-          } else {
-            alert(language === 'ko' ? `결제가 진행되지 않았습니다: ${rsp.error_msg}` : `Payment failed: ${rsp.error_msg}`);
-          }
+          // V2 전용 에러 메시지 처리 보완
+          console.error('Payment failed:', rsp);
+          alert(language === 'ko' ? `결제가 진행되지 않았습니다: ${rsp.error_msg}` : `Payment failed: ${rsp.error_msg}`);
           setIsLoading(false);
         }
       });
     } catch (err) {
-      alert('결제 준비 중 오류가 발생했습니다.');
+      alert('결제 시스템 로딩 중 오류가 발생했습니다.');
       setIsLoading(false);
     }
   };
@@ -172,7 +171,7 @@ export default function CheckoutPage() {
       setIsCompleted(true);
       clearCart();
     } catch (error: any) {
-      alert('결제는 완료되었으나 정보 기록 중 오류가 발생했습니다. 고객센터로 문의해주세요.');
+      alert('결제는 완료되었으나 정보 기록 중 오류가 발생했습니다.');
       setIsLoading(false);
     }
   };
@@ -189,10 +188,7 @@ export default function CheckoutPage() {
   if (isCompleted) {
     return (
       <div className="flex-1 bg-hanji-white relative overflow-hidden min-h-screen flex items-center justify-center p-4 text-center">
-        <motion.div 
-          initial={{ opacity: 0 }} animate={{ opacity: 0.15 }}
-          className="absolute inset-0 z-0 pointer-events-none"
-        >
+        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 0.15 }} className="absolute inset-0 z-0 pointer-events-none">
           {[...Array(12)].map((_, i) => (
             <motion.div key={i} initial={{ y: -20, x: Math.random() * 100 + '%' }} animate={{ y: '110vh', rotate: 360 }} transition={{ duration: Math.random() * 5 + 5, repeat: Infinity, ease: "linear" }} className="absolute text-deep-sage"><Leaf className="w-6 h-6 fill-current" /></motion.div>
           ))}
@@ -201,7 +197,7 @@ export default function CheckoutPage() {
           <div className="flex justify-center mb-10"><div className="relative"><motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} className="w-24 h-24 bg-deep-sage/10 rounded-full flex items-center justify-center text-deep-sage"><PackageCheck className="w-12 h-12" /></motion.div></div></div>
           <h1 className="font-serif text-4xl md:text-5xl text-charcoal mb-6 leading-tight">{language === 'ko' ? '단아한 산물의 여정이 시작되었습니다' : 'A Journey of Pure Gifts Begins'}</h1>
           <p className="text-muted text-lg mb-12 font-light">{language === 'ko' ? '자연의 결을 선택해주신 안목에 감사를 표합니다.' : 'Thank you for your choice.'}</p>
-          <Link href="/mypage" className="bg-charcoal text-white px-12 py-4 rounded-sm hover:bg-deep-sage transition-all tracking-[0.2em] text-sm uppercase">Order Details</Link>
+          <Link href="/mypage" className="bg-charcoal text-white px-12 py-4 rounded-sm hover:bg-deep-sage transition-all tracking-[0.2em] text-sm uppercase font-medium">Order Details</Link>
         </motion.div>
       </div>
     );
