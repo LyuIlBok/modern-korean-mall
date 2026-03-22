@@ -6,7 +6,7 @@ import { useLanguageStore } from '@/store/useLanguageStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, X, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, CreditCard, Truck, User, Phone, MapPin, CheckCircle2, Search, ChevronRight, Wallet, X, ShieldCheck, Loader2, AlertTriangle, Sparkles, Heart, PackageCheck, Leaf } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import Script from 'next/script';
@@ -43,7 +43,7 @@ export default function CheckoutPage() {
   useEffect(() => {
     const initIMP = () => {
       if (window.IMP) {
-        window.IMP.init('imp33000546'); // 실제 상점 식별코드
+        window.IMP.init('imp33000546');
       }
     };
     
@@ -76,7 +76,6 @@ export default function CheckoutPage() {
     }
   };
 
-  // 실제 결제 프로세스 시작
   const requestActualPayment = async () => {
     if (!formData.name || !formData.phone || !formData.address) {
       alert(language === 'ko' ? '배송 정보를 정확히 입력해주세요.' : 'Please fill in delivery info.');
@@ -87,7 +86,6 @@ export default function CheckoutPage() {
     setIsLoading(true);
     
     try {
-      // 1. 재고 최종 선점 확인
       for (const item of items) {
         const { data } = await supabase.from('products').select('name, stock').eq('id', item.id).single();
         if (data && data.stock < item.quantity) {
@@ -97,12 +95,11 @@ export default function CheckoutPage() {
         }
       }
 
-      // 2. 포트원 실제 결제창 호출
       const { IMP } = window;
       const merchant_uid = `ORD-${new Date().getTime()}`;
 
       IMP.request_pay({
-        pg: 'html5_inicis', // 연동된 기본 PG사 (포트원 관리자에서 설정한 값에 따라 자동 조정)
+        pg: 'html5_inicis',
         pay_method: formData.paymentMethod,
         merchant_uid: merchant_uid,
         name: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
@@ -112,10 +109,9 @@ export default function CheckoutPage() {
         buyer_tel: formData.phone,
         buyer_addr: `${formData.address} ${formData.detailAddress}`,
         buyer_postcode: formData.postcode,
-        m_redirect_url: `${window.location.origin}/mypage`, // 모바일 대응
+        m_redirect_url: `${window.location.origin}/mypage`,
       }, async (rsp: any) => {
         if (rsp.success) {
-          // 결제 성공 시 DB 저장 진행
           await handlePaymentSuccess(rsp);
         } else {
           alert(language === 'ko' ? `결제가 취소되었습니다: ${rsp.error_msg}` : `Payment failed: ${rsp.error_msg}`);
@@ -132,7 +128,6 @@ export default function CheckoutPage() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      // 1. 주문 테이블 저장 (실제 거래번호 imp_uid 포함)
       const { data: orderData, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -141,9 +136,7 @@ export default function CheckoutPage() {
           customer_phone: formData.phone,
           address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`,
           total_price: total,
-          status: '결제완료',
-          tracking_number: null, // 초기에는 없음
-          // 거래 고유 정보를 나중을 위해 로그로 남길 수도 있습니다.
+          status: '결제완료'
         }])
         .select();
 
@@ -157,11 +150,8 @@ export default function CheckoutPage() {
         price: item.price
       }));
 
-      // 2. 주문 상품 내역 저장
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
+      await supabase.from('order_items').insert(orderItems);
 
-      // 3. 재고 자동 차감 및 품절 처리
       for (const item of items) {
         const { data: prod } = await supabase.from('products').select('stock').eq('id', item.id).single();
         if (prod) {
@@ -172,10 +162,8 @@ export default function CheckoutPage() {
 
       setIsCompleted(true);
       clearCart();
-      // 성공 페이지를 보여준 후 일정 시간 뒤 마이페이지로 이동
-      setTimeout(() => router.push('/mypage'), 3000);
     } catch (error: any) {
-      alert('결제는 완료되었으나 주문 정보 기록 중 오류가 발생했습니다. 고객센터(010-0000-0000)로 즉시 문의 부탁드립니다.');
+      alert('결제는 완료되었으나 주문 정보 기록 중 오류가 발생했습니다. 고객센터로 연락주세요.');
       setIsLoading(false);
     }
   };
@@ -189,17 +177,99 @@ export default function CheckoutPage() {
     );
   }
 
+  // --- 보상형 결제 완료 페이지 디자인 ---
   if (isCompleted) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center p-8 bg-hanji-white text-center h-screen">
-        <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="mb-8 text-deep-sage">
-          <CheckCircle2 className="w-20 h-20 mx-auto" />
+      <div className="flex-1 bg-hanji-white relative overflow-hidden min-h-screen flex items-center justify-center p-4">
+        {/* Decorative elements */}
+        <motion.div 
+          initial={{ opacity: 0 }} animate={{ opacity: 0.15 }}
+          className="absolute inset-0 z-0 pointer-events-none"
+        >
+          {[...Array(12)].map((_, i) => (
+            <motion.div 
+              key={i}
+              initial={{ y: -20, x: Math.random() * 100 + '%' }}
+              animate={{ y: '110vh', rotate: 360 }}
+              transition={{ duration: Math.random() * 5 + 5, repeat: Infinity, ease: "linear" }}
+              className="absolute text-deep-sage"
+            >
+              <Leaf className="w-6 h-6 fill-current" />
+            </motion.div>
+          ))}
         </motion.div>
-        <h1 className="font-serif text-4xl mb-4 text-charcoal">{t?.checkout?.successTitle || 'Order Success'}</h1>
-        <p className="text-muted mb-10 leading-relaxed text-sm">{t?.checkout?.successDesc || 'Thank you for your order.'}</p>
-        <div className="flex gap-4 justify-center">
-          <Link href="/mypage" className="bg-charcoal text-white px-10 py-3 rounded-sm hover:bg-deep-sage transition-all text-sm tracking-widest">{t?.common?.mypage || 'My Page'}</Link>
-        </div>
+
+        <motion.div 
+          initial={{ scale: 0.95, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          className="max-w-2xl w-full bg-white border border-border-light shadow-2xl rounded-sm p-12 text-center relative z-10"
+        >
+          <div className="flex justify-center mb-10">
+            <div className="relative">
+              <motion.div 
+                initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', damping: 12, stiffness: 200, delay: 0.2 }}
+                className="w-24 h-24 bg-deep-sage/10 rounded-full flex items-center justify-center text-deep-sage"
+              >
+                <PackageCheck className="w-12 h-12" />
+              </motion.div>
+              <motion.div 
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+                className="absolute -top-2 -right-2 w-8 h-8 bg-terracotta text-white rounded-full flex items-center justify-center shadow-lg"
+              >
+                <Sparkles className="w-4 h-4 fill-current" />
+              </motion.div>
+            </div>
+          </div>
+
+          <h1 className="font-serif text-4xl md:text-5xl text-charcoal mb-6 leading-tight">
+            {language === 'ko' ? '단아한 산물의 여정이 시작되었습니다' : 'A Journey of Pure Gifts Begins'}
+          </h1>
+          
+          <p className="text-muted text-lg mb-12 leading-relaxed font-light">
+            {language === 'ko' 
+              ? '자연의 결을 선택해주신 당신의 고귀한 안목에 감사를 표합니다.\n정직한 농부의 땀방울이 담긴 산물을 정성을 다해 준비하겠습니다.'
+              : 'We thank you for your noble choice of Nature Texture.\nWe will carefully prepare the gifts filled with the farmers sincerity.'}
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16 border-y border-border-light/50 py-10">
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border border-border-light rounded-full flex items-center justify-center text-muted italic text-xs">01</div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-deep-sage">Harvest & Selection</p>
+              <p className="text-xs text-muted">최상의 상태 선별</p>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border border-border-light rounded-full flex items-center justify-center text-muted italic text-xs">02</div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-deep-sage">Nature-Safe Packing</p>
+              <p className="text-xs text-muted">환경을 생각한 포장</p>
+            </div>
+            <div className="flex flex-col items-center gap-3">
+              <div className="w-10 h-10 border border-border-light rounded-full flex items-center justify-center text-muted italic text-xs">03</div>
+              <p className="text-[11px] uppercase tracking-widest font-bold text-deep-sage">Direct Delivery</p>
+              <p className="text-xs text-muted">산지 직송 출발</p>
+            </div>
+          </div>
+
+          <div className="flex flex-col md:flex-row gap-4 justify-center items-center">
+            <Link 
+              href="/mypage" 
+              className="w-full md:w-auto bg-charcoal text-white px-12 py-4 rounded-sm hover:bg-deep-sage transition-all duration-500 tracking-[0.2em] text-sm uppercase font-medium shadow-xl flex items-center justify-center gap-3 group"
+            >
+              Order Details <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <button 
+              onClick={() => router.push('/shop')}
+              className="w-full md:w-auto px-12 py-4 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-sm uppercase tracking-widest"
+            >
+              Continue Exploring
+            </button>
+          </div>
+
+          <div className="mt-16 flex justify-center opacity-30 grayscale hover:opacity-100 transition-all duration-1000">
+            <div className="relative w-20 h-20">
+              <Image src="/seal.png" alt="복이네농장 인감" fill className="object-contain" />
+            </div>
+          </div>
+        </motion.div>
       </div>
     );
   }
@@ -257,7 +327,7 @@ export default function CheckoutPage() {
                 ].map((method) => (
                   <label key={method.id} className="relative cursor-pointer">
                     <input type="radio" name="payment" checked={formData.paymentMethod === method.id} onChange={() => setFormData({...formData, paymentMethod: method.id})} className="peer sr-only" />
-                    <div className="p-4 border border-border-light rounded-sm text-center text-sm transition-all peer-checked:border-deep-sage peer-checked:bg-deep-sage/5 hover:border-deep-sage/30">
+                    <div className={`p-4 border border-border-light rounded-sm text-center text-sm transition-all peer-checked:border-deep-sage peer-checked:bg-deep-sage/5 hover:border-deep-sage/30`}>
                       {method.name}
                     </div>
                   </label>
