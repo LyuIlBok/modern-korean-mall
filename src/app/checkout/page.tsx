@@ -282,7 +282,7 @@ export default function CheckoutPage() {
           <div className="space-y-12">
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
               <div className="flex items-center justify-between mb-8 border-b border-border-light pb-4">
-                <div className="flex items-center gap-2"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.shippingInfo || 'Shipping'}</h2></div>
+                <div className="flex items-center gap-2"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.shippingInfo || 'Shipping Info'}</h2></div>
                 {savedAddresses.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1 max-w-[60%] scrollbar-hide">
                     {savedAddresses.map((addr) => (
@@ -309,39 +309,45 @@ export default function CheckoutPage() {
                         !selectedAddressId ? 'bg-charcoal border-charcoal text-white' : 'border-border-light text-muted'
                       }`}
                     >
-                      + {language === 'ko' ? '직접 입력' : 'New'}
+                      + {t?.checkout?.directInput || 'New'}
                     </button>
                   </div>
                 )}
               </div>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2"><label className="text-[10px] text-muted ml-1">Name</label><input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} type="text" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" /></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted ml-1">Phone</label><input required value={formData.phone} onChange={handlePhoneChange} type="tel" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted ml-1">{t?.checkout?.name || 'Name'}</label><input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} type="text" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted ml-1">{t?.checkout?.phone || 'Phone'}</label><input required value={formData.phone} onChange={handlePhoneChange} type="tel" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" /></div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex gap-2">
-                    <input readOnly required value={formData.postcode} placeholder="Postcode" className="w-32 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
-                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-xs rounded-sm">Search</button>
+                    <input readOnly required value={formData.postcode} placeholder={t?.checkout?.postcode || "Postcode"} className="w-32 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-xs rounded-sm">{t?.checkout?.searchAddress || 'Search'}</button>
                   </div>
-                  <input readOnly required value={formData.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
-                  <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} placeholder="Detail Address" className="w-full bg-white border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <input readOnly required value={formData.address} placeholder={t?.checkout?.address || "Address"} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} placeholder={t?.checkout?.detailAddress || "Detail Address"} className="w-full bg-white border border-border-light px-4 py-3 rounded-sm text-sm" />
                 </div>
                 {!selectedAddressId && (
                   <div className="pt-2 border-t border-border-light mt-4">
                     <label className="flex items-center gap-2 cursor-pointer">
                       <input type="checkbox" name="saveAddress" className="w-3 h-3 accent-deep-sage" />
-                      <span className="text-[10px] text-muted">{language === 'ko' ? '이 정보를 배송지 목록에 저장' : 'Save as new shipping address'}</span>
+                      <span className="text-[10px] text-muted">{t?.checkout?.saveNewAddr || 'Save as new shipping address'}</span>
                     </label>
                   </div>
                 )}
               </div>
             </section>
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
-              <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Wallet className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.paymentMethod || 'Payment'}</h2></div>
-              <div className="grid grid-cols-2 gap-3">
-                {[ { id: 'card', name: 'Credit Card' }, { id: 'trans', name: 'Transfer' }, { id: 'vbank', name: 'Virtual Account' }, { id: 'kakaopay', name: 'Kakaopay' } ].map((method) => (
-                  <label key={method.id} className="relative cursor-pointer"><input type="radio" name="payment" checked={formData.paymentMethod === method.id} onChange={() => setFormData({...formData, paymentMethod: method.id})} className="peer sr-only" /><div className="p-4 border border-border-light rounded-sm text-center text-sm peer-checked:border-deep-sage peer-checked:bg-deep-sage/5 hover:border-deep-sage/30">{method.name}</div></label>
+              <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Wallet className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.paymentMethod || 'Payment Method'}</h2></div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {[ 
+                  { id: 'card', name: language === 'ko' ? '카드 결제' : 'Credit Card' }, 
+                  { id: 'kakaopay', name: '카카오페이' }, 
+                  { id: 'naverpay', name: '네이버페이' }, 
+                  { id: 'tosspay', name: '토스페이' },
+                  { id: 'trans', name: language === 'ko' ? '계좌이체' : 'Transfer' }
+                ].map((method) => (
+                  <label key={method.id} className="relative cursor-pointer"><input type="radio" name="payment" checked={formData.paymentMethod === method.id} onChange={() => setFormData({...formData, paymentMethod: method.id})} className="peer sr-only" /><div className="p-4 border border-border-light rounded-sm text-center text-[11px] peer-checked:border-deep-sage peer-checked:bg-deep-sage/5 hover:border-deep-sage/30 h-full flex items-center justify-center">{method.name}</div></label>
                 ))}
               </div>
             </section>
@@ -351,7 +357,7 @@ export default function CheckoutPage() {
               <h2 className="font-serif text-2xl mb-8 border-b border-border-light pb-4">{t?.cart?.summary || 'Summary'}</h2>
               <div className="space-y-4 text-sm mb-8 pt-6">
                 <div className="flex justify-between text-muted"><span>{t?.cart?.subtotal}</span><span>₩{subtotal.toLocaleString()}</span></div>
-                <div className="flex justify-between text-muted"><span>{t?.cart?.shipping}</span><span>{shipping === 0 ? 'FREE' : `₩${shipping.toLocaleString()}`}</span></div>
+                <div className="flex justify-between text-muted"><span>{t?.cart?.shipping}</span><span>{shipping === 0 ? (t?.checkout?.free || 'FREE') : `₩${shipping.toLocaleString()}`}</span></div>
                 <div className="pt-4 border-t border-border-light flex justify-between text-xl font-serif"><span>{t?.cart?.total}</span><span className="text-deep-sage font-bold">₩{total.toLocaleString()}</span></div>
               </div>
               <div className="mb-6 p-4 bg-hanji-white border border-border-light rounded-sm"><label className="flex items-start gap-3 cursor-pointer"><input required type="checkbox" className="mt-1 w-4 h-4 accent-deep-sage" /><span className="text-[11px] text-muted">{t?.checkout?.agreement} <Link href="/support/refund" target="_blank" className="underline">{t?.common?.refundPolicy}</Link></span></label></div>
