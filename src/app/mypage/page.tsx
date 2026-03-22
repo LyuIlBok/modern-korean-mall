@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2 } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -53,6 +53,7 @@ function MyPageContent() {
       setUser(currentUser);
       setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
+      // 1. Orders
       const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (orderData) {
         setOrders(orderData);
@@ -66,12 +67,29 @@ function MyPageContent() {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
-      const { data: addrData, error: addrError } = await supabase.from('addresses').select('*').eq('user_id', currentUser.id).order('is_default', { ascending: false }).order('created_at', { ascending: false });
-      if (addrError) console.error('Address load error:', addrError);
-      setAddresses(addrData || []);
+      // 2. Addresses (정렬 쿼리를 단순화하여 안정성 확보)
+      const { data: addrData, error: addrError } = await supabase
+        .from('addresses')
+        .select('*')
+        .eq('user_id', currentUser.id);
+      
+      if (addrError) throw addrError;
+
+      if (addrData) {
+        // 자바스크립트단에서 정렬 (기본 배송지 우선 -> 최신순)
+        const sortedAddrs = [...addrData].sort((a, b) => {
+          if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
+          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+        });
+        setAddresses(sortedAddrs);
+      }
 
       await syncWithSupabase();
-    } catch (err) { console.error('Fetch error:', err); } finally { setLoading(false); }
+    } catch (err) { 
+      console.error('Fetch error:', err);
+    } finally { 
+      setLoading(false); 
+    }
   }, [router, syncWithSupabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -137,47 +155,55 @@ function MyPageContent() {
     e.preventDefault();
     if (!user) return;
     setIsSaving(true);
+    
     try {
+      // 1. 기본 배송지 설정 처리
       if (newAddr.is_default) {
         await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
       }
       
-      let error;
+      const payload = {
+        user_id: user.id,
+        address_name: newAddr.address_name,
+        receiver_name: newAddr.receiver_name,
+        receiver_phone: newAddr.receiver_phone,
+        postcode: newAddr.postcode,
+        address: newAddr.address,
+        detail_address: newAddr.detail_address,
+        is_default: newAddr.is_default
+      };
+
+      let res;
       if (editingAddrId) {
-        const { error: updateError } = await supabase.from('addresses').update(newAddr).eq('id', editingAddrId);
-        error = updateError;
+        res = await supabase.from('addresses').update(payload).eq('id', editingAddrId);
       } else {
-        const { error: insertError } = await supabase.from('addresses').insert({ user_id: user.id, ...newAddr });
-        error = insertError;
+        res = await supabase.from('addresses').insert(payload);
       }
       
-      if (error) throw error;
+      if (res.error) throw res.error;
       
-      // 저장 성공 후 즉시 목록 갱신
+      // 2. 성공 시 즉시 목록 갱신 및 모달 닫기
       await fetchData();
       setIsAddrModalOpen(false);
+      
     } catch (err: any) { 
-      alert(language === 'ko' ? `주소 저장 중 오류가 발생했습니다: ${err.message}` : `Error saving address: ${err.message}`);
-    } finally { setIsSaving(false); }
+      alert(language === 'ko' ? `저장 실패: ${err.message}` : `Save failed: ${err.message}`);
+    } finally { 
+      setIsSaving(false); 
+    }
   };
 
   const handleDeleteAddress = async (id: string) => {
     if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
-    try {
-      await supabase.from('addresses').delete().eq('id', id);
-      await fetchData();
-    } catch (err) { console.error(err); }
+    const { error } = await supabase.from('addresses').delete().eq('id', id);
+    if (!error) fetchData();
   };
 
   const handleSetDefaultAddress = async (id: string) => {
-    try {
-      await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-      await supabase.from('addresses').update({ is_default: true }).eq('id', id);
-      await fetchData();
-    } catch (err) { console.error(err); }
+    await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
+    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
+    fetchData();
   };
-
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/'); };
 
   if (loading) return <div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">{t.common.loading}</div>;
   if (!user) return null;
@@ -200,7 +226,7 @@ function MyPageContent() {
           </div>
           <div className="flex gap-3">
             {isAdmin && <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">Admin Access</Link>}
-            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
+            <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
         </div>
 
@@ -266,7 +292,10 @@ function MyPageContent() {
                 <button onClick={handleOpenAddModal} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
               </div>
               {addresses.length === 0 ? (
-                <div className="py-32 text-center bg-white border border-border-light rounded-sm text-muted font-light italic">등록된 배송지가 없습니다.</div>
+                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-4">
+                  <div className="w-12 h-12 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Info className="w-6 h-6" /></div>
+                  <p className="text-muted font-light italic">등록된 배송지가 없습니다. 새 배송지를 추가해 주세요.</p>
+                </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {addresses.map((addr) => (
@@ -276,7 +305,7 @@ function MyPageContent() {
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div>
                           <div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div>
                         </div>
-                        <div className="flex gap-1">
+                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button onClick={() => handleOpenEditModal(addr)} className="p-2 text-muted hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -345,7 +374,7 @@ function MyPageContent() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">{editingAddrId ? '배송지 수정' : '새 배송지 등록'}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
               <form onSubmit={handleSaveAddress} className="space-y-8">
-                <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭 <span className="text-[9px] lowercase opacity-60">(예: 우리 집, 회사)</span></label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
                 <div className="grid grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">받는 분 성함</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">연락처</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div></div>
                 <div className="space-y-4">
                   <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">우편번호</label><div className="flex gap-3"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" /><button type="button" onClick={handleAddressSearch} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase">주소 찾기</button></div></div>
