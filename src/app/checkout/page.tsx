@@ -25,6 +25,8 @@ export default function CheckoutPage() {
   const [isCompleted, setIsCompleted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [stockError, setStockError] = useState<string | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     name: '',
@@ -36,34 +38,41 @@ export default function CheckoutPage() {
     paymentMethod: 'card',
   });
 
-  // 회원 정보 자동 불러오기
+  // 저장된 배송지 목록 불러오기
   useEffect(() => {
-    const loadUserProfile = async () => {
+    const loadData = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setFormData(prev => ({ ...prev, email: session.user.email || '' }));
         
-        // profiles 테이블에서 배송지 정보 가져오기
-        const { data: profile } = await supabase
-          .from('profiles')
+        // addresses 테이블에서 주소 목록 가져오기
+        const { data: addresses } = await supabase
+          .from('addresses')
           .select('*')
-          .eq('id', session.user.id)
-          .single();
+          .order('is_default', { ascending: false });
           
-        if (profile) {
-          setFormData(prev => ({
-            ...prev,
-            name: profile.full_name || prev.name,
-            phone: profile.phone || prev.phone,
-            postcode: profile.postcode || prev.postcode,
-            address: profile.address || prev.address,
-            detailAddress: profile.detail_address || prev.detailAddress,
-          }));
+        if (addresses && addresses.length > 0) {
+          setSavedAddresses(addresses);
+          // 기본 배송지 자동 선택
+          const defaultAddr = addresses.find(a => a.is_default) || addresses[0];
+          applyAddress(defaultAddr);
         }
       }
     };
-    loadUserProfile();
+    loadData();
   }, []);
+
+  const applyAddress = (addr: any) => {
+    setSelectedAddressId(addr.id);
+    setFormData(prev => ({
+      ...prev,
+      name: addr.receiver_name,
+      phone: addr.receiver_phone,
+      postcode: addr.postcode,
+      address: addr.address,
+      detailAddress: addr.detail_address,
+    }));
+  };
 
   // 포트원 V2 초기화
   useEffect(() => {
@@ -200,7 +209,7 @@ export default function CheckoutPage() {
         }
       }
 
-      // 배송 정보 프로필 업데이트 (다음 결제 시 자동 입력을 위해)
+      // 배송 정보 프로필 업데이트
       if (session?.user) {
         await supabase.from('profiles').upsert({
           id: session.user.id,
@@ -211,6 +220,20 @@ export default function CheckoutPage() {
           detail_address: formData.detailAddress,
           updated_at: new Date().toISOString(),
         });
+
+        // '이 정보를 배송지 목록에 저장' 체크박스가 선택된 경우 addresses 테이블에 추가
+        const saveCheckbox = document.querySelector('input[name="saveAddress"]') as HTMLInputElement;
+        if (saveCheckbox?.checked && !selectedAddressId) {
+          await supabase.from('addresses').insert({
+            user_id: session.user.id,
+            address_name: `배송지 ${savedAddresses.length + 1}`,
+            receiver_name: formData.name,
+            receiver_phone: formData.phone,
+            postcode: formData.postcode,
+            address: formData.address,
+            detail_address: formData.detailAddress,
+          });
+        }
       }
 
       setIsCompleted(true);
@@ -258,7 +281,39 @@ export default function CheckoutPage() {
         <form onSubmit={(e) => { e.preventDefault(); requestActualPayment(); }} className="grid grid-cols-1 lg:grid-cols-2 gap-16">
           <div className="space-y-12">
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
-              <div className="flex items-center gap-2 mb-8 border-b border-border-light pb-4"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.shippingInfo || 'Shipping'}</h2></div>
+              <div className="flex items-center justify-between mb-8 border-b border-border-light pb-4">
+                <div className="flex items-center gap-2"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.shippingInfo || 'Shipping'}</h2></div>
+                {savedAddresses.length > 0 && (
+                  <div className="flex gap-2 overflow-x-auto pb-1 max-w-[60%] scrollbar-hide">
+                    {savedAddresses.map((addr) => (
+                      <button 
+                        key={addr.id} 
+                        type="button"
+                        onClick={() => applyAddress(addr)}
+                        className={`flex-shrink-0 px-3 py-1 rounded-full text-[10px] border transition-all ${
+                          selectedAddressId === addr.id 
+                            ? 'bg-deep-sage border-deep-sage text-white' 
+                            : 'border-border-light text-muted hover:border-deep-sage'
+                        }`}
+                      >
+                        {addr.address_name}
+                      </button>
+                    ))}
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setSelectedAddressId(null);
+                        setFormData({...formData, name: '', phone: '', postcode: '', address: '', detailAddress: ''});
+                      }}
+                      className={`flex-shrink-0 px-3 py-1 rounded-full text-[10px] border border-dashed ${
+                        !selectedAddressId ? 'bg-charcoal border-charcoal text-white' : 'border-border-light text-muted'
+                      }`}
+                    >
+                      + {language === 'ko' ? '직접 입력' : 'New'}
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="space-y-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                   <div className="space-y-2"><label className="text-[10px] text-muted ml-1">Name</label><input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} type="text" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" /></div>
@@ -272,6 +327,14 @@ export default function CheckoutPage() {
                   <input readOnly required value={formData.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
                   <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} placeholder="Detail Address" className="w-full bg-white border border-border-light px-4 py-3 rounded-sm text-sm" />
                 </div>
+                {!selectedAddressId && (
+                  <div className="pt-2 border-t border-border-light mt-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input type="checkbox" name="saveAddress" className="w-3 h-3 accent-deep-sage" />
+                      <span className="text-[10px] text-muted">{language === 'ko' ? '이 정보를 배송지 목록에 저장' : 'Save as new shipping address'}</span>
+                    </label>
+                  </div>
+                )}
               </div>
             </section>
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
