@@ -114,7 +114,7 @@ export default function Header() {
           </div>
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
-            <div className="relative h-12 w-56 sm:w-64">
+            <div className="relative h-16 w-72 sm:w-80">
               <Image 
                 src="/logo_main.png" 
                 alt="자연의 결" 
