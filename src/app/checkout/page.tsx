@@ -44,8 +44,8 @@ export default function CheckoutPage() {
   useEffect(() => {
     const initIMP = () => {
       if (window.IMP) {
-        // 유일복님의 상점 아이디 적용 (V2 규격)
-        window.IMP.init('imp33000546'); 
+        // 유일복님의 V2 전용 상점 아이디 적용
+        window.IMP.init(process.env.NEXT_PUBLIC_PORTONE_STORE_ID || 'store-d4dc5027-72ba-4c9e-bf91-d6f87ec3f32b'); 
       }
     };
     
