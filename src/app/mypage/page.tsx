@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map, ShoppingCart, ChevronRight, CreditCard, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Check } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -45,13 +45,14 @@ function MyPageContent() {
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) { router.push('/login'); return; }
-    const currentUser = session.user;
-    setUser(currentUser);
-    setIsAdmin(CONFIG.ADMIN_EMAILS.includes(currentUser.email || ''));
-
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) { router.push('/login'); return; }
+      const currentUser = session.user;
+      setUser(currentUser);
+      setIsAdmin(CONFIG.ADMIN_EMAILS.includes(currentUser.email || ''));
+
+      // 1. Orders
       const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (orderData) {
         setOrders(orderData);
@@ -61,14 +62,17 @@ function MyPageContent() {
           completed: orderData.filter(o => o.status === '배송완료').length
         });
       }
+
+      // 2. Profile
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
+      // 3. Addresses
       const { data: addrData } = await supabase.from('addresses').select('*').eq('user_id', currentUser.id).order('is_default', { ascending: false }).order('created_at', { ascending: false });
       setAddresses(addrData || []);
 
       await syncWithSupabase();
-    } catch (err) { console.error(err); } finally { setLoading(false); }
+    } catch (err) { console.error('Data load error:', err); } finally { setLoading(false); }
   }, [router, syncWithSupabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -88,18 +92,22 @@ function MyPageContent() {
     e.preventDefault();
     if (!user || !selectedProduct) return;
     setIsSaving(true);
-    await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || user.email?.split('@')[0], rating: reviewData.rating, content: reviewData.content, is_verified: true });
-    setIsReviewModalOpen(false);
-    setIsSaving(false);
-    alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
+    try {
+      await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || user.email?.split('@')[0], rating: reviewData.rating, content: reviewData.content, is_verified: true });
+      setIsReviewModalOpen(false);
+      alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
+    } catch (err) { alert('Error submitting review'); }
+    finally { setIsSaving(false); }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
-    setIsSaving(false);
-    alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
+    try {
+      await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
+      alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
+    } catch (err) { alert('Error updating profile'); }
+    finally { setIsSaving(false); }
   };
 
   const handleAddressSearch = () => {
@@ -113,12 +121,14 @@ function MyPageContent() {
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    if (newAddr.is_default) await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-    await supabase.from('addresses').insert({ user_id: user?.id, ...newAddr });
-    setIsAddrModalOpen(false);
-    setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
-    fetchData();
-    setIsSaving(false);
+    try {
+      if (newAddr.is_default) await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
+      await supabase.from('addresses').insert({ user_id: user?.id, ...newAddr });
+      setIsAddrModalOpen(false);
+      setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
+      fetchData();
+    } catch (err) { alert('Error saving address'); }
+    finally { setIsSaving(false); }
   };
 
   const handleDeleteAddress = async (id: string) => {
@@ -147,6 +157,7 @@ function MyPageContent() {
     <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border-light pb-8">
           <div>
             <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.mypage.title}</h1>
@@ -154,10 +165,11 @@ function MyPageContent() {
           </div>
           <div className="flex gap-3">
             {isAdmin && <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">Admin Access</Link>}
-            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
+            <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
         </div>
 
+        {/* Dashboard */}
         {activeTab === 'orders' && (
           <div className="bg-white border border-border-light rounded-sm p-8 mb-12 shadow-sm">
             <div className="grid grid-cols-3 divide-x divide-border-light">
@@ -168,6 +180,7 @@ function MyPageContent() {
           </div>
         )}
 
+        {/* Tabs */}
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as ActiveTab)} className={`pb-4 px-2 font-serif text-lg md:text-xl flex items-center gap-2.5 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}>
@@ -219,32 +232,21 @@ function MyPageContent() {
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
                 <button onClick={() => setIsAddrModalOpen(true)} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
               </div>
-              {addresses.length === 0 ? (
-                <div className="py-32 text-center bg-white border border-border-light rounded-sm text-muted font-light italic">등록된 배송지가 없습니다.</div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  {addresses.map((addr) => (
-                    <div key={addr.id} className={`p-8 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage ring-1 ring-deep-sage/20' : 'border-border-light hover:border-deep-sage/50'}`}>
-                      <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div>
-                          <div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase vertical-middle">{t.mypage.defaultAddress}</span>}</div>
-                        </div>
-                        <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
-                      </div>
-                      <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
-                        <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
-                        <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
-                        <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
-                      </div>
-                      {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {addresses.map((addr) => (
+                  <div key={addr.id} className={`p-8 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage ring-1 ring-deep-sage/20' : 'border-border-light hover:border-deep-sage/50'}`}>
+                    <div className="flex justify-between items-start mb-6">
+                      <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div><div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div></div>
+                      <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
                     </div>
-                  ))}
-                </div>
-              )}
-              <div className="mt-8 p-6 bg-deep-sage/5 rounded-sm border border-deep-sage/10 flex items-start gap-4">
-                <AlertCircle className="w-5 h-5 text-deep-sage flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-charcoal/70 leading-relaxed">마이페이지에서 관리하는 배송지는 결제 페이지에서 즉시 선택하여 사용하실 수 있습니다. <strong>기본 배송지</strong>로 설정된 주소는 주문 시 자동으로 입력됩니다.</p>
+                    <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
+                      <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
+                      <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
+                      <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
+                    </div>
+                    {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
+                  </div>
+                ))}
               </div>
             </div>
           )}
@@ -262,8 +264,8 @@ function MyPageContent() {
               <h3 className="font-serif text-2xl text-charcoal mb-8">{t.mypage.profile}</h3>
               <form onSubmit={handleUpdateProfile} className="space-y-8">
                 <div className="space-y-6">
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name} <span className="text-[9px] lowercase opacity-60">(성함 또는 닉네임)</span></label><input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none transition-colors" /></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone} <span className="text-[9px] lowercase opacity-60">(- 제외하고 입력)</span></label><input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none transition-colors" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name} <span className="text-[9px] lowercase opacity-60">(성함 또는 닉네임)</span></label><input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone} <span className="text-[9px] lowercase opacity-60">(- 제외하고 입력)</span></label><input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
                   <div className="space-y-2 opacity-50"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email <span className="text-[9px] lowercase opacity-60">(수정 불가)</span></label><input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" /></div>
                 </div>
                 <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-lg shadow-lg disabled:opacity-50">{isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {t.mypage.saveBtn}</>}</button>
@@ -283,16 +285,16 @@ function MyPageContent() {
               <div className="flex gap-6 mb-10 items-center bg-hanji-white/30 p-4 rounded-sm border border-border-light"><div className="relative w-16 h-20 bg-white rounded-sm overflow-hidden border border-border-light"><Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" /></div><div><p className="text-[10px] text-muted uppercase tracking-widest mb-1">Product</p><h4 className="text-xl font-serif text-charcoal">{selectedProduct.name}</h4></div></div>
               <form onSubmit={handleSubmitReview} className="space-y-10">
                 <div className="text-center space-y-4"><p className="text-xs text-muted uppercase tracking-[0.2em]">상품은 만족스러우셨나요?</p><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all ${reviewData.rating >= star ? 'text-deep-sage scale-110' : 'text-border-light hover:text-deep-sage/40'}`}><Star className={`w-10 h-10 ${reviewData.rating >= star ? 'fill-current' : ''}`} /></button>))}</div></div>
-                <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">솔직한 구매 후기를 들려주세요</label><textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="다른 구매자들에게 도움이 되는 정보를 공유해 주세요 (최소 10자)" rows={6} className="w-full bg-hanji-white/30 border border-border-light px-5 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all resize-none" /></div>
-                <div className="grid grid-cols-4 gap-4"><div className="aspect-square border-2 border-dashed border-border-light rounded-sm flex flex-col items-center justify-center text-muted hover:border-deep-sage hover:text-deep-sage transition-all cursor-pointer"><Camera className="w-6 h-6 mb-2" /><span className="text-[9px] uppercase font-bold">Photo</span></div></div>
-                <div className="bg-hanji-white/50 p-4 rounded-sm flex items-start gap-3"><AlertCircle className="w-4 h-4 text-deep-sage flex-shrink-0 mt-0.5" /><p className="text-[10px] text-muted leading-relaxed">작성해주신 리뷰는 자연의 결 서비스 개선과 다른 고객님들의 구매 결정에 큰 도움이 됩니다. 정성스러운 리뷰에 감사드립니다.</p></div>
-                <button type="submit" disabled={isSaving || reviewData.content.length < 10} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30 disabled:cursor-not-allowed">{isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <ClipboardCheck className="w-6 h-6" />}리뷰 등록 완료하기</button>
+                <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">솔직한 구매 후기를 들려주세요</label><textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="다른 구매자들에게 도움이 되는 정보를 공유해 주세요 (최소 10자)" rows={6} className="w-full bg-hanji-white/30 border border-border-light px-5 py-4 rounded-sm text-sm focus:border-deep-sage outline-none resize-none" /></div>
+                <div className="grid grid-cols-4 gap-4"><div className="aspect-square border-2 border-dashed border-border-light rounded-sm flex flex-col items-center justify-center text-muted hover:border-deep-sage transition-all cursor-pointer"><Camera className="w-6 h-6 mb-2" /><span className="text-[9px] uppercase font-bold">Photo</span></div></div>
+                <button type="submit" disabled={isSaving || reviewData.content.length < 10} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30">리뷰 등록 완료하기</button>
               </form>
             </motion.div>
           </div>
         )}
       </AnimatePresence>
 
+      {/* Address Modal */}
       <AnimatePresence>
         {isAddrModalOpen && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
