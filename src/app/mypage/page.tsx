@@ -201,10 +201,10 @@ function MyPageContent() {
   if (!user) return null;
 
   const tabs = [
-    { id: 'orders', label: t.mypage.orderHistory, icon: Package },
-    { id: 'wishlist', label: t.mypage.wishlist, icon: Heart },
-    { id: 'addresses', label: t.mypage.addresses, icon: MapPin },
-    { id: 'profile', label: t.mypage.profile, icon: User },
+    { id: 'orders', label: t?.mypage?.orderHistory || (language === 'ko' ? '주문 내역' : 'Orders'), icon: Package },
+    { id: 'wishlist', label: t?.mypage?.wishlist || (language === 'ko' ? '관심 상품' : 'Wishlist'), icon: Heart },
+    { id: 'addresses', label: t?.mypage?.addresses || (language === 'ko' ? '배송지 관리' : 'Addresses'), icon: MapPin },
+    { id: 'profile', label: t?.mypage?.profile || (language === 'ko' ? '내 정보 수정' : 'Profile'), icon: User },
   ];
 
   return (
