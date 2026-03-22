@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map, ShoppingCart, ChevronRight } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map, ShoppingCart, ChevronRight, CreditCard, ClipboardCheck, MessageSquare, Box } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -33,6 +33,13 @@ function MyPageContent() {
   const [profile, setProfile] = useState({
     full_name: '',
     phone: '',
+  });
+
+  // Order Counts for Dashboard
+  const [orderCounts, setOrderCounts] = useState({
+    pending: 0,
+    shipping: 0,
+    completed: 0
   });
 
   // Modal State
@@ -67,7 +74,16 @@ function MyPageContent() {
         .select(`*, order_items (*, products (*))`)
         .eq('user_id', currentUser.id)
         .order('created_at', { ascending: false });
-      setOrders(orderData || []);
+      
+      if (orderData) {
+        setOrders(orderData);
+        // Calculate counts
+        setOrderCounts({
+          pending: orderData.filter(o => o.status === '결제완료').length,
+          shipping: orderData.filter(o => o.status === '배송중').length,
+          completed: orderData.filter(o => o.status === '배송완료').length
+        });
+      }
 
       // 2. Profile
       const { data: profileData } = await supabase
@@ -212,25 +228,45 @@ function MyPageContent() {
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-border-light pb-12">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border-light pb-8">
           <div>
             <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.mypage.title}</h1>
-            <div className="flex items-center gap-3">
-              <p className="text-muted text-sm font-light">
-                <span className="font-medium text-deep-sage border-b border-deep-sage/30 pb-0.5">{user.email}</span> 
-                {language === 'ko' ? ' 님, 반갑습니다.' : ' welcome back.'}
-              </p>
-              {isAdmin && (
-                <Link href="/admin" className="px-3 py-1 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all">
-                  Admin Access
-                </Link>
-              )}
+            <p className="text-muted text-sm font-light">
+              <span className="font-medium text-deep-sage border-b border-deep-sage/30 pb-0.5">{profile.full_name || user.email}</span> 
+              {language === 'ko' ? ' 님, 자연의 결에 오신 것을 환영합니다.' : ' welcome back.'}
+            </p>
+          </div>
+          <div className="flex gap-3">
+            {isAdmin && (
+              <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">
+                Admin Access
+              </Link>
+            )}
+            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2">
+              <LogOut className="w-3 h-3" /> {t.common.logout}
+            </button>
+          </div>
+        </div>
+
+        {/* Naver Style Dashboard */}
+        {activeTab === 'orders' && (
+          <div className="bg-white border border-border-light rounded-sm p-8 mb-12 shadow-sm">
+            <div className="grid grid-cols-3 divide-x divide-border-light">
+              <div className="text-center space-y-2">
+                <p className="text-[10px] text-muted uppercase tracking-widest">결제완료</p>
+                <p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.pending}</p>
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-[10px] text-muted uppercase tracking-widest">배송중</p>
+                <p className="text-3xl font-serif font-bold text-deep-sage">{orderCounts.shipping}</p>
+              </div>
+              <div className="text-center space-y-2">
+                <p className="text-[10px] text-muted uppercase tracking-widest">배송완료</p>
+                <p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.completed}</p>
+              </div>
             </div>
           </div>
-          <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2">
-            <LogOut className="w-3 h-3" /> {t.common.logout}
-          </button>
-        </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
@@ -250,47 +286,79 @@ function MyPageContent() {
         {/* Tab Content */}
         <div className="min-h-[400px]">
           {activeTab === 'orders' && (
-            <section className="space-y-8">
+            <section className="space-y-10">
               {orders.length === 0 ? (
                 <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
-                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted">
-                    <Package className="w-8 h-8" />
-                  </div>
+                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Package className="w-8 h-8" /></div>
                   <p className="text-muted font-light italic">{t.mypage.noOrder}</p>
-                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2">
-                    <ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" />
-                  </Link>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" /></Link>
                 </div>
               ) : (
                 orders.map((order) => (
-                  <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div className="bg-hanji-white/50 px-6 py-4 border-b border-border-light flex justify-between items-center text-[10px] text-muted uppercase tracking-widest">
-                      <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                      <span className={`px-3 py-1 rounded-full font-bold ${order.status === '배송중' ? 'bg-deep-sage text-white' : 'bg-charcoal/5 text-charcoal/60'}`}>{order.status}</span>
+                  <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
+                    {/* Order Header */}
+                    <div className="bg-hanji-white/50 px-8 py-5 border-b border-border-light flex flex-col md:flex-row md:justify-between md:items-center gap-4">
+                      <div className="flex items-center gap-6">
+                        <div className="space-y-1">
+                          <p className="text-[9px] text-muted uppercase tracking-widest">주문일자</p>
+                          <p className="text-sm font-medium">{new Date(order.created_at).toLocaleDateString()}</p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-[9px] text-muted uppercase tracking-widest">주문번호</p>
+                          <p className="text-sm text-charcoal/60 font-mono">{order.id.slice(0, 8).toUpperCase()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${order.status === '배송중' ? 'bg-deep-sage text-white' : order.status === '배송완료' ? 'bg-charcoal text-white' : 'bg-charcoal/5 text-charcoal/60'}`}>{order.status}</span>
+                      </div>
                     </div>
-                    <div className="p-8">
+                    
+                    {/* Order Items */}
+                    <div className="p-8 space-y-8">
                       {order.order_items?.map((item: any, idx: number) => (
-                        <div key={idx} className="flex gap-6 mb-6 last:mb-0">
-                          <div className="relative w-16 h-20 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0">
-                            <Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover" />
+                        <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-8 group">
+                          <div className="flex gap-6">
+                            <div className="relative w-20 h-24 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0">
+                              <Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-500" />
+                            </div>
+                            <div className="space-y-2">
+                              <h4 className="text-lg font-serif text-charcoal">{item.products?.name}</h4>
+                              <p className="text-sm text-muted font-light">{item.quantity} {language === 'ko' ? '개' : 'ea'} / ₩{item.price.toLocaleString()}</p>
+                              <div className="pt-2 flex gap-2">
+                                {order.status === '배송완료' && (
+                                  <button className="text-[10px] border border-border-light px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-hanji-white transition-all text-charcoal font-medium">
+                                    <MessageSquare className="w-3 h-3" /> 리뷰 쓰기
+                                  </button>
+                                )}
+                                <button className="text-[10px] border border-border-light px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-hanji-white transition-all text-charcoal/60">
+                                  <Box className="w-3 h-3" /> 재구매
+                                </button>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1">
-                            <h4 className="text-base font-serif text-charcoal">{item.products?.name}</h4>
-                            <p className="text-xs text-muted mt-1 font-light">{item.quantity} {language === 'ko' ? '개' : 'ea'} / ₩{item.price.toLocaleString()}</p>
+                          <div className="flex md:flex-col gap-2">
+                            {order.tracking_number && (
+                              <button onClick={() => window.open(`https://search.naver.com/search.naver?query=${order.tracking_number}`)} className="text-[10px] bg-charcoal text-white px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all uppercase tracking-widest min-w-[120px] justify-center">
+                                <Truck className="w-3 h-3" /> 배송 조회
+                              </button>
+                            )}
+                            {order.status === '배송완료' ? (
+                              <button className="text-[10px] border border-deep-sage text-deep-sage px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center">
+                                <ClipboardCheck className="w-3 h-3" /> 구매 확정
+                              </button>
+                            ) : order.status === '결제완료' && (
+                              <button className="text-[10px] border border-border-light text-muted px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-terracotta hover:text-white hover:border-terracotta transition-all uppercase tracking-widest min-w-[120px] justify-center">
+                                <X className="w-3 h-3" /> 주문 취소
+                              </button>
+                            )}
                           </div>
                         </div>
                       ))}
-                      <div className="mt-8 pt-8 border-t border-border-light flex justify-between items-end">
-                        <div>
-                          <p className="text-[10px] text-muted uppercase tracking-tighter mb-1">Total Payment</p>
-                          <p className="text-2xl font-serif font-bold text-deep-sage">₩{order.total_price.toLocaleString()}</p>
-                        </div>
-                        {order.tracking_number && (
-                          <button onClick={() => window.open(`https://search.naver.com/search.naver?query=${order.tracking_number}`)} className="text-[10px] bg-charcoal text-white px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all uppercase tracking-widest">
-                            <ExternalLink className="w-3 h-3" /> {t.mypage.tracking}
-                          </button>
-                        )}
-                      </div>
+                    </div>
+                    {/* Order Footer */}
+                    <div className="bg-hanji-white/20 px-8 py-4 border-t border-border-light flex justify-between items-center">
+                      <p className="text-[10px] text-muted uppercase tracking-widest">총 결제 금액</p>
+                      <p className="text-xl font-serif font-bold text-deep-sage">₩{order.total_price.toLocaleString()}</p>
                     </div>
                   </div>
                 ))
@@ -302,13 +370,9 @@ function MyPageContent() {
             <div>
               {wishItems.length === 0 ? (
                 <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
-                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted">
-                    <Heart className="w-8 h-8" />
-                  </div>
+                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Heart className="w-8 h-8" /></div>
                   <p className="text-muted font-light italic">{t.mypage.noWish}</p>
-                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2">
-                    <ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" />
-                  </Link>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" /></Link>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
@@ -322,10 +386,7 @@ function MyPageContent() {
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
-                <button 
-                  onClick={() => setIsAddrModalOpen(true)}
-                  className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"
-                >
+                <button onClick={() => setIsAddrModalOpen(true)} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg">
                   <Plus className="w-4 h-4" /> {language === 'ko' ? '새 배송지 추가' : 'Add New Address'}
                 </button>
               </div>
@@ -348,10 +409,7 @@ function MyPageContent() {
                         <p>{addr.detail_address}</p>
                       </div>
                       {!addr.is_default && (
-                        <button 
-                          onClick={() => handleSetDefaultAddress(addr.id)}
-                          className="mt-6 text-[10px] text-deep-sage hover:underline flex items-center gap-1.5"
-                        >
+                        <button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 text-[10px] text-deep-sage hover:underline flex items-center gap-1.5">
                           <Star className="w-3 h-3" /> {t.mypage.setDefault}
                         </button>
                       )}
@@ -369,32 +427,18 @@ function MyPageContent() {
                 <div className="space-y-6">
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name} <span className="text-[9px] lowercase opacity-60">(성함 또는 닉네임)</span></label>
-                    <input 
-                      required 
-                      value={profile.full_name} 
-                      onChange={(e) => setProfile({...profile, full_name: e.target.value})} 
-                      className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage focus:outline-none transition-colors" 
-                    />
+                    <input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage focus:outline-none transition-colors" />
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone} <span className="text-[9px] lowercase opacity-60">(- 제외하고 입력)</span></label>
-                    <input 
-                      required 
-                      value={profile.phone} 
-                      onChange={(e) => setProfile({...profile, phone: e.target.value})} 
-                      className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage focus:outline-none transition-colors" 
-                    />
+                    <input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage focus:outline-none transition-colors" />
                   </div>
                   <div className="space-y-2 opacity-50">
                     <label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email <span className="text-[9px] lowercase opacity-60">(수정 불가)</span></label>
                     <input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" />
                   </div>
                 </div>
-                <button 
-                  type="submit" 
-                  disabled={isSaving}
-                  className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-lg shadow-lg disabled:opacity-50"
-                >
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-lg shadow-lg disabled:opacity-50">
                   {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {t.mypage.saveBtn}</>}
                 </button>
               </form>
@@ -418,7 +462,6 @@ function MyPageContent() {
                   <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">배송지 별칭 <span className="text-[9px] lowercase opacity-60">(예: 우리 집, 회사, 친구 집)</span></label>
                   <input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="어디로 보내드릴까요?" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                 </div>
-                
                 <div className="grid grid-cols-2 gap-6">
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">받는 분 성함</label>
@@ -429,7 +472,6 @@ function MyPageContent() {
                     <input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                   </div>
                 </div>
-
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">우편번호</label>
@@ -438,25 +480,21 @@ function MyPageContent() {
                       <button type="button" onClick={handleAddressSearch} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase tracking-widest"><Search className="w-3.5 h-3.5" /> 주소 찾기</button>
                     </div>
                   </div>
-                  
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">주소</label>
                     <input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" />
                   </div>
-                  
                   <div className="space-y-2">
                     <label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">상세 주소 <span className="text-[9px] lowercase opacity-60">(동, 호수 등)</span></label>
                     <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder="상세 정보를 입력해 주세요" className="w-full border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" />
                   </div>
                 </div>
-
                 <div className="pt-4">
                   <label className="flex items-center gap-3 cursor-pointer group">
                     <input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-5 h-5 accent-deep-sage cursor-pointer" />
                     <span className="text-xs text-muted group-hover:text-charcoal transition-colors">이 주소를 기본 배송지로 설정합니다.</span>
                   </label>
                 </div>
-
                 <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-4">
                   {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}
                   주소 저장하기
