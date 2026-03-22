@@ -36,6 +36,7 @@ export default function RootLayout({
       <head>
         <title>자연의 결 | 모던 한국 농산물 큐레이션</title>
         <meta name="naver-site-verification" content="bd26db4e27ea50f336cb8327f45f6edde12bf7b3" />
+        <meta name="google-site-verification" content="j4r-CHUjYPZG8DYoa9SzzwEYxw_eTf5i_VqQsC17Ac8" />
         <meta name="description" content="꾸밈없는 자연의 산물과 정직한 농산물을 제안합니다. 연천 비무장지대 오대쌀, 유기농 꿀고구마 등 엄선된 산물을 만나보세요." />
         <meta name="keywords" content="농산물, 오대쌀, 꿀고구마, 유기농, 산지직송, 자연의결, 복이네농장, 한국농산물" />
         
