@@ -7,7 +7,7 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-const WEBHOOK_SECRET = 'whsec_oz7HlF8VxGtksdQwJPoxqqEWzk2iis+61vHxadL3/0s=';
+const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
 
 export async function POST(req: Request) {
   try {

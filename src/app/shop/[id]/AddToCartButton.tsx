@@ -7,8 +7,10 @@ import { useToastStore } from '@/store/useToastStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { ShoppingCart, CreditCard, AlertCircle, Bell, X, Check, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/navigation';
 
 export default function PurchaseButtons({ product }: { product: Product }) {
+  const router = useRouter();
   const { addItem } = useCartStore();
   const { addToast } = useToastStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
@@ -29,7 +31,8 @@ export default function PurchaseButtons({ product }: { product: Product }) {
 
   const handleBuyNow = () => {
     if (product.is_sold_out) return;
-    alert('결제 페이지로 이동합니다. (가상 결제창)');
+    addItem(product);
+    router.push('/checkout');
   };
 
   const handleToggleWish = () => {

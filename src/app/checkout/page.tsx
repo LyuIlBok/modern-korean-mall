@@ -102,9 +102,8 @@ export default function CheckoutPage() {
 
       // 포트원 V2 권장 파라미터 구조
       const payParams: any = {
-        // storeId가 있을 경우 pg 파라미터 대신 우선순위를 가질 수 있음
-        pg: 'html5_inicis', // 기본값 유지하되 채널 설정을 따르도록 함
-        pay_method: formData.paymentMethod,
+        channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || 'channel-key-70674bb7-a72c-417d-b34f-f33a42a6de51',
+        pay_method: formData.paymentMethod.toUpperCase(),
         merchant_uid: merchant_uid,
         name: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
         amount: total,
