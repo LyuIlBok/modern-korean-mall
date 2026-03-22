@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useCartStore } from '@/store/useCartStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import Image from 'next/image';
@@ -38,47 +38,55 @@ export default function CheckoutPage() {
     paymentMethod: 'card',
   });
 
-  // 저장된 배송지 목록 불러오기
-  useEffect(() => {
-    const loadData = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        setFormData(prev => ({ ...prev, email: session.user.email || '' }));
-        
-        // addresses 테이블에서 주소 목록 가져오기
-        const { data: addresses } = await supabase
-          .from('addresses')
-          .select('*')
-          .order('is_default', { ascending: false });
-          
-        if (addresses && addresses.length > 0) {
-          setSavedAddresses(addresses);
-          // 기본 배송지 자동 선택
-          const defaultAddr = addresses.find(a => a.is_default) || addresses[0];
-          applyAddress(defaultAddr);
-        }
-      }
-    };
-    loadData();
-  }, []);
+  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const shipping = subtotal >= 50000 || items.length === 0 ? 0 : 3000;
+  const total = subtotal + shipping;
 
-  const applyAddress = (addr: any) => {
+  const applyAddress = useCallback((addr: any) => {
+    if (!addr) return;
     setSelectedAddressId(addr.id);
     setFormData(prev => ({
       ...prev,
-      name: addr.receiver_name,
-      phone: addr.receiver_phone,
-      postcode: addr.postcode,
-      address: addr.address,
-      detailAddress: addr.detail_address,
+      name: addr.receiver_name || '',
+      phone: addr.receiver_phone || '',
+      postcode: addr.postcode || '',
+      address: addr.address || '',
+      detailAddress: addr.detail_address || '',
     }));
-  };
+  }, []);
+
+  // 저장된 배송지 목록 불러오기
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          setFormData(prev => ({ ...prev, email: session.user.email || '' }));
+          
+          // addresses 테이블에서 주소 목록 가져오기
+          const { data: addresses } = await supabase
+            .from('addresses')
+            .select('*')
+            .order('is_default', { ascending: false });
+            
+          if (addresses && addresses.length > 0) {
+            setSavedAddresses(addresses);
+            // 기본 배송지 자동 선택
+            const defaultAddr = addresses.find((a: any) => a.is_default) || addresses[0];
+            applyAddress(defaultAddr);
+          }
+        }
+      } catch (error) {
+        console.error('Error loading profile:', error);
+      }
+    };
+    loadData();
+  }, [applyAddress]);
 
   // 포트원 V2 초기화
   useEffect(() => {
     const initIMP = () => {
       if (window.IMP) {
-        // 유일복님의 V2 전용 상점 아이디 적용
         window.IMP.init(process.env.NEXT_PUBLIC_PORTONE_STORE_ID || 'store-d4dc5027-72ba-4c9e-bf91-d6f87ec3f32b'); 
       }
     };
@@ -97,11 +105,13 @@ export default function CheckoutPage() {
   }, []);
 
   const handleAddressSearch = () => {
-    new window.daum.Postcode({
-      oncomplete: (data: any) => {
-        setFormData({ ...formData, postcode: data.zonecode, address: data.address });
-      }
-    }).open();
+    if (typeof window !== 'undefined' && window.daum) {
+      new window.daum.Postcode({
+        oncomplete: (data: any) => {
+          setFormData({ ...formData, postcode: data.zonecode, address: data.address });
+        }
+      }).open();
+    }
   };
 
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -121,7 +131,6 @@ export default function CheckoutPage() {
     setIsLoading(true);
     
     try {
-      // 재고 선점 확인
       for (const item of items) {
         const { data } = await supabase.from('products').select('name, stock').eq('id', item.id).single();
         if (data && data.stock < item.quantity) {
@@ -134,12 +143,11 @@ export default function CheckoutPage() {
       const { IMP } = window;
       const merchant_uid = `ORD-${new Date().getTime()}`;
 
-      // 포트원 V2 표준 파라미터 구조
       const payParams: any = {
         storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || 'store-d4dc5027-72ba-4c9e-bf91-d6f87ec3f32b',
         channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || 'channel-key-70674bb7-a72c-417d-b34f-f33a42a6de51',
-        payMethod: formData.paymentMethod.toUpperCase(), // V2 표준: payMethod
-        orderId: merchant_uid, // V2 표준: orderId
+        payMethod: formData.paymentMethod.toUpperCase(),
+        orderId: merchant_uid,
         productName: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
         totalAmount: total,
         currency: 'CURRENCY_KRW',
@@ -161,7 +169,6 @@ export default function CheckoutPage() {
         if (rsp.success) {
           await handlePaymentSuccess(rsp);
         } else {
-          // V2 전용 에러 메시지 처리 보완
           console.error('Payment failed:', rsp);
           alert(language === 'ko' ? `결제가 진행되지 않았습니다: ${rsp.error_msg}` : `Payment failed: ${rsp.error_msg}`);
           setIsLoading(false);
@@ -209,7 +216,6 @@ export default function CheckoutPage() {
         }
       }
 
-      // 배송 정보 프로필 업데이트
       if (session?.user) {
         await supabase.from('profiles').upsert({
           id: session.user.id,
@@ -221,7 +227,6 @@ export default function CheckoutPage() {
           updated_at: new Date().toISOString(),
         });
 
-        // '이 정보를 배송지 목록에 저장' 체크박스가 선택된 경우 addresses 테이블에 추가
         const saveCheckbox = document.querySelector('input[name="saveAddress"]') as HTMLInputElement;
         if (saveCheckbox?.checked && !selectedAddressId) {
           await supabase.from('addresses').insert({
@@ -283,7 +288,7 @@ export default function CheckoutPage() {
             <section className="bg-white p-8 border border-border-light rounded-sm shadow-sm">
               <div className="flex items-center justify-between mb-8 border-b border-border-light pb-4">
                 <div className="flex items-center gap-2"><Truck className="w-5 h-5 text-deep-sage" /><h2 className="font-serif text-2xl">{t?.checkout?.shippingInfo || 'Shipping Info'}</h2></div>
-                {savedAddresses.length > 0 && (
+                {savedAddresses && savedAddresses.length > 0 && (
                   <div className="flex gap-2 overflow-x-auto pb-1 max-w-[60%] scrollbar-hide">
                     {savedAddresses.map((addr) => (
                       <button 
