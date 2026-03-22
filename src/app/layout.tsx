@@ -31,7 +31,7 @@ export default function RootLayout({
   return (
     <html lang={language}>
       <head>
-        {/* Google Tag Manager */}
+        {/* Google Tag Manager (GTM) */}
         <Script id="gtm-script" strategy="afterInteractive">
           {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
           new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
@@ -39,7 +39,21 @@ export default function RootLayout({
           'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
           })(window,document,'script','dataLayer','GTM-KM6X382D');`}
         </Script>
-        {/* End Google Tag Manager */}
+
+        {/* Google Analytics (GA4) */}
+        <Script 
+          async 
+          src="https://www.googletagmanager.com/gtag/js?id=G-13W7B0K2Y1" 
+          strategy="afterInteractive" 
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-13W7B0K2Y1');
+          `}
+        </Script>
 
         <title>자연의 결 | 모던 한국 농산물 큐레이션</title>
         <meta name="naver-site-verification" content="bd26db4e27ea50f336cb8327f45f6edde12bf7b3" />
@@ -60,7 +74,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-hanji-white text-charcoal flex flex-col min-h-screen selection:bg-deep-sage selection:text-white`}>
-        {/* Google Tag Manager (noscript) */}
         <noscript>
           <iframe 
             src="https://www.googletagmanager.com/ns.html?id=GTM-KM6X382D"
@@ -69,7 +82,6 @@ export default function RootLayout({
             style={{ display: 'none', visibility: 'hidden' }}
           ></iframe>
         </noscript>
-        {/* End Google Tag Manager (noscript) */}
 
         <Header />
         <main className="flex-1 flex flex-col">
