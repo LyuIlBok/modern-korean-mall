@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -52,7 +52,6 @@ function MyPageContent() {
       setUser(currentUser);
       setIsAdmin(CONFIG.ADMIN_EMAILS.includes(currentUser.email || ''));
 
-      // 1. Orders
       const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (orderData) {
         setOrders(orderData);
@@ -62,12 +61,9 @@ function MyPageContent() {
           completed: orderData.filter(o => o.status === '배송완료').length
         });
       }
-
-      // 2. Profile
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
-      // 3. Addresses
       const { data: addrData } = await supabase.from('addresses').select('*').eq('user_id', currentUser.id).order('is_default', { ascending: false }).order('created_at', { ascending: false });
       setAddresses(addrData || []);
 
@@ -78,8 +74,10 @@ function MyPageContent() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
-    await supabase.from('orders').update({ status }).eq('id', orderId);
-    fetchData();
+    try {
+      await supabase.from('orders').update({ status }).eq('id', orderId);
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
   const handleOpenReview = (product: any) => {
@@ -93,11 +91,17 @@ function MyPageContent() {
     if (!user || !selectedProduct) return;
     setIsSaving(true);
     try {
-      await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || user.email?.split('@')[0], rating: reviewData.rating, content: reviewData.content, is_verified: true });
+      await supabase.from('reviews').insert({
+        product_id: selectedProduct.id,
+        user_id: user.id,
+        user_name: profile.full_name || user.email?.split('@')[0],
+        rating: reviewData.rating,
+        content: reviewData.content,
+        is_verified: true
+      });
       setIsReviewModalOpen(false);
       alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
-    } catch (err) { alert('Error submitting review'); }
-    finally { setIsSaving(false); }
+    } catch (err) { console.error(err); } finally { setIsSaving(false); }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
@@ -106,8 +110,7 @@ function MyPageContent() {
     try {
       await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
       alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
-    } catch (err) { alert('Error updating profile'); }
-    finally { setIsSaving(false); }
+    } catch (err) { console.error(err); } finally { setIsSaving(false); }
   };
 
   const handleAddressSearch = () => {
@@ -127,20 +130,23 @@ function MyPageContent() {
       setIsAddrModalOpen(false);
       setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
       fetchData();
-    } catch (err) { alert('Error saving address'); }
-    finally { setIsSaving(false); }
+    } catch (err) { console.error(err); } finally { setIsSaving(false); }
   };
 
   const handleDeleteAddress = async (id: string) => {
     if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
-    await supabase.from('addresses').delete().eq('id', id);
-    fetchData();
+    try {
+      await supabase.from('addresses').delete().eq('id', id);
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
   const handleSetDefaultAddress = async (id: string) => {
-    await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
-    fetchData();
+    try {
+      await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
+      await supabase.from('addresses').update({ is_default: true }).eq('id', id);
+      fetchData();
+    } catch (err) { console.error(err); }
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">{t.common.loading}</div>;
@@ -157,7 +163,6 @@ function MyPageContent() {
     <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border-light pb-8">
           <div>
             <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.mypage.title}</h1>
@@ -169,7 +174,6 @@ function MyPageContent() {
           </div>
         </div>
 
-        {/* Dashboard */}
         {activeTab === 'orders' && (
           <div className="bg-white border border-border-light rounded-sm p-8 mb-12 shadow-sm">
             <div className="grid grid-cols-3 divide-x divide-border-light">
@@ -180,7 +184,6 @@ function MyPageContent() {
           </div>
         )}
 
-        {/* Tabs */}
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as ActiveTab)} className={`pb-4 px-2 font-serif text-lg md:text-xl flex items-center gap-2.5 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}>
@@ -241,7 +244,7 @@ function MyPageContent() {
                     </div>
                     <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
                       <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
-                      <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
+                      <p className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
                       <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
                     </div>
                     {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
