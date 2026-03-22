@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2 } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -36,7 +36,9 @@ function MyPageContent() {
   const [selectedProduct, setSelectedReviewProduct] = useState<any>(null);
   const [reviewData, setReviewData] = useState({ rating: 5, content: '', images: [] as string[] });
 
+  // Address Modal State (Add & Edit)
   const [isAddrModalOpen, setIsAddrModalOpen] = useState(false);
+  const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
   const [newAddr, setNewAddr] = useState({
     address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false
   });
@@ -50,7 +52,7 @@ function MyPageContent() {
       if (!session) { router.push('/login'); return; }
       const currentUser = session.user;
       setUser(currentUser);
-      setIsAdmin(CONFIG.ADMIN_EMAILS.includes(currentUser.email || ''));
+      setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
       const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (orderData) {
@@ -68,16 +70,14 @@ function MyPageContent() {
       setAddresses(addrData || []);
 
       await syncWithSupabase();
-    } catch (err) { console.error('Data load error:', err); } finally { setLoading(false); }
+    } catch (err) { console.error('Fetch error:', err); } finally { setLoading(false); }
   }, [router, syncWithSupabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
-    try {
-      await supabase.from('orders').update({ status }).eq('id', orderId);
-      fetchData();
-    } catch (err) { console.error(err); }
+    await supabase.from('orders').update({ status }).eq('id', orderId);
+    fetchData();
   };
 
   const handleOpenReview = (product: any) => {
@@ -90,27 +90,18 @@ function MyPageContent() {
     e.preventDefault();
     if (!user || !selectedProduct) return;
     setIsSaving(true);
-    try {
-      await supabase.from('reviews').insert({
-        product_id: selectedProduct.id,
-        user_id: user.id,
-        user_name: profile.full_name || user.email?.split('@')[0],
-        rating: reviewData.rating,
-        content: reviewData.content,
-        is_verified: true
-      });
-      setIsReviewModalOpen(false);
-      alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
-    } catch (err) { console.error(err); } finally { setIsSaving(false); }
+    await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || user.email?.split('@')[0], rating: reviewData.rating, content: reviewData.content, is_verified: true });
+    setIsReviewModalOpen(false);
+    setIsSaving(false);
+    alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    try {
-      await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
-      alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
-    } catch (err) { console.error(err); } finally { setIsSaving(false); }
+    await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
+    setIsSaving(false);
+    alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
   };
 
   const handleAddressSearch = () => {
@@ -121,32 +112,59 @@ function MyPageContent() {
     }
   };
 
+  const handleOpenAddModal = () => {
+    setEditingAddrId(null);
+    setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
+    setIsAddrModalOpen(true);
+  };
+
+  const handleOpenEditModal = (addr: any) => {
+    setEditingAddrId(addr.id);
+    setNewAddr({
+      address_name: addr.address_name,
+      receiver_name: addr.receiver_name,
+      receiver_phone: addr.receiver_phone,
+      postcode: addr.postcode,
+      address: addr.address,
+      detail_address: addr.detail_address,
+      is_default: addr.is_default
+    });
+    setIsAddrModalOpen(true);
+  };
+
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!user) return;
     setIsSaving(true);
     try {
-      if (newAddr.is_default) await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-      await supabase.from('addresses').insert({ user_id: user?.id, ...newAddr });
+      if (newAddr.is_default) {
+        await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
+      }
+      
+      if (editingAddrId) {
+        // Update existing
+        await supabase.from('addresses').update(newAddr).eq('id', editingAddrId);
+      } else {
+        // Insert new
+        await supabase.from('addresses').insert({ user_id: user.id, ...newAddr });
+      }
+      
       setIsAddrModalOpen(false);
-      setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
       fetchData();
-    } catch (err) { console.error(err); } finally { setIsSaving(false); }
+    } catch (err) { alert('Error saving address'); }
+    finally { setIsSaving(false); }
   };
 
   const handleDeleteAddress = async (id: string) => {
     if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
-    try {
-      await supabase.from('addresses').delete().eq('id', id);
-      fetchData();
-    } catch (err) { console.error(err); }
+    await supabase.from('addresses').delete().eq('id', id);
+    fetchData();
   };
 
   const handleSetDefaultAddress = async (id: string) => {
-    try {
-      await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-      await supabase.from('addresses').update({ is_default: true }).eq('id', id);
-      fetchData();
-    } catch (err) { console.error(err); }
+    await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
+    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
+    fetchData();
   };
 
   if (loading) return <div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">{t.common.loading}</div>;
@@ -173,16 +191,6 @@ function MyPageContent() {
             <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
         </div>
-
-        {activeTab === 'orders' && (
-          <div className="bg-white border border-border-light rounded-sm p-8 mb-12 shadow-sm">
-            <div className="grid grid-cols-3 divide-x divide-border-light">
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">결제완료</p><p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.pending}</p></div>
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">배송중</p><p className="text-3xl font-serif font-bold text-deep-sage">{orderCounts.shipping}</p></div>
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">배송완료</p><p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.completed}</p></div>
-            </div>
-          </div>
-        )}
 
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
           {tabs.map((tab) => (
@@ -233,24 +241,34 @@ function MyPageContent() {
             <div className="space-y-8">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
-                <button onClick={() => setIsAddrModalOpen(true)} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
+                <button onClick={handleOpenAddModal} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {addresses.map((addr) => (
-                  <div key={addr.id} className={`p-8 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage ring-1 ring-deep-sage/20' : 'border-border-light hover:border-deep-sage/50'}`}>
-                    <div className="flex justify-between items-start mb-6">
-                      <div className="flex items-center gap-3"><div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div><div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div></div>
-                      <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
+              {addresses.length === 0 ? (
+                <div className="py-32 text-center bg-white border border-border-light rounded-sm text-muted font-light italic">등록된 배송지가 없습니다.</div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {addresses.map((addr) => (
+                    <div key={addr.id} className={`p-8 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage ring-1 ring-deep-sage/20 shadow-md' : 'border-border-light hover:border-deep-sage/50'}`}>
+                      <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div>
+                          <div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div>
+                        </div>
+                        <div className="flex gap-1">
+                          <button onClick={() => handleOpenEditModal(addr)} className="p-2 text-muted hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        </div>
+                      </div>
+                      <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
+                        <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
+                        <p className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
+                        <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
+                      </div>
+                      {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
                     </div>
-                    <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
-                      <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
-                      <p className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
-                      <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
-                    </div>
-                    {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              )}
             </div>
           )}
 
@@ -303,7 +321,10 @@ function MyPageContent() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">새 배송지 등록</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:text-terracotta transition-colors"><X className="w-7 h-7" /></button></div>
+              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
+                <h3 className="font-serif text-3xl">{editingAddrId ? '배송지 수정' : '새 배송지 등록'}</h3>
+                <button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button>
+              </div>
               <form onSubmit={handleSaveAddress} className="space-y-8">
                 <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭 <span className="text-[9px] lowercase opacity-60">(예: 우리 집, 회사)</span></label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
                 <div className="grid grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">받는 분 성함</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">연락처</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div></div>
@@ -313,7 +334,7 @@ function MyPageContent() {
                   <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">상세 주소</label><input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder="상세 정보를 입력해 주세요" className="w-full border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
                 </div>
                 <div className="pt-4"><label className="flex items-center gap-3 cursor-pointer group"><input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-5 h-5 accent-deep-sage cursor-pointer" /><span className="text-xs text-muted group-hover:text-charcoal transition-colors">이 주소를 기본 배송지로 설정합니다.</span></label></div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-4">{isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />}주소 저장하기</button>
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-4">{isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />} {editingAddrId ? '주소 수정 완료' : '주소 저장하기'}</button>
               </form>
             </motion.div>
           </div>
