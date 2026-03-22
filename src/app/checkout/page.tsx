@@ -113,6 +113,8 @@ export default function CheckoutPage() {
         buyer_addr: `${formData.address} ${formData.detailAddress}`,
         buyer_postcode: formData.postcode,
         m_redirect_url: `${window.location.origin}/mypage`,
+        // 테스트 결제 시 추가 옵션 (필요시)
+        confirm_url: `${window.location.origin}/api/webhook/portone`, 
       };
 
       IMP.request_pay(payParams, async (rsp: any) => {
