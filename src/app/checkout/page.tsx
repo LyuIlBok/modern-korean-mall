@@ -36,9 +36,34 @@ export default function CheckoutPage() {
     paymentMethod: 'card',
   });
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal >= 50000 || items.length === 0 ? 0 : 3000;
-  const total = subtotal + shipping;
+  // 회원 정보 자동 불러오기
+  useEffect(() => {
+    const loadUserProfile = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setFormData(prev => ({ ...prev, email: session.user.email || '' }));
+        
+        // profiles 테이블에서 배송지 정보 가져오기
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+          
+        if (profile) {
+          setFormData(prev => ({
+            ...prev,
+            name: profile.full_name || prev.name,
+            phone: profile.phone || prev.phone,
+            postcode: profile.postcode || prev.postcode,
+            address: profile.address || prev.address,
+            detailAddress: profile.detail_address || prev.detailAddress,
+          }));
+        }
+      }
+    };
+    loadUserProfile();
+  }, []);
 
   // 포트원 V2 초기화
   useEffect(() => {
@@ -173,6 +198,19 @@ export default function CheckoutPage() {
           const newStock = Math.max(0, prod.stock - item.quantity);
           await supabase.from('products').update({ stock: newStock, is_sold_out: newStock <= 0 }).eq('id', item.id);
         }
+      }
+
+      // 배송 정보 프로필 업데이트 (다음 결제 시 자동 입력을 위해)
+      if (session?.user) {
+        await supabase.from('profiles').upsert({
+          id: session.user.id,
+          full_name: formData.name,
+          phone: formData.phone,
+          postcode: formData.postcode,
+          address: formData.address,
+          detail_address: formData.detailAddress,
+          updated_at: new Date().toISOString(),
+        });
       }
 
       setIsCompleted(true);
