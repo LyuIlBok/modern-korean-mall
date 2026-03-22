@@ -238,10 +238,10 @@ function MyPageContent() {
             <button 
               key={tab.id}
               onClick={() => setActiveTab(tab.id as ActiveTab)}
-              className={`pb-4 px-2 font-serif text-lg md:text-xl flex items-center gap-2 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}
+              className={`pb-4 px-2 font-serif text-lg md:text-xl flex items-center gap-2.5 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}
             >
-              <tab.icon className={`w-4 h-4 ${activeTab === tab.id ? (tab.id === 'wishlist' ? 'text-terracotta' : 'text-deep-sage') : 'text-muted'}`} />
-              {tab.label}
+              <tab.icon className={`w-4 h-4 md:w-5 md:h-5 ${activeTab === tab.id ? (tab.id === 'wishlist' ? 'text-terracotta' : 'text-deep-sage') : 'text-muted'}`} />
+              <span className="whitespace-nowrap">{tab.label}</span>
               {activeTab === tab.id && <motion.div layoutId="myTabLine" className="absolute bottom-0 left-0 right-0 h-0.5 bg-charcoal" />}
             </button>
           ))}
