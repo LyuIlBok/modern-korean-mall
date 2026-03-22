@@ -7,11 +7,12 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Filter, Heart, ShoppingBag, ExternalLink, MapPin, User, Settings, Save, Plus, Trash2, Home, Briefcase, Star, Search, Loader2, X, Map } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
 import ProductCard from '@/components/ProductCard';
+import Script from 'next/script';
 
 type ActiveTab = 'orders' | 'wishlist' | 'addresses' | 'profile';
 
@@ -32,6 +33,18 @@ function MyPageContent() {
   const [profile, setProfile] = useState({
     full_name: '',
     phone: '',
+  });
+
+  // Modal State
+  const [isAddrModalOpen, setIsAddrModalOpen] = useState(false);
+  const [newAddr, setNewAddr] = useState({
+    address_name: '',
+    receiver_name: '',
+    receiver_phone: '',
+    postcode: '',
+    address: '',
+    detail_address: '',
+    is_default: false
   });
 
   const { items: wishItems, syncWithSupabase } = useWishlistStore();
@@ -114,6 +127,56 @@ function MyPageContent() {
     }
   };
 
+  const handleAddressSearch = () => {
+    if (typeof window !== 'undefined' && (window as any).daum) {
+      new (window as any).daum.Postcode({
+        oncomplete: (data: any) => {
+          setNewAddr(prev => ({ ...prev, postcode: data.zonecode, address: data.address }));
+        }
+      }).open();
+    }
+  };
+
+  const handleSaveAddress = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsSaving(true);
+    try {
+      if (newAddr.is_default) {
+        await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
+      }
+      
+      const { error } = await supabase.from('addresses').insert({
+        user_id: user.id,
+        address_name: newAddr.address_name,
+        receiver_name: newAddr.receiver_name,
+        receiver_phone: newAddr.receiver_phone,
+        postcode: newAddr.postcode,
+        address: newAddr.address,
+        detail_address: newAddr.detail_address,
+        is_default: newAddr.is_default
+      });
+      
+      if (error) throw error;
+      
+      setIsAddrModalOpen(false);
+      setNewAddr({
+        address_name: '',
+        receiver_name: '',
+        receiver_phone: '',
+        postcode: '',
+        address: '',
+        detail_address: '',
+        is_default: false
+      });
+      fetchData();
+    } catch (err) {
+      alert('Error saving address');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleDeleteAddress = async (id: string) => {
     if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
     try {
@@ -126,9 +189,7 @@ function MyPageContent() {
 
   const handleSetDefaultAddress = async (id: string) => {
     try {
-      // All false first
       await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-      // Set this one true
       await supabase.from('addresses').update({ is_default: true }).eq('id', id);
       fetchData();
     } catch (err) {
@@ -148,6 +209,7 @@ function MyPageContent() {
 
   return (
     <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
+      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-16 border-b border-border-light pb-12">
@@ -156,7 +218,7 @@ function MyPageContent() {
             <div className="flex items-center gap-3">
               <p className="text-muted text-sm font-light">
                 <span className="font-medium text-deep-sage border-b border-deep-sage/30 pb-0.5">{user.email}</span> 
-                {language === 'ko' ? ' 님, 자연의 결에 오신 것을 환영합니다.' : ' welcome to Nature Texture.'}
+                {language === 'ko' ? ' 님, 반갑습니다.' : ' welcome back.'}
               </p>
               {isAdmin && (
                 <Link href="/admin" className="px-3 py-1 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all">
@@ -242,9 +304,12 @@ function MyPageContent() {
             <div className="space-y-6">
               <div className="flex justify-between items-center mb-8">
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
-                <Link href="/checkout" className="text-[10px] bg-deep-sage text-white px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-charcoal transition-all uppercase tracking-widest">
+                <button 
+                  onClick={() => setIsAddrModalOpen(true)}
+                  className="text-[10px] bg-deep-sage text-white px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-charcoal transition-all uppercase tracking-widest"
+                >
                   <Plus className="w-3 h-3" /> {t.mypage.addAddress}
-                </Link>
+                </button>
               </div>
               {addresses.length === 0 ? (
                 <div className="py-32 text-center text-muted font-light italic bg-white border border-border-light rounded-sm">{t.mypage.noAddress}</div>
@@ -319,6 +384,55 @@ function MyPageContent() {
           )}
         </div>
       </div>
+
+      {/* Add Address Modal */}
+      <AnimatePresence>
+        {isAddrModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-8 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-8 pb-4 border-b border-border-light">
+                <h3 className="font-serif text-2xl">{t.mypage.addAddress}</h3>
+                <button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:text-terracotta transition-colors"><X className="w-6 h-6" /></button>
+              </div>
+              <form onSubmit={handleSaveAddress} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.mypage.addressName}</label>
+                  <input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name}</label>
+                    <input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone}</label>
+                    <input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <input readOnly required value={newAddr.postcode} placeholder={t.checkout.postcode} className="w-24 bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                    <button type="button" onClick={handleAddressSearch} className="px-4 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2"><Search className="w-3 h-3" /> {t.checkout.searchAddress}</button>
+                  </div>
+                  <input readOnly required value={newAddr.address} placeholder={t.checkout.address} className="w-full bg-hanji-white/50 border border-border-light px-4 py-3 rounded-sm text-sm" />
+                  <input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border border-border-light px-4 py-3 rounded-sm text-sm" />
+                </div>
+                <div className="pt-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-4 h-4 accent-deep-sage" />
+                    <span className="text-[11px] text-muted">{t.mypage.setDefault}</span>
+                  </label>
+                </div>
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all font-serif text-lg flex items-center justify-center gap-3">
+                  {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
+                  {t.mypage.saveBtn}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
