@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>자연의 결 | 모던 한국 농산물 큐레이션</title>
+    <link>https://modern-korean-mall.vercel.app</link>
+    <description>꾸밈없는 자연의 산물과 정직한 농산물을 제안합니다. 연천 비무장지대 오대쌀, 유기농 꿀고구마 등 엄선된 산물을 만나보세요.</description>
+    <language>ko-kr</language>
+    <item>
+      <title>자연의 결 만물상 오픈</title>
+      <link>https://modern-korean-mall.vercel.app/shop</link>
+      <description>정직한 농부의 산물을 경험해보세요.</description>
+      <pubDate>Fri, 22 Mar 2024 00:00:00 +0900</pubDate>
+    </item>
+  </channel>
+</rss>
