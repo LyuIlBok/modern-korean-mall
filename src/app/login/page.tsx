@@ -7,15 +7,16 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 export default function LoginPage() {
+  const { t } = useLanguageStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
 
-  // 이미 로그인된 경우 리다이렉트
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
@@ -44,8 +45,23 @@ export default function LoginPage() {
     }
   };
 
+  // 소셜 로그인 처리 (실제 작동을 위해선 Supabase 설정 필요)
+  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider,
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      alert(`소셜 로그인 시도 중 오류가 발생했습니다: ${err.message}`);
+    }
+  };
+
   return (
-    <div className="flex-1 flex items-center justify-center bg-hanji-white py-20 px-4">
+    <div className="flex-1 flex items-center justify-center bg-hanji-white py-20 px-4 min-h-screen">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -53,12 +69,13 @@ export default function LoginPage() {
       >
         <div className="text-center mb-12">
           <Link href="/" className="inline-block mb-8">
-            <div className="relative h-12 w-48">
+            <div className="relative h-12 w-56">
               <Image 
-                src="/logo_horizontal.jfif" 
+                src="/logo_main.png" 
                 alt="자연의 결" 
                 fill 
                 className="object-contain"
+                priority
               />
             </div>
           </Link>
@@ -126,10 +143,16 @@ export default function LoginPage() {
           </div>
 
           <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-medium">
+            <button 
+              onClick={() => handleSocialLogin('google')}
+              className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-medium"
+            >
               <Chrome className="w-4 h-4 text-[#4285F4]" /> Google
             </button>
-            <button className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-xs font-medium">
+            <button 
+              onClick={() => handleSocialLogin('kakao')}
+              className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-xs font-medium"
+            >
               <MessageCircle className="w-4 h-4 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
             </button>
           </div>
