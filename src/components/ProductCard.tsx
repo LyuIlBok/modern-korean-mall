@@ -7,8 +7,9 @@ import { useCartStore } from '@/store/useCartStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useState } from 'react';
 import Skeleton from './ui/Skeleton';
-import { Star, Heart } from 'lucide-react';
+import { Star, Heart, ShoppingBag, Plus } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { motion } from 'framer-motion';
 
 export interface ProductWithRating extends Product {
   avgRating?: number;
@@ -34,82 +35,98 @@ export default function ProductCard({ product }: { product: ProductWithRating })
   const handleToggleWish = (e: React.MouseEvent) => {
     e.preventDefault();
     toggleWish(product);
-    addToast(
-      isWished ? '관심 상품에서 제거되었습니다.' : '관심 상품에 추가되었습니다.',
-      isWished ? 'info' : 'success'
-    );
   };
 
-  // 이미지 에러 시 대체 이미지 (한지 느낌의 플레이스홀더)
   const handleImgError = () => {
     setImgSrc('https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=800');
   };
 
   return (
-    <Link href={`/shop/${product.id}`} className={`group block ${product.is_sold_out ? 'cursor-default' : ''}`}>
-      <div className="relative aspect-[4/5] overflow-hidden bg-border-light/20 rounded-sm mb-4">
-        {!isLoaded && <Skeleton className="absolute inset-0 z-10" />}
-        
-        {product.is_sold_out && (
-          <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/20 backdrop-blur-[1px]">
-            <div className="bg-white/90 border border-charcoal/10 px-4 py-2 shadow-sm transform -rotate-3">
-              <span className="font-serif text-xs tracking-[0.3em] text-charcoal uppercase">Sold Out</span>
-            </div>
-          </div>
-        )}
-
-        <Image 
-          src={imgSrc} 
-          alt={product.name} 
-          fill 
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          className={`object-cover transition-all duration-700 ${product.is_sold_out ? 'grayscale-[0.5] opacity-60' : 'group-hover:scale-105 opacity-100'} ${isLoaded ? '' : 'opacity-0'}`}
-          onLoad={() => setIsLoaded(true)}
-          onError={handleImgError}
-        />
-        <div className="absolute inset-0 bg-charcoal/0 group-hover:bg-charcoal/5 transition-colors duration-300" />
-        
-        <button 
-          onClick={handleToggleWish}
-          className={`absolute top-3 right-3 z-30 p-2 rounded-full backdrop-blur-md transition-all duration-300 ${
-            isWished 
-              ? 'bg-terracotta text-white shadow-md' 
-              : 'bg-white/70 text-charcoal/40 hover:bg-white hover:text-terracotta'
-          }`}
-        >
-          <Heart className={`w-4 h-4 ${isWished ? 'fill-current' : ''}`} />
-        </button>
-      </div>
-
-      <div className="flex flex-col gap-1">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-terracotta uppercase tracking-widest">{product.category}</span>
-          {product.reviewCount !== undefined && product.reviewCount > 0 && (
-            <div className="flex items-center gap-1">
-              <Star className="w-3 h-3 fill-terracotta text-terracotta" />
-              <span className="text-[10px] font-bold text-charcoal">{product.avgRating?.toFixed(1)}</span>
-              <span className="text-[10px] text-muted">({product.reviewCount})</span>
+    <motion.div 
+      whileHover={{ y: -8 }}
+      transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      className="h-full"
+    >
+      <Link href={`/shop/${product.id}`} className={`group block h-full flex flex-col ${product.is_sold_out ? 'cursor-default' : ''}`}>
+        {/* Image Container */}
+        <div className="relative aspect-[4/5] overflow-hidden bg-hanji-white rounded-sm mb-5 shadow-sm group-hover:shadow-xl transition-all duration-500">
+          {!isLoaded && <Skeleton className="absolute inset-0 z-10" />}
+          
+          {product.is_sold_out && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/30 backdrop-blur-[2px]">
+              <div className="bg-white/95 border border-charcoal/10 px-5 py-2.5 shadow-xl transform -rotate-2">
+                <span className="font-serif text-xs tracking-[0.4em] text-charcoal uppercase font-bold">Sold Out</span>
+              </div>
             </div>
           )}
-        </div>
-        <h3 className={`font-serif text-lg ${product.is_sold_out ? 'text-muted' : 'text-charcoal group-hover:text-deep-sage'} transition-colors line-clamp-1`}>{product.name}</h3>
-        <div className="flex items-center justify-between mt-2">
-          <p className={`font-serif font-bold ${product.is_sold_out ? 'text-muted' : 'text-charcoal'}`}>
-            ₩{product.price.toLocaleString()}
-          </p>
+
+          <Image 
+            src={imgSrc} 
+            alt={product.name} 
+            fill 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            className={`object-cover transition-all duration-1000 ${product.is_sold_out ? 'grayscale opacity-50' : 'group-hover:scale-110 opacity-100'} ${isLoaded ? '' : 'opacity-0'}`}
+            onLoad={() => setIsLoaded(true)}
+            onError={handleImgError}
+          />
+          
+          <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+          
+          {/* Action Buttons Overlay */}
+          <div className="absolute bottom-4 right-4 flex flex-col gap-2 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-75">
+            <button 
+              onClick={handleAddToCart}
+              disabled={product.is_sold_out}
+              className="p-3 bg-white text-charcoal rounded-full shadow-lg hover:bg-deep-sage hover:text-white transition-all transform hover:scale-110 active:scale-95"
+              title="Add to Cart"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
+          </div>
+
           <button 
-            onClick={handleAddToCart}
-            disabled={product.is_sold_out}
-            className={`text-[10px] uppercase tracking-widest border-b pb-0.5 transition-all ${
-              product.is_sold_out 
-              ? 'text-muted border-transparent' 
-              : 'text-charcoal/60 border-charcoal/20 hover:text-deep-sage hover:border-deep-sage'
+            onClick={handleToggleWish}
+            className={`absolute top-4 right-4 z-30 p-2.5 rounded-full backdrop-blur-md transition-all duration-300 shadow-sm ${
+              isWished 
+                ? 'bg-terracotta text-white scale-110' 
+                : 'bg-white/80 text-charcoal/30 hover:text-terracotta hover:scale-110'
             }`}
           >
-            {product.is_sold_out ? '품절' : 'Add to Cart'}
+            <Heart className={`w-4 h-4 ${isWished ? 'fill-current' : ''}`} />
           </button>
         </div>
-      </div>
-    </Link>
+
+        {/* Info Area */}
+        <div className="flex-1 flex flex-col">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-bold text-terracotta/80 uppercase tracking-[0.2em]">{product.category}</span>
+            {product.reviewCount !== undefined && product.reviewCount > 0 && (
+              <div className="flex items-center gap-1 bg-terracotta/5 px-2 py-0.5 rounded-full">
+                <Star className="w-2.5 h-2.5 fill-terracotta text-terracotta" />
+                <span className="text-[10px] font-bold text-charcoal">{product.avgRating?.toFixed(1)}</span>
+                <span className="text-[9px] text-muted">({product.reviewCount})</span>
+              </div>
+            )}
+          </div>
+          
+          <h3 className={`font-serif text-xl mb-2 leading-tight ${product.is_sold_out ? 'text-muted' : 'text-charcoal group-hover:text-deep-sage'} transition-colors duration-300 line-clamp-1`}>
+            {product.name}
+          </h3>
+          
+          <div className="mt-auto flex items-end justify-between">
+            <div className="flex flex-col">
+              <p className={`text-lg font-serif font-bold ${product.is_sold_out ? 'text-muted' : 'text-charcoal'}`}>
+                ₩{product.price.toLocaleString()}
+              </p>
+              {!product.is_sold_out && <span className="text-[9px] text-deep-sage font-medium uppercase tracking-tighter">Free Shipping</span>}
+            </div>
+            
+            <span className="text-[10px] text-muted/40 group-hover:text-deep-sage transition-colors font-medium tracking-widest flex items-center gap-1">
+              DETAILS <Plus className="w-3 h-3" />
+            </span>
+          </div>
+        </div>
+      </Link>
+    </motion.div>
   );
 }
