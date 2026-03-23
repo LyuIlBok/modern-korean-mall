@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, ShieldCheck, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -67,29 +67,25 @@ function MyPageContent() {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
-      // 2. Addresses (정렬 쿼리를 단순화하여 안정성 확보)
+      // 2. Addresses (가장 단순한 쿼리로 시도)
       const { data: addrData, error: addrError } = await supabase
         .from('addresses')
         .select('*')
         .eq('user_id', currentUser.id);
       
-      if (addrError) throw addrError;
-
-      if (addrData) {
-        // 자바스크립트단에서 정렬 (기본 배송지 우선 -> 최신순)
-        const sortedAddrs = [...addrData].sort((a, b) => {
+      if (addrError) {
+        console.error('Address Fetch Error:', addrError);
+      } else if (addrData) {
+        // 클라이언트 사이드 정렬
+        const sorted = [...addrData].sort((a, b) => {
           if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
-          return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
         });
-        setAddresses(sortedAddrs);
+        setAddresses(sorted);
       }
 
       await syncWithSupabase();
-    } catch (err) { 
-      console.error('Fetch error:', err);
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (err) { console.error('Data load error:', err); } finally { setLoading(false); }
   }, [router, syncWithSupabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -155,9 +151,7 @@ function MyPageContent() {
     e.preventDefault();
     if (!user) return;
     setIsSaving(true);
-    
     try {
-      // 1. 기본 배송지 설정 처리
       if (newAddr.is_default) {
         await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
       }
@@ -182,21 +176,18 @@ function MyPageContent() {
       
       if (res.error) throw res.error;
       
-      // 2. 성공 시 즉시 목록 갱신 및 모달 닫기
       await fetchData();
       setIsAddrModalOpen(false);
-      
     } catch (err: any) { 
-      alert(language === 'ko' ? `저장 실패: ${err.message}` : `Save failed: ${err.message}`);
-    } finally { 
-      setIsSaving(false); 
-    }
+      console.error('Save Error:', err);
+      alert(`저장 실패: ${err.message}`);
+    } finally { setIsSaving(false); }
   };
 
   const handleDeleteAddress = async (id: string) => {
     if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
-    const { error } = await supabase.from('addresses').delete().eq('id', id);
-    if (!error) fetchData();
+    await supabase.from('addresses').delete().eq('id', id);
+    fetchData();
   };
 
   const handleSetDefaultAddress = async (id: string) => {
@@ -229,16 +220,6 @@ function MyPageContent() {
             <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
         </div>
-
-        {activeTab === 'orders' && (
-          <div className="bg-white border border-border-light rounded-sm p-8 mb-12 shadow-sm">
-            <div className="grid grid-cols-3 divide-x divide-border-light">
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">결제완료</p><p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.pending}</p></div>
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">배송중</p><p className="text-3xl font-serif font-bold text-deep-sage">{orderCounts.shipping}</p></div>
-              <div className="text-center space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">배송완료</p><p className="text-3xl font-serif font-bold text-charcoal">{orderCounts.completed}</p></div>
-            </div>
-          </div>
-        )}
 
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
           {tabs.map((tab) => (
@@ -336,9 +317,9 @@ function MyPageContent() {
               <h3 className="font-serif text-2xl text-charcoal mb-8">{t.mypage.profile}</h3>
               <form onSubmit={handleUpdateProfile} className="space-y-8">
                 <div className="space-y-6">
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name} <span className="text-[9px] lowercase opacity-60">(성함 또는 닉네임)</span></label><input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone} <span className="text-[9px] lowercase opacity-60">(- 제외하고 입력)</span></label><input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
-                  <div className="space-y-2 opacity-50"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email <span className="text-[9px] lowercase opacity-60">(수정 불가)</span></label><input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name}</label><input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone}</label><input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                  <div className="space-y-2 opacity-50"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email</label><input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" /></div>
                 </div>
                 <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-lg shadow-lg disabled:opacity-50">{isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {t.mypage.saveBtn}</>}</button>
               </form>
@@ -374,7 +355,7 @@ function MyPageContent() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">{editingAddrId ? '배송지 수정' : '새 배송지 등록'}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
               <form onSubmit={handleSaveAddress} className="space-y-8">
-                <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭 <span className="text-[9px] lowercase opacity-60">(예: 우리 집, 회사)</span></label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
                 <div className="grid grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">받는 분 성함</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">연락처</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div></div>
                 <div className="space-y-4">
                   <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">우편번호</label><div className="flex gap-3"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" /><button type="button" onClick={handleAddressSearch} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase">주소 찾기</button></div></div>
