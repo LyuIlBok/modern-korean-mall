@@ -48,13 +48,26 @@ export default function PurchaseButtons({ product }: { product: Product }) {
     if (!restockPhone.trim()) return;
     setIsRestockSubmitting(true);
     
-    // 실제로는 DB(restock_alerts 테이블 등)에 저장하는 로직이 들어갑니다.
-    setTimeout(() => {
+    try {
+      const { error } = await supabase
+        .from('restock_alerts')
+        .insert([{
+          product_id: product.id,
+          phone_number: restockPhone,
+          status: 'pending'
+        }]);
+
+      if (error) throw error;
+
       setIsRestockSubmitting(false);
       setShowRestockModal(false);
       setRestockPhone('');
       addToast('재입고 알림 신청이 완료되었습니다.', 'success');
-    }, 1000);
+    } catch (err: any) {
+      console.error('Error saving restock alert:', err.message);
+      setIsRestockSubmitting(false);
+      addToast('알림 신청 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   return (
