@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info } from 'lucide-react';
+import { Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info, Database } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -22,6 +22,7 @@ function MyPageContent() {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [dbError, setDbError] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as ActiveTab) || 'orders';
@@ -46,6 +47,7 @@ function MyPageContent() {
   const router = useRouter();
 
   const fetchData = useCallback(async () => {
+    setDbError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
@@ -53,7 +55,7 @@ function MyPageContent() {
       setUser(currentUser);
       setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
-      // 1. Orders
+      // 1. Orders Load
       const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
       if (orderData) {
         setOrders(orderData);
@@ -67,16 +69,16 @@ function MyPageContent() {
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
-      // 2. Addresses (가장 단순한 쿼리로 시도)
+      // 2. Addresses Load (안정성 최우선)
       const { data: addrData, error: addrError } = await supabase
         .from('addresses')
         .select('*')
         .eq('user_id', currentUser.id);
       
       if (addrError) {
-        console.error('Address Fetch Error:', addrError);
+        setDbError(`Database Error: ${addrError.message}`);
+        console.error('Addr Load Error:', addrError);
       } else if (addrData) {
-        // 클라이언트 사이드 정렬
         const sorted = [...addrData].sort((a, b) => {
           if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
           return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -85,7 +87,12 @@ function MyPageContent() {
       }
 
       await syncWithSupabase();
-    } catch (err) { console.error('Data load error:', err); } finally { setLoading(false); }
+    } catch (err: any) { 
+      console.error('System Error:', err);
+      setDbError(err.message);
+    } finally { 
+      setLoading(false); 
+    }
   }, [router, syncWithSupabase]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
@@ -179,8 +186,7 @@ function MyPageContent() {
       await fetchData();
       setIsAddrModalOpen(false);
     } catch (err: any) { 
-      console.error('Save Error:', err);
-      alert(`저장 실패: ${err.message}`);
+      alert(`저장 오류: ${err.message}`);
     } finally { setIsSaving(false); }
   };
 
@@ -196,6 +202,8 @@ function MyPageContent() {
     fetchData();
   };
 
+  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/'); };
+
   if (loading) return <div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">{t.common.loading}</div>;
   if (!user) return null;
 
@@ -210,6 +218,7 @@ function MyPageContent() {
     <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border-light pb-8">
           <div>
             <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.mypage.title}</h1>
@@ -217,10 +226,11 @@ function MyPageContent() {
           </div>
           <div className="flex gap-3">
             {isAdmin && <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">Admin Access</Link>}
-            <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
+            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
         </div>
 
+        {/* Tab Navigation */}
         <div className="flex flex-wrap gap-4 md:gap-12 border-b border-border-light mb-12">
           {tabs.map((tab) => (
             <button key={tab.id} onClick={() => setActiveTab(tab.id as ActiveTab)} className={`pb-4 px-2 font-serif text-lg md:text-xl flex items-center gap-2.5 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}>
@@ -268,14 +278,26 @@ function MyPageContent() {
 
           {activeTab === 'addresses' && (
             <div className="space-y-8">
+              {dbError && (
+                <div className="bg-terracotta/10 border border-terracotta/20 p-6 rounded-sm flex items-start gap-4 mb-8">
+                  <Database className="w-6 h-6 text-terracotta flex-shrink-0" />
+                  <div className="space-y-2">
+                    <p className="font-bold text-terracotta">데이터베이스 설정이 필요합니다.</p>
+                    <p className="text-xs text-terracotta/80 leading-relaxed">배송지 테이블이 생성되지 않았거나 설정이 올바르지 않습니다. 위에서 안내드린 SQL 코드를 실행해 주세요.</p>
+                    <p className="text-[10px] bg-white/50 p-2 rounded font-mono">{dbError}</p>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex justify-between items-center mb-4">
                 <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
                 <button onClick={handleOpenAddModal} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
               </div>
+              
               {addresses.length === 0 ? (
                 <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-4">
                   <div className="w-12 h-12 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Info className="w-6 h-6" /></div>
-                  <p className="text-muted font-light italic">등록된 배송지가 없습니다. 새 배송지를 추가해 주세요.</p>
+                  <p className="text-muted font-light italic">등록된 배송지가 없습니다.</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -286,7 +308,7 @@ function MyPageContent() {
                           <div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div>
                           <div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div>
                         </div>
-                        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="flex gap-1">
                           <button onClick={() => handleOpenEditModal(addr)} className="p-2 text-muted hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
                           <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
@@ -296,7 +318,7 @@ function MyPageContent() {
                         <p className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
                         <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
                       </div>
-                      {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
+                      {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
                     </div>
                   ))}
                 </div>
