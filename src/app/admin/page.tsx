@@ -28,7 +28,6 @@ export default function AdminDashboard() {
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [trackingNumbers, setTrackingNumbers] = useState<{[key: string]: string}>({});
 
-  // New product form state
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newStock, setNewStock] = useState('100');
@@ -38,40 +37,34 @@ export default function AdminDashboard() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session || !CONFIG.ADMIN_EMAILS.includes(session.user.email || '')) {
-      alert('관리자 권한이 없습니다.');
-      router.push('/');
-      return;
-    }
-    setIsAdmin(true);
-    
-    // 1. Products
-    const { data: prodData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
-    if (prodData) setProducts(prodData);
-    
-    // 2. Orders
-    const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-    if (orderData) {
-      setOrders(orderData);
-      const existingTracking: {[key: string]: string} = {};
-      orderData.forEach(o => { if (o.tracking_number) existingTracking[o.id] = o.tracking_number; });
-      setTrackingNumbers(existingTracking);
-    }
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session || !CONFIG.ADMIN_EMAILS.includes(session.user.email || '')) {
+        alert('관리자 권한이 없습니다.');
+        router.push('/');
+        return;
+      }
+      setIsAdmin(true);
+      
+      const { data: prodData } = await supabase.from('products').select('*').order('created_at', { ascending: false });
+      if (prodData) setProducts(prodData);
+      
+      const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
+      if (orderData) {
+        setOrders(orderData);
+        const existingTracking: {[key: string]: string} = {};
+        orderData.forEach(o => { if (o.tracking_number) existingTracking[o.id] = o.tracking_number; });
+        setTrackingNumbers(existingTracking);
+      }
 
-    // 3. Restock Alerts
-    const { data: alertData } = await supabase
-      .from('restock_alerts')
-      .select('*, products(name, imageUrl)')
-      .order('created_at', { ascending: false });
-    if (alertData) setRestockAlerts(alertData);
-    
-    setIsCheckingAuth(false);
+      const { data: alertData } = await supabase.from('restock_alerts').select('*, products(name, imageUrl)').order('created_at', { ascending: false });
+      if (alertData) setRestockAlerts(alertData);
+      
+      setIsCheckingAuth(false);
+    } catch (err) { console.error(err); }
   }, [router]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -101,10 +94,10 @@ export default function AdminDashboard() {
         name: newName, price: Number(newPrice), stock: Number(newStock), category: newCategory, description: newDesc, imageUrl, is_sold_out: Number(newStock) <= 0
       }]).select();
       if (error) throw error;
-      alert('상품이 등록되었습니다!');
       if (data) setProducts([data[0], ...products]);
       setIsAdding(false);
       setNewName(''); setNewPrice(''); setNewStock('100'); setNewDesc(''); setImageFile(null); setImagePreview(null);
+      alert('상품이 등록되었습니다!');
     } catch (error: any) { alert(`오류: ${error.message}`); } finally { setIsLoading(false); }
   };
 
@@ -117,11 +110,15 @@ export default function AdminDashboard() {
   const handleUpdateProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-    const { error } = await supabase.from('products').update({
-      name: editingProduct.name, price: Number(editingProduct.price), stock: Number(editingProduct.stock), category: editingProduct.category, description: editingProduct.description, is_sold_out: Number(editingProduct.stock) <= 0
-    }).eq('id', editingProduct.id);
-    if (!error) { setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p)); setEditingProduct(null); alert('수정 완료'); }
-    setIsLoading(false);
+    try {
+      const { error } = await supabase.from('products').update({
+        name: editingProduct.name, price: Number(editingProduct.price), stock: Number(editingProduct.stock), category: editingProduct.category, description: editingProduct.description, is_sold_out: Number(editingProduct.stock) <= 0
+      }).eq('id', editingProduct.id);
+      if (error) throw error;
+      setProducts(products.map(p => p.id === editingProduct.id ? editingProduct : p));
+      setEditingProduct(null);
+      alert('수정 완료');
+    } catch (err: any) { alert(err.message); } finally { setIsLoading(false); }
   };
 
   const updateOrderStatus = async (id: string, newStatus: string, trackingNumber?: string) => {
@@ -144,7 +141,6 @@ export default function AdminDashboard() {
 
   return (
     <div className="flex-1 flex min-h-screen bg-white">
-      {/* Sidebar */}
       <aside className="w-64 border-r border-border-light bg-hanji-white flex flex-col p-8 sticky top-0 h-screen shadow-sm">
         <h2 className="font-serif text-2xl text-deep-sage mb-12">관리자 센터</h2>
         <nav className="space-y-6 flex-1 text-sm">
@@ -177,7 +173,7 @@ export default function AdminDashboard() {
                 <button onClick={() => setIsAdding(!isAdding)} className="bg-charcoal text-white px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all">{isAdding ? '닫기' : '새 상품 등록'}</button>
               </div>
               {isAdding && (
-                <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} className="bg-hanji-white border border-border-light p-8 rounded-sm mb-12 shadow-sm relative">
+                <div className="bg-hanji-white border border-border-light p-8 rounded-sm mb-12 shadow-sm">
                   <form onSubmit={handleAddProduct} className="grid grid-cols-1 md:grid-cols-2 gap-8">
                     <div className="space-y-6">
                       <input required value={newName} onChange={(e) => setNewName(e.target.value)} type="text" placeholder="상품명" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none focus:border-deep-sage" />
@@ -198,7 +194,7 @@ export default function AdminDashboard() {
                       <button type="submit" disabled={isLoading} className="w-full bg-deep-sage text-white py-4 rounded-sm hover:bg-charcoal transition-all font-medium">{isLoading ? '처리 중...' : '상품 등록 완료'}</button>
                     </div>
                   </form>
-                </motion.div>
+                </div>
               )}
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
@@ -232,26 +228,11 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-border-light">
                     {restockAlerts.map((a) => (
                       <tr key={a.id} className="hover:bg-hanji-white/50 transition-colors text-sm">
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-4">
-                            <div className="relative w-10 h-12 rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={a.products?.imageUrl || ''} alt="" fill className="object-cover" /></div>
-                            <span className="font-medium">{a.products?.name}</span>
-                          </div>
-                        </td>
+                        <td className="px-8 py-6"><div className="flex items-center gap-4"><div className="relative w-10 h-12 rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={a.products?.imageUrl || ''} alt="" fill className="object-cover" /></div><span className="font-medium">{a.products?.name}</span></div></td>
                         <td className="px-8 py-6 font-mono text-charcoal/70">{a.phone_number}</td>
                         <td className="px-8 py-6 text-xs text-muted">{new Date(a.created_at).toLocaleDateString()}</td>
-                        <td className="px-8 py-6">
-                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-terracotta/10 text-terracotta'}`}>
-                            {a.status === 'completed' ? '발송완료' : '대기중'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-6 text-center">
-                          {a.status !== 'completed' && (
-                            <button onClick={() => updateAlertStatus(a.id, 'completed')} className="p-2 hover:bg-deep-sage text-muted hover:text-white rounded-full transition-all" title="알림 발송 완료 처리">
-                              <Check className="w-4 h-4" />
-                            </button>
-                          )}
-                        </td>
+                        <td className="px-8 py-6"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-terracotta/10 text-terracotta'}`}>{a.status === 'completed' ? '발송완료' : '대기중'}</span></td>
+                        <td className="px-8 py-6 text-center">{a.status !== 'completed' && (<button onClick={() => updateAlertStatus(a.id, 'completed')} className="p-2 hover:bg-deep-sage text-muted hover:text-white rounded-full transition-all" title="알림 발송 완료 처리"><Check className="w-4 h-4" /></button>)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -291,7 +272,6 @@ export default function AdminDashboard() {
         </AnimatePresence>
       </main>
 
-      {/* Edit Product Modal */}
       <AnimatePresence>
         {editingProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
