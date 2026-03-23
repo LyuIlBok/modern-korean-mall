@@ -26,7 +26,6 @@ export default function AdminDashboard() {
   const router = useRouter();
 
   const [editingProduct, setEditingProduct] = useState<any>(null);
-  const [trackingNumbers, setTrackingNumbers] = useState<{[key: string]: string}>({});
 
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -49,12 +48,7 @@ export default function AdminDashboard() {
       if (prodData) setProducts(prodData);
       
       const { data: orderData } = await supabase.from('orders').select('*').order('created_at', { ascending: false });
-      if (orderData) {
-        setOrders(orderData);
-        const existingTracking: {[key: string]: string} = {};
-        orderData.forEach(o => { if (o.tracking_number) existingTracking[o.id] = o.tracking_number; });
-        setTrackingNumbers(existingTracking);
-      }
+      if (orderData) setOrders(orderData);
 
       const { data: alertData } = await supabase.from('restock_alerts').select('*, products(name, imageUrl)').order('created_at', { ascending: false });
       if (alertData) setRestockAlerts(alertData);
@@ -87,7 +81,8 @@ export default function AdminDashboard() {
         const fileExt = imageFile.name.split('.').pop();
         const fileName = `${Math.random()}.${fileExt}`;
         const filePath = `products/${fileName}`;
-        await supabase.storage.from('product-images').upload(filePath, imageFile);
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, imageFile);
+        if (uploadError) throw uploadError;
         const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filePath);
         imageUrl = publicUrl;
       }
@@ -104,7 +99,10 @@ export default function AdminDashboard() {
 
   const updateAlertStatus = async (alertId: string, status: string) => {
     const { error } = await supabase.from('restock_alerts').update({ status }).eq('id', alertId);
-    if (!error) { setRestockAlerts(restockAlerts.map(a => a.id === alertId ? { ...a, status } : a)); alert('상태 업데이트 완료'); }
+    if (!error) { 
+      setRestockAlerts(restockAlerts.map(a => a.id === alertId ? { ...a, status } : a)); 
+      alert('상태 업데이트 완료'); 
+    }
   };
 
   if (isCheckingAuth) return <div className="min-h-screen flex items-center justify-center bg-hanji-white text-deep-sage uppercase text-xs">Loading Admin...</div>;
@@ -118,12 +116,12 @@ export default function AdminDashboard() {
       <aside className="w-64 border-r border-border-light bg-hanji-white flex flex-col p-8 sticky top-0 h-screen">
         <h2 className="font-serif text-2xl text-deep-sage mb-12">관리자 센터</h2>
         <nav className="space-y-6 flex-1 text-sm text-muted">
-          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'dashboard' && 'text-charcoal font-bold'}`}><LayoutDashboard className="w-4 h-4" /> 대시보드</button>
-          <button onClick={() => setActiveTab('products')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'products' && 'text-charcoal font-bold'}`}><Package className="w-4 h-4" /> 상품 관리</button>
-          <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'orders' && 'text-charcoal font-bold'}`}><ShoppingCart className="w-4 h-4" /> 주문 관리</button>
-          <button onClick={() => setActiveTab('restock')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'restock' && 'text-charcoal font-bold'}`}><Bell className="w-4 h-4" /> 재입고 알림</button>
+          <button onClick={() => setActiveTab('dashboard')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'dashboard' ? 'text-charcoal font-bold' : ''}`}><LayoutDashboard className="w-4 h-4" /> 대시보드</button>
+          <button onClick={() => setActiveTab('products')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'products' ? 'text-charcoal font-bold' : ''}`}><Package className="w-4 h-4" /> 상품 관리</button>
+          <button onClick={() => setActiveTab('orders')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'orders' ? 'text-charcoal font-bold' : ''}`}><ShoppingCart className="w-4 h-4" /> 주문 관리</button>
+          <button onClick={() => setActiveTab('restock')} className={`flex items-center gap-3 w-full text-left ${activeTab === 'restock' ? 'text-charcoal font-bold' : ''}`}><Bell className="w-4 h-4" /> 재입고 알림</button>
         </nav>
-        <button onClick={() => { supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> 로그아웃</button>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> 로그아웃</button>
       </aside>
 
       <main className="flex-1 p-12 overflow-y-auto">
@@ -151,27 +149,80 @@ export default function AdminDashboard() {
                     <input required value={newName} onChange={(e) => setNewName(e.target.value)} type="text" placeholder="상품명" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none" />
                     <div className="grid grid-cols-2 gap-4"><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="가격" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none" /><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="재고" className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none" /></div>
                     <select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light bg-transparent py-2 focus:outline-none"><option value="농산물">농산물</option><option value="농자재">농자재</option></select>
-                    <div className="flex items-center gap-4 mt-2"><div className="relative w-20 h-24 bg-white border border-border-light rounded-sm overflow-hidden">{imagePreview ? <Image src={imagePreview} alt="Preview" fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center text-muted/30"><ImageIcon className="w-6 h-6" /></div>}</div><input type="file" accept="image/*" onChange={handleImageChange} className="text-xs text-muted" /></div>
+                    <div className="flex items-center gap-4 mt-2">
+                      <div className="relative w-20 h-24 bg-white border border-border-light rounded-sm overflow-hidden">{imagePreview ? <Image src={imagePreview} alt="Preview" fill className="object-cover" /> : <div className="w-full h-full flex items-center justify-center text-muted/30"><ImageIcon className="w-6 h-6" /></div>}</div>
+                      <input type="file" accept="image/*" onChange={handleImageChange} className="text-xs text-muted" />
+                    </div>
                   </div>
-                  <div className="space-y-6"><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="설명" className="w-full h-32 border border-border-light bg-white/50 p-4 rounded-sm focus:outline-none text-sm" /><button type="submit" disabled={isLoading} className="w-full bg-deep-sage text-white py-4 rounded-sm hover:bg-charcoal transition-all font-medium">{isLoading ? '처리 중...' : '상품 등록'}</button></div>
+                  <div className="space-y-6">
+                    <textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="설명" className="w-full h-32 border border-border-light bg-white/50 p-4 rounded-sm focus:outline-none text-sm" />
+                    <button type="submit" disabled={isLoading} className="w-full bg-deep-sage text-white py-4 rounded-sm hover:bg-charcoal transition-all font-medium">{isLoading ? '처리 중...' : '상품 등록'}</button>
+                  </div>
                 </form>
               </div>
             )}
-            <div className="bg-white border border-border-light rounded-sm overflow-hidden"><table className="w-full text-left"><thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light"><tr><th className="px-8 py-5">Product</th><th className="px-8 py-5 text-right">Price</th><th className="px-8 py-5 text-right">Stock</th><th className="px-8 py-5 text-center">Action</th></tr></thead><tbody className="divide-y divide-border-light">{products.map((p) => (<tr key={p.id} className="text-sm"><td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-10 h-12 border border-border-light rounded-sm overflow-hidden"><Image src={p.imageUrl} alt={p.name} fill className="object-cover" /></div><span>{p.name}</span></div></td><td className="px-8 py-6 text-right">{Number(p.price).toLocaleString()}원</td><td className="px-8 py-6 text-right">{Number(p.stock).toLocaleString()}</td><td className="px-8 py-6 text-center"><div className="flex justify-center gap-2"><button onClick={() => setEditingProduct(p)} className="p-2 hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button><button onClick={async () => { if(confirm('삭제하시겠습니까?')){ await supabase.from('products').delete().eq('id', p.id); fetchData(); }}} className="p-2 hover:text-terracotta"><Trash2 className="w-4 h-4" /></button></div></td></tr>))}</tbody></table></div>
+            <div className="bg-white border border-border-light rounded-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light">
+                  <tr><th className="px-8 py-5">Product</th><th className="px-8 py-5 text-right">Price</th><th className="px-8 py-5 text-right">Stock</th><th className="px-8 py-5 text-center">Action</th></tr>
+                </thead>
+                <tbody className="divide-y divide-border-light">
+                  {products.map((p) => (
+                    <tr key={p.id} className="text-sm">
+                      <td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-10 h-12 border border-border-light rounded-sm overflow-hidden"><Image src={p.imageUrl} alt={p.name} fill className="object-cover" /></div><span>{p.name}</span></div></td>
+                      <td className="px-8 py-6 text-right">{Number(p.price).toLocaleString()}원</td>
+                      <td className="px-8 py-6 text-right">{Number(p.stock).toLocaleString()}</td>
+                      <td className="px-8 py-6 text-center"><div className="flex justify-center gap-2"><button onClick={() => setEditingProduct(p)} className="p-2 hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button><button onClick={async () => { if(confirm('삭제하시겠습니까?')){ await supabase.from('products').delete().eq('id', p.id); fetchData(); }}} className="p-2 hover:text-terracotta"><Trash2 className="w-4 h-4" /></button></div></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'restock' && (
           <div>
             <h1 className="font-serif text-4xl mb-12">재입고 알림</h1>
-            <div className="bg-white border border-border-light rounded-sm overflow-hidden"><table className="w-full text-left"><thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light"><tr><th className="px-8 py-5">Product</th><th className="px-8 py-5">Phone</th><th className="px-8 py-5 text-center">Status</th></tr></thead><tbody className="divide-y divide-border-light">{restockAlerts.map((a) => (<tr key={a.id} className="text-sm"><td className="px-8 py-6">{a.products?.name}</td><td className="px-8 py-6">{a.phone_number}</td><td className="px-8 py-6 text-center"><button onClick={() => updateAlertStatus(a.id, 'completed')} className={`px-3 py-1 rounded-full text-[10px] ${a.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-charcoal text-white'}`}>{a.status === 'completed' ? '발송완료' : '대기중'}</button></td></tr>))}</tbody></table></div>
+            <div className="bg-white border border-border-light rounded-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light">
+                  <tr><th className="px-8 py-5">Product</th><th className="px-8 py-5">Phone</th><th className="px-8 py-5 text-center">Status</th></tr>
+                </thead>
+                <tbody className="divide-y divide-border-light">
+                  {restockAlerts.map((a) => (
+                    <tr key={a.id} className="text-sm">
+                      <td className="px-8 py-6">{a.products?.name}</td>
+                      <td className="px-8 py-6">{a.phone_number}</td>
+                      <td className="px-8 py-6 text-center"><button onClick={() => updateAlertStatus(a.id, 'completed')} className={`px-3 py-1 rounded-full text-[10px] ${a.status === 'completed' ? 'bg-green-50 text-green-600' : 'bg-charcoal text-white'}`}>{a.status === 'completed' ? '발송완료' : '대기중'}</button></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
 
         {activeTab === 'orders' && (
           <div>
             <h1 className="font-serif text-4xl mb-12">주문 관리</h1>
-            <div className="bg-white border border-border-light rounded-sm overflow-hidden"><table className="w-full text-left"><thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light"><tr><th className="px-8 py-5">ID</th><th className="px-8 py-5">Customer</th><th className="px-8 py-5 text-right">Total</th><th className="px-8 py-5 text-center">Status</th></tr></thead><tbody className="divide-y divide-border-light">{orders.map((o) => (<tr key={o.id} className="text-sm"><td className="px-8 py-6">{o.id.slice(0, 8)}</td><td className="px-8 py-6">{o.customer_name}</td><td className="px-8 py-6 text-right">{Number(o.total_price).toLocaleString()}원</td><td className="px-8 py-6 text-center"><span className="px-2 py-1 bg-hanji-white rounded-full text-[10px]">{o.status}</span></td></tr>))}</tbody></table></div>
+            <div className="bg-white border border-border-light rounded-sm overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-hanji-white text-[10px] uppercase text-muted border-b border-border-light">
+                  <tr><th className="px-8 py-5">ID</th><th className="px-8 py-5">Customer</th><th className="px-8 py-5 text-right">Total</th><th className="px-8 py-5 text-center">Status</th></tr>
+                </thead>
+                <tbody className="divide-y divide-border-light">
+                  {orders.map((o) => (
+                    <tr key={o.id} className="text-sm">
+                      <td className="px-8 py-6 font-serif">{o.id.slice(0, 8)}</td>
+                      <td className="px-8 py-6">{o.customer_name}</td>
+                      <td className="px-8 py-6 text-right">{Number(o.total_price).toLocaleString()}원</td>
+                      <td className="px-8 py-6 text-center"><span className="px-2 py-1 bg-hanji-white rounded-full text-[10px]">{o.status}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </main>

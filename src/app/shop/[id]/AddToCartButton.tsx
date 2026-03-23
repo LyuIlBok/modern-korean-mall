@@ -8,6 +8,7 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { ShoppingCart, CreditCard, AlertCircle, Bell, X, Check, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function PurchaseButtons({ product }: { product: Product }) {
   const router = useRouter();
@@ -122,7 +123,6 @@ export default function PurchaseButtons({ product }: { product: Product }) {
         </div>
       </div>
 
-      {/* Restock Alert Modal */}
       <AnimatePresence>
         {showRestockModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
