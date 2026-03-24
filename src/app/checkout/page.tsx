@@ -8,7 +8,8 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, ArrowRight } from 'lucide-react';
+import Script from 'next/script';
+import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, ArrowRight, Search } from 'lucide-react';
 
 export default function CheckoutPage() {
   const { items, clearCart } = useCartStore();
@@ -21,7 +22,9 @@ export default function CheckoutPage() {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
+    postcode: '',
     address: '',
+    detailAddress: '',
     memo: '',
     paymentMethod: 'card'
   });
@@ -48,7 +51,9 @@ export default function CheckoutPage() {
             ...prev,
             name: addrData.receiver_name || prev.name,
             phone: addrData.receiver_phone || prev.phone,
-            address: `${addrData.address} ${addrData.detail_address}`.trim() || prev.address
+            postcode: addrData.postcode || prev.postcode,
+            address: addrData.address || prev.address,
+            detailAddress: addrData.detail_address || prev.detailAddress
           }));
         } else {
           // 2. Fallback to profile if no default address
@@ -75,6 +80,21 @@ export default function CheckoutPage() {
       fetchUserProfile();
     }
   }, [hasMounted]);
+
+  const handleAddressSearch = () => {
+    if (typeof window !== 'undefined' && (window as any).daum) {
+      new (window as any).daum.Postcode({
+        oncomplete: (data: any) => {
+          setFormData(prev => ({
+            ...prev,
+            postcode: data.zonecode,
+            address: data.address,
+            detailAddress: '' // New address usually needs new detail
+          }));
+        }
+      }).open();
+    }
+  };
 
   useEffect(() => {
     if (hasMounted && items.length === 0) {
@@ -114,7 +134,7 @@ export default function CheckoutPage() {
           user_id: session?.user?.id || null,
           customer_name: formData.name,
           customer_phone: formData.phone,
-          address: formData.address,
+          address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
           total_price: total,
           status: '결제완료'
         }])
@@ -153,6 +173,7 @@ export default function CheckoutPage() {
 
   return (
     <div className="bg-hanji-white min-h-screen pt-24 pb-32">
+      <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <header className="mb-12">
           <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-6 text-xs uppercase tracking-widest">
@@ -169,19 +190,44 @@ export default function CheckoutPage() {
                 <Truck className="w-6 h-6 text-deep-sage" /> 배송지 정보
               </h2>
               <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
-                  <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함을 입력해 주세요" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
+                    <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함을 입력해 주세요" />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
+                    <input required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="010-0000-0000" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
-                  <input required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="010-0000-0000" />
+
+                <div className="space-y-4 pt-4 border-t border-border-light/50">
+                  <div className="flex gap-4 items-end">
+                    <div className="flex-1 space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
+                      <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="00000" />
+                    </div>
+                    <button 
+                      type="button" 
+                      onClick={handleAddressSearch}
+                      className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2 mb-1"
+                    >
+                      <Search className="w-3 h-3" /> 주소 찾기
+                    </button>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">기본 주소</label>
+                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="주소 찾기를 이용해 주세요" />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">상세 주소</label>
+                    <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="나머지 상세 주소를 입력해 주세요" />
+                  </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest font-bold text-muted">배송 주소</label>
-                  <input required value={formData.address} onChange={(e) => setFormData({...formData, address: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="도로명 주소를 입력해 주세요" />
-                </div>
-                <div className="space-y-2">
+
+                <div className="space-y-2 pt-4 border-t border-border-light/50">
                   <label className="text-[10px] uppercase tracking-widest font-bold text-muted">배송 메모 (선택)</label>
                   <input value={formData.memo} onChange={(e) => setFormData({...formData, memo: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="요청 사항을 적어주세요" />
                 </div>
