@@ -100,6 +100,11 @@ export default function CheckoutClient() {
     setIsLoading(true);
 
     try {
+      // 신용카드 선택 시 가상의 결제창 로딩 연출
+      if (formData.paymentMethod === 'card') {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+      }
+
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const session = sessionData?.session;
@@ -107,6 +112,9 @@ export default function CheckoutClient() {
       const subtotal = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const shippingFee = subtotal >= 50000 ? 0 : 3000;
       const total = subtotal + shippingFee;
+
+      // 무통장 입금은 '입금대기', 신용카드는 '결제완료'로 상태 저장
+      const orderStatus = formData.paymentMethod === 'transfer' ? '입금대기' : '결제완료';
 
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -116,7 +124,8 @@ export default function CheckoutClient() {
           customer_phone: formData.phone,
           address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
           total_price: total,
-          status: '결제완료'
+          status: orderStatus,
+          payment_method: formData.paymentMethod
         }])
         .select()
         .single();
@@ -221,22 +230,39 @@ export default function CheckoutClient() {
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
                 <CreditCard className="w-6 h-6 text-deep-sage" /> 결제 수단 선택
               </h2>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-8">
                 {[
                   { id: 'card', label: '신용카드' },
                   { id: 'transfer', label: '무통장 입금' },
-                  { id: 'kakao', label: '카카오페이' },
-                  { id: 'naver', label: '네이버페이' },
                 ].map((method) => (
                   <button
                     key={method.id}
                     type="button"
                     onClick={() => setFormData({...formData, paymentMethod: method.id})}
-                    className={`py-4 rounded-sm border transition-all text-sm font-medium ${formData.paymentMethod === method.id ? 'border-charcoal bg-charcoal text-white' : 'border-border-light hover:border-charcoal'}`}
+                    className={`py-4 rounded-sm border transition-all text-sm font-medium ${formData.paymentMethod === method.id ? 'border-charcoal bg-charcoal text-white shadow-lg' : 'border-border-light hover:border-charcoal'}`}
                   >
                     {method.label}
                   </button>
                 ))}
+              </div>
+
+              {/* 결제 수단별 안내 문구 */}
+              <div className="bg-hanji-white p-6 rounded-sm border border-border-light/50">
+                {formData.paymentMethod === 'transfer' ? (
+                  <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <p className="text-[10px] uppercase tracking-widest font-bold text-deep-sage mb-2">입금 계좌 안내</p>
+                    <p className="font-serif text-lg text-charcoal">농협 351-1234-5678-90</p>
+                    <p className="text-xs text-muted">예금주: 농업회사법인 복이네농장(주)</p>
+                    <p className="text-[11px] text-muted mt-4 italic">* 주문 후 24시간 이내 미입금 시 자동 취소됩니다.</p>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
+                    <ShieldCheck className="w-5 h-5 text-deep-sage" />
+                    <p className="text-sm text-charcoal font-light">
+                      결제하기 버튼을 누르면 안전한 카드 결제창으로 연결됩니다.
+                    </p>
+                  </div>
+                )}
               </div>
             </section>
           </div>
@@ -278,7 +304,16 @@ export default function CheckoutClient() {
                 disabled={isLoading || items.length === 0}
                 className="w-full bg-charcoal text-white py-6 rounded-sm mt-10 hover:bg-deep-sage transition-all font-serif text-xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:bg-muted disabled:cursor-not-allowed"
               >
-                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>₩{total.toLocaleString()} 결제하기</>}
+                {isLoading ? (
+                  <div className="flex items-center gap-3">
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    <span className="text-sm font-sans uppercase tracking-widest">
+                      {formData.paymentMethod === 'card' ? 'Processing Payment...' : 'Creating Order...'}
+                    </span>
+                  </div>
+                ) : (
+                  <>₩{total.toLocaleString()} 결제하기</>
+                )}
               </button>
 
               <div className="mt-6 flex items-center justify-center gap-2 text-[10px] text-muted uppercase tracking-widest font-bold">
