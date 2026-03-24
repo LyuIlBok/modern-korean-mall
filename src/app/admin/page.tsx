@@ -146,34 +146,55 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
+      // 1. 새 파일 업로드 실행
       const [newMainUrl, newGalleryUrls, newDetailUrls] = await Promise.all([
         mainImage ? uploadFiles([mainImage], 'main') : Promise.resolve([]),
         uploadFiles(galleryFiles, 'gallery'),
         uploadFiles(detailFiles, 'details')
       ]);
 
-      const updatedData = {
+      // 2. 최종 URL 리스트 구성 (기존 유지된 URL + 새로 업로드된 URL)
+      const finalMainUrl = newMainUrl.length > 0 ? newMainUrl[0] : editingProduct.imageUrl;
+      const finalGallery = [...(editingProduct.images || []), ...newGalleryUrls];
+      const finalDetails = [...(editingProduct.detail_content_images || []), ...newDetailUrls];
+
+      const { error } = await supabase.from('products').update({
         name: editingProduct.name, 
         price: Number(editingProduct.price), 
         stock: Number(editingProduct.stock), 
         category: editingProduct.category, 
         description: editingProduct.description, 
-        imageUrl: newMainUrl.length > 0 ? newMainUrl[0] : editingProduct.imageUrl,
-        images: [...(editingProduct.images || []), ...newGalleryUrls],
-        detail_content_images: [...(editingProduct.detail_content_images || []), ...newDetailUrls],
+        imageUrl: finalMainUrl,
+        images: finalGallery,
+        detail_content_images: finalDetails,
         is_sold_out: Number(editingProduct.stock) <= 0
-      };
+      }).eq('id', editingProduct.id);
 
-      const { error } = await supabase.from('products').update(updatedData).eq('id', editingProduct.id);
       if (error) throw error;
       
-      alert('수정되었습니다.');
+      alert('상품 정보가 수정되었습니다.');
       setEditingProduct(null);
+      // 스테이트 초기화
+      setMainImage(null); setMainPreview(null);
+      setGalleryFiles([]); setGalleryPreviews([]);
+      setDetailFiles([]); setDetailPreviews([]);
       fetchData();
     } catch (err: any) { 
       alert(err.message); 
     } finally { 
       setIsLoading(false); 
+    }
+  };
+
+  // 기존 이미지 삭제 처리 (수정 모드용)
+  const removeExistingImage = (idx: number, type: 'gallery' | 'detail') => {
+    if (!editingProduct) return;
+    if (type === 'gallery') {
+      const newImages = editingProduct.images.filter((_: any, i: number) => i !== idx);
+      setEditingProduct({ ...editingProduct, images: newImages });
+    } else {
+      const newDetails = editingProduct.detail_content_images.filter((_: any, i: number) => i !== idx);
+      setEditingProduct({ ...editingProduct, detail_content_images: newDetails });
     }
   };
 
@@ -465,26 +486,90 @@ export default function AdminDashboard() {
       <AnimatePresence>
         {editingProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingProduct(null)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-2xl rounded-sm shadow-2xl p-12 overflow-hidden">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setEditingProduct(null); setMainPreview(null); setGalleryPreviews([]); setDetailPreviews([]); }} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-4xl rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
               <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
               <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
                 <h2 className="font-serif text-3xl">상품 정보 수정</h2>
-                <button onClick={() => setEditingProduct(null)} className="p-2 hover:bg-hanji-white rounded-full transition-colors"><X className="w-7 h-7" /></button>
+                <button onClick={() => { setEditingProduct(null); setMainPreview(null); setGalleryPreviews([]); setDetailPreviews([]); }} className="p-2 hover:bg-hanji-white rounded-full transition-colors"><X className="w-7 h-7" /></button>
               </div>
-              <form onSubmit={handleUpdateProduct} className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                <div className="space-y-6">
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage text-lg font-serif bg-transparent" /></div>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+              
+              <form onSubmit={handleUpdateProduct} className="space-y-12">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                  <div className="space-y-8">
+                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage text-lg font-serif bg-transparent" /></div>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                    </div>
+                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                   </div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required rows={6} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-full bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
                 </div>
-                <div className="space-y-8 flex flex-col">
-                  <div className="flex-1 space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required rows={6} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-full bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
-                  <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-lg">{isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />} 수정 내용 저장하기</button>
+
+                {/* Edit Image Upload Sections */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
+                  <div className="space-y-4">
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
+                    <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                      <Image src={mainPreview || editingProduct.imageUrl} alt="Main" fill className="object-cover" />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">새 이미지 선택</div>
+                      <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'main')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                  </div>
+
+                  <div className="space-y-4 md:col-span-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images</label>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+                      {/* Existing Gallery Images */}
+                      {editingProduct.images?.map((url: string, idx: number) => (
+                        <div key={`old-${idx}`} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                          <Image src={url} alt="Gallery" fill className="object-cover" />
+                          <button type="button" onClick={() => removeExistingImage(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-terracotta text-white rounded-full transition-all group-hover:scale-110 shadow-lg"><X className="w-3 h-3" /></button>
+                        </div>
+                      ))}
+                      {/* New Gallery Previews */}
+                      {galleryPreviews.map((src, idx) => (
+                        <div key={`new-${idx}`} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border-2 border-deep-sage/30 group">
+                          <Image src={src} alt="New Gallery" fill className="object-cover" />
+                          <button type="button" onClick={() => removeFile(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-charcoal text-white rounded-full"><X className="w-3 h-3" /></button>
+                          <div className="absolute bottom-0 left-0 right-0 bg-deep-sage text-[8px] text-white text-center py-0.5">NEW</div>
+                        </div>
+                      ))}
+                      <label className="aspect-square bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
+                        <Plus className="w-6 h-6 text-muted/30" /><input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'gallery')} className="hidden" />
+                      </label>
+                    </div>
+                  </div>
                 </div>
+
+                <div className="space-y-4 border-t border-border-light pt-10">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Detail Content Images</label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {/* Existing Detail Images */}
+                    {editingProduct.detail_content_images?.map((url: string, idx: number) => (
+                      <div key={`old-det-${idx}`} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                        <Image src={url} alt="Detail" fill className="object-cover" />
+                        <button type="button" onClick={() => removeExistingImage(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-terracotta text-white rounded-full transition-all group-hover:scale-110 shadow-lg"><X className="w-4 h-4" /></button>
+                      </div>
+                    ))}
+                    {/* New Detail Previews */}
+                    {detailPreviews.map((src, idx) => (
+                      <div key={`new-det-${idx}`} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border-2 border-deep-sage/30 group">
+                        <Image src={src} alt="New Detail" fill className="object-cover" />
+                        <button type="button" onClick={() => removeFile(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-charcoal text-white rounded-full"><X className="w-4 h-4" /></button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-deep-sage text-[8px] text-white text-center py-1">NEW</div>
+                      </div>
+                    ))}
+                    <label className="aspect-[2/3] bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
+                      <Camera className="w-8 h-8 text-muted/30" /><input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'detail')} className="hidden" />
+                    </label>
+                  </div>
+                </div>
+
+                <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl">
+                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Save className="w-8 h-8" />} 수정 내용 저장하기
+                </button>
               </form>
             </motion.div>
           </div>
