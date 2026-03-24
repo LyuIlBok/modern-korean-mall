@@ -4,8 +4,8 @@ import crypto from 'crypto';
 
 // 서버 사이드 전용 Supabase 클라이언트 (RLS 우회 권한 필요 - 내부 로직용)
 const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
