@@ -145,7 +145,6 @@ export default function CheckoutClient() {
               country: "KR",
               addressLine1: finalAddressData.address1,
               addressLine2: finalAddressData.address2,
-              zipCode: finalAddressData.postcode,
             },
           },
         });
