@@ -325,7 +325,7 @@ export default function AdminDashboard() {
                   <input type="text" placeholder="상품명 검색..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full bg-hanji-white/50 border border-border-light pl-12 pr-4 py-3 rounded-sm text-sm focus:outline-none focus:border-deep-sage" />
                 </div>
                 <div className="flex gap-4">
-                  <select value={categoryFilter} onChange={(e) => setNewCategoryFilter(e.target.value)} className="bg-hanji-white/50 border border-border-light px-6 py-3 rounded-sm text-sm focus:outline-none">
+                  <select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)} className="bg-hanji-white/50 border border-border-light px-6 py-3 rounded-sm text-sm focus:outline-none">
                     <option value="전체">전체 카테고리</option><option value="농산물">농산물</option><option value="농자재">농자재</option>
                   </select>
                 </div>
