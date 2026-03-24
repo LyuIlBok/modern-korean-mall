@@ -103,16 +103,8 @@ export default function CheckoutPage() {
     }
   }, [hasMounted, items, router, language]);
 
-  const handleCheckout = useCallback(async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // 렌더링에 사용되는 items를 직접 사용하여 데이터 일관성 보장
-    if (!items || items.length === 0) {
-      alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
-      router.push('/');
-      return;
-    }
-
+  const handleCheckout = useCallback(async (currentItems: any[]) => {
+    // 렌더링 시점의 최신 items를 인자로 직접 전달받아 클로저 문제를 원천 차단
     setIsLoading(true);
 
     try {
@@ -121,6 +113,10 @@ export default function CheckoutPage() {
       if (sessionError) throw sessionError;
       const session = sessionData?.session;
       
+      const subtotal = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const shippingFee = subtotal >= 50000 ? 0 : 3000;
+      const total = subtotal + shippingFee;
+
       // 1. orders 테이블에 주문 생성
       const { data: order, error: orderError } = await supabase
         .from('orders')
@@ -129,7 +125,7 @@ export default function CheckoutPage() {
           customer_name: formData.name,
           customer_phone: formData.phone,
           address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
-          total_price: items.reduce((sum, item) => sum + item.price * item.quantity, 0) + (items.reduce((sum, item) => sum + item.price * item.quantity, 0) >= 50000 ? 0 : 3000),
+          total_price: total,
           status: '결제완료'
         }])
         .select()
@@ -139,7 +135,7 @@ export default function CheckoutPage() {
       if (!order) throw new Error('주문 데이터가 생성되지 않았습니다.');
 
       // 2. order_items 테이블에 상세 내역 생성
-      const orderItems = items.map(item => {
+      const orderItems = currentItems.map(item => {
         if (!item || !item.id) throw new Error('잘못된 상품 정보가 포함되어 있습니다.');
         return {
           order_id: order.id,
@@ -163,7 +159,7 @@ export default function CheckoutPage() {
     } finally {
       setIsLoading(false);
     }
-  }, [items, formData, language, router, clearCart]);
+  }, [formData, language, router, clearCart]);
 
   if (!hasMounted || items.length === 0) return null;
 
@@ -182,7 +178,7 @@ export default function CheckoutPage() {
           <h1 className="font-serif text-4xl text-charcoal">주문/결제</h1>
         </header>
 
-        <form onSubmit={handleCheckout} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+        <form onSubmit={(e) => { e.preventDefault(); handleCheckout(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           {/* Left: Shipping & Payment */}
           <div className="lg:col-span-7 space-y-12">
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
