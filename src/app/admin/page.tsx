@@ -12,6 +12,7 @@ import {
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
+import SalesChart from './SalesChart';
 
 type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock';
 
@@ -322,9 +323,18 @@ export default function AdminDashboard() {
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-12">
-              <h1 className="font-serif text-4xl text-charcoal">운영 현황</h1>
+              <div className="flex justify-between items-end">
+                <div className="space-y-4">
+                  <h1 className="font-serif text-4xl text-charcoal">운영 현황</h1>
+                  <p className="text-muted text-sm font-light">복이네농장의 실시간 비즈니스 성과를 분석합니다.</p>
+                </div>
+              </div>
+
+              {/* 실시간 통계 차트 및 요약 카드 */}
+              <SalesChart />
+
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales (All Time)</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Orders</p><h3 className="text-3xl font-serif text-charcoal">{orders.length}건</h3></div><ShoppingCart className="w-8 h-8 text-deep-sage opacity-20" /></div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Ship</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrders}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
               </div>
