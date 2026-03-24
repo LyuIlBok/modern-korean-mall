@@ -17,6 +17,12 @@ export default function CheckoutPage() {
   const hasMounted = useHasMounted();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Hydration fix
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -76,10 +82,10 @@ export default function CheckoutPage() {
       }
     };
 
-    if (hasMounted) {
+    if (hasMounted && isMounted) {
       fetchUserProfile();
     }
-  }, [hasMounted]);
+  }, [hasMounted, isMounted]);
 
   const handleAddressSearch = () => {
     if (typeof window !== 'undefined' && (window as any).daum) {
@@ -95,13 +101,6 @@ export default function CheckoutPage() {
       }).open();
     }
   };
-
-  useEffect(() => {
-    if (hasMounted && items.length === 0) {
-      alert(language === 'ko' ? '장바구니가 비어 있습니다.' : 'Your cart is empty.');
-      router.push('/');
-    }
-  }, [hasMounted, items, router, language]);
 
   const handleCheckout = useCallback(async (currentItems: any[]) => {
     // 렌더링 시점의 최신 items를 인자로 직접 전달받아 클로저 문제를 원천 차단
@@ -161,7 +160,19 @@ export default function CheckoutPage() {
     }
   }, [formData, language, router, clearCart]);
 
-  if (!hasMounted || items.length === 0) return null;
+  if (!isMounted || !hasMounted) {
+    return (
+      <div className="bg-hanji-white min-h-screen flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+      </div>
+    );
+  }
+
+  // 장바구니가 정말 비어있고 마운트가 완료되었다면 (Hydration 이후) 리다이렉트
+  if (items.length === 0) {
+    router.push('/');
+    return null;
+  }
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingFee = subtotal >= 50000 ? 0 : 3000;
