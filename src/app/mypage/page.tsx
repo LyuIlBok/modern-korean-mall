@@ -46,6 +46,8 @@ function MyPageContent() {
   const { items: wishItems, syncWithSupabase } = useWishlistStore();
   const router = useRouter();
 
+  const [cancellingId, setCancellingId] = useState<string | null>(null);
+
   const fetchData = useCallback(async () => {
     setDbError(null);
     try {
@@ -97,10 +99,37 @@ function MyPageContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm(language === 'ko' ? '주문을 취소하시겠습니까?' : 'Do you want to cancel the order?')) return;
+    
+    setCancellingId(orderId);
+    try {
+      const response = await fetch('/api/orders/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderId })
+      });
+      
+      const result = await response.json();
+      if (response.ok) {
+        alert(language === 'ko' ? '주문이 취소되었습니다.' : 'Order cancelled.');
+        fetchData();
+      } else {
+        alert(`취소 오류: ${result.error}`);
+      }
+    } catch (err) {
+      alert('서버와 통신 중 오류가 발생했습니다.');
+    } finally {
+      setCancellingId(null);
+    }
+  };
+
   const handleUpdateStatus = async (orderId: string, status: string) => {
     await supabase.from('orders').update({ status }).eq('id', orderId);
     fetchData();
   };
+
+  const cancelableStatus = ['결제완료', '입금대기', '결제대기'];
 
   const handleOpenReview = (product: any) => {
     setSelectedReviewProduct(product);
@@ -266,7 +295,36 @@ function MyPageContent() {
                             <div className="relative w-20 h-24 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-500" /></div>
                             <div className="space-y-2"><h4 className="text-lg font-serif text-charcoal">{item.products?.name}</h4><p className="text-sm text-muted font-light">{item.quantity} 개 / ₩{item.price.toLocaleString()}</p><div className="pt-2 flex gap-2">{order.status === '배송완료' && (<button onClick={() => handleOpenReview(item.products)} className="text-[10px] border border-deep-sage text-deep-sage px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-deep-sage hover:text-white transition-all font-medium"><MessageSquare className="w-3 h-3" /> 리뷰 쓰기</button>)}<button onClick={() => router.push(`/shop/${item.products?.id}`)} className="text-[10px] border border-border-light px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-hanji-white transition-all text-charcoal/60"><Box className="w-3 h-3" /> 재구매</button></div></div>
                           </div>
-                          <div className="flex md:flex-col gap-2">{order.status === '결제완료' && (<><button onClick={() => handleUpdateStatus(order.id, '배송완료')} className="text-[10px] bg-deep-sage/10 text-deep-sage px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center"><CheckCircle className="w-3 h-3" /> 배송완료 처리 (테스트)</button><button className="text-[10px] border border-border-light text-muted px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-terracotta hover:text-white hover:border-terracotta transition-all uppercase tracking-widest min-w-[120px] justify-center"><X className="w-3 h-3" /> 주문 취소</button></>)}{order.status === '배송완료' && (<button className="text-[10px] border border-charcoal text-charcoal px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-charcoal hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center"><ClipboardCheck className="w-3 h-3" /> 구매 확정 완료</button>)}</div>
+                          <div className="flex md:flex-col gap-2">
+                            {cancelableStatus.includes(order.status) && (
+                              <button 
+                                onClick={() => handleCancelOrder(order.id)}
+                                disabled={cancellingId === order.id}
+                                className="text-[10px] border border-border-light text-muted px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-terracotta hover:text-white hover:border-terracotta transition-all uppercase tracking-widest min-w-[120px] justify-center disabled:opacity-50"
+                              >
+                                {cancellingId === order.id ? (
+                                  <><Loader2 className="w-3 h-3 animate-spin" /> 취소 중...</>
+                                ) : (
+                                  <><X className="w-3 h-3" /> 주문 취소</>
+                                )}
+                              </button>
+                            )}
+                            
+                            {order.status === '결제완료' && (
+                              <button 
+                                onClick={() => handleUpdateStatus(order.id, '배송완료')} 
+                                className="text-[10px] bg-deep-sage/10 text-deep-sage px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center"
+                              >
+                                <CheckCircle className="w-3 h-3" /> 배송완료 처리 (테스트)
+                              </button>
+                            )}
+                            
+                            {order.status === '배송완료' && (
+                              <button className="text-[10px] border border-charcoal text-charcoal px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-charcoal hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center">
+                                <ClipboardCheck className="w-3 h-3" /> 구매 확정 완료
+                              </button>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
