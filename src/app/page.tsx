@@ -5,6 +5,9 @@ import { supabase } from '@/lib/supabaseClient';
 import ProductCard from '@/components/ProductCard';
 import { translations } from '@/lib/translations';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 /**
  * [복이네농장 공식 메인 페이지]
  * - Server Component를 활용한 실시간 데이터 연동

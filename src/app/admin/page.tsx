@@ -160,15 +160,18 @@ export default function AdminDashboard() {
       if (mainImage) {
         const fileExt = mainImage.name.split('.').pop();
         const fileName = `main_${Date.now()}.${fileExt}`;
+        const filePath = `main/${fileName}`;
+        
         const { error: uploadError } = await supabase.storage
           .from('product-images')
-          .upload(`main/${fileName}`, mainImage);
+          .upload(filePath, mainImage);
         
         if (uploadError) throw uploadError;
         
         const { data: { publicUrl } } = supabase.storage
           .from('product-images')
-          .getPublicUrl(`main/${fileName}`);
+          .getPublicUrl(filePath);
+          
         customImageUrl = publicUrl;
       }
 
