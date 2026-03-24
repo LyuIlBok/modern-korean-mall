@@ -147,7 +147,7 @@ export default function Header() {
               <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest">{t?.common?.login || 'Login'}</Link>
             )}
             
-            <button onClick={toggleCart} className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors" aria-label="장바구니 열기">
+            <button onClick={() => toggleCart(true)} className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors" aria-label="장바구니 열기">
               <ShoppingBag className="w-6 h-6" />
               {itemCount > 0 && (
                 <span className="absolute top-0 right-0 bg-terracotta text-white text-[10px] font-medium w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{itemCount}</span>

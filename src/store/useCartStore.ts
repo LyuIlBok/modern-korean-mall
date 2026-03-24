@@ -1,61 +1,64 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Product } from '../data/mockData';
 
-export interface CartItem extends Product {
+export interface CartItem {
+  id: string;
+  name: string;
+  price: number;
+  imageUrl: string;
   quantity: number;
 }
 
 interface CartState {
   items: CartItem[];
-  userId: string | null;
-  addItem: (product: Product) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
-  clearCart: () => void;
-  setUserId: (id: string | null) => void;
   isOpen: boolean;
-  toggleCart: () => void;
+  addItem: (item: CartItem) => void;
+  removeItem: (id: string) => void;
+  updateQuantity: (id: string, delta: number) => void;
+  clearCart: () => void;
+  toggleCart: (open?: boolean) => void;
 }
 
 export const useCartStore = create<CartState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       items: [],
-      userId: null,
+      isOpen: false,
       
-      // 사용자 ID 설정 및 장바구니 동기화
-      setUserId: (id) => {
-        const currentUserId = get().userId;
-        // 유저가 바뀌면 (로그인/로그아웃) 기존 장바구니 비움
-        if (id !== currentUserId) {
-          set({ userId: id, items: [] });
+      addItem: (newItem) => set((state) => {
+        const existingItem = state.items.find((item) => item.id === newItem.id);
+        if (existingItem) {
+          return {
+            items: state.items.map((item) =>
+              item.id === newItem.id
+                ? { ...item, quantity: item.quantity + newItem.quantity }
+                : item
+            ),
+          };
         }
-      },
-
-      addItem: (product) => set((state) => {
-        const existing = state.items.find(item => item.id === product.id);
-        if (existing) {
-          return { items: state.items.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item) };
-        }
-        return { items: [...state.items, { ...product, quantity: 1 }] };
+        return { items: [...state.items, newItem] };
       }),
 
-      removeItem: (id) => set((state) => ({ items: state.items.filter(item => item.id !== id) })),
+      removeItem: (id) => set((state) => ({
+        items: state.items.filter((item) => item.id !== id),
+      })),
 
-      updateQuantity: (id, quantity) => set((state) => ({
-        items: quantity <= 0 
-          ? state.items.filter(item => item.id !== id)
-          : state.items.map(item => item.id === id ? { ...item, quantity } : item)
+      updateQuantity: (id, delta) => set((state) => ({
+        items: state.items.map((item) =>
+          item.id === id
+            ? { ...item, quantity: Math.max(1, item.quantity + delta) }
+            : item
+        ),
       })),
 
       clearCart: () => set({ items: [] }),
       
-      isOpen: false,
-      toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+      toggleCart: (open) => set((state) => ({ 
+        isOpen: open !== undefined ? open : !state.isOpen 
+      })),
     }),
     {
-      name: 'cart-storage',
+      name: 'boki-cart-storage',
       storage: createJSONStorage(() => localStorage),
     }
   )

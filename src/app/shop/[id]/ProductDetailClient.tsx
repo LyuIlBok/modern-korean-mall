@@ -19,9 +19,9 @@ export default function ProductDetailClient({
   product: any, 
   relatedProducts: any[] 
 }) {
-  const { t, language } = useLanguageStore();
+  const { language } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
-  const { addItem } = useCartStore();
+  const { addItem, toggleCart } = useCartStore();
   const hasMounted = useHasMounted();
   
   const [activeImage, setActiveImage] = useState(0);
@@ -32,8 +32,14 @@ export default function ProductDetailClient({
   const detailImages = product.detail_content_images || [];
 
   const handleAddToCart = () => {
-    addItem({ ...product, quantity });
-    alert(language === 'ko' ? '장바구니에 담겼습니다.' : 'Added to cart.');
+    addItem({ 
+      id: product.id, 
+      name: product.name, 
+      price: product.price, 
+      imageUrl: product.imageUrl, 
+      quantity 
+    });
+    toggleCart(true);
   };
 
   return (
