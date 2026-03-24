@@ -6,9 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, User, Send, Loader2, Search, 
-  ArrowLeft, Clock, CheckCircle2, ChevronRight 
+  ArrowLeft, Clock, ChevronRight, Hash, ShieldCheck
 } from 'lucide-react';
-import Image from 'next/image';
 import { CONFIG } from '@/lib/config';
 
 export default function AdminChatPage() {
@@ -32,6 +31,7 @@ export default function AdminChatPage() {
       }
       setIsAdmin(true);
       fetchChatUsers();
+      subscribeToAllMessages();
     };
     checkAdmin();
   }, [router]);
@@ -39,10 +39,6 @@ export default function AdminChatPage() {
   useEffect(() => {
     if (selectedUserId) {
       fetchMessages(selectedUserId);
-      const channel = subscribeToMessages(selectedUserId);
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
   }, [selectedUserId]);
 
@@ -53,8 +49,7 @@ export default function AdminChatPage() {
   }, [messages]);
 
   const fetchChatUsers = async () => {
-    // 모든 메시지를 가져와 사용자별로 그룹화 (최근 메시지순)
-    const { data, error } = await supabase
+    const { data } = await supabase
       .from('support_messages')
       .select('user_id, created_at, content, is_admin')
       .order('created_at', { ascending: false });
@@ -67,13 +62,45 @@ export default function AdminChatPage() {
             id: msg.user_id,
             lastMessage: msg.content,
             lastTime: msg.created_at,
-            unread: !msg.is_admin // 단순화된 로직 (실제로는 더 정교한 읽음 처리 필요)
+            isGuest: msg.user_id.startsWith('guest_')
           });
         }
       });
       setUsers(Array.from(userMap.values()));
     }
     setLoading(false);
+  };
+
+  const subscribeToAllMessages = () => {
+    return supabase
+      .channel('admin-chat-global')
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'support_messages' },
+        (payload) => {
+          const newMsg = payload.new;
+          
+          // 현재 대화 중인 유저의 메시지라면 대화창 업데이트
+          setSelectedUserId(currentId => {
+            if (currentId === newMsg.user_id) {
+              setMessages(prev => [...prev, newMsg]);
+            }
+            return currentId;
+          });
+
+          // 유저 목록 실시간 갱신
+          setUsers(prev => {
+            const exists = prev.find(u => u.id === newMsg.user_id);
+            if (exists) {
+              const updated = prev.map(u => u.id === newMsg.user_id ? { ...u, lastMessage: newMsg.content, lastTime: newMsg.created_at } : u);
+              return updated.sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
+            } else {
+              return [{ id: newMsg.user_id, lastMessage: newMsg.content, lastTime: newMsg.created_at, isGuest: newMsg.user_id.startsWith('guest_') }, ...prev];
+            }
+          });
+        }
+      )
+      .subscribe();
   };
 
   const fetchMessages = async (uid: string) => {
@@ -83,27 +110,6 @@ export default function AdminChatPage() {
       .eq('user_id', uid)
       .order('created_at', { ascending: true });
     if (data) setMessages(data);
-  };
-
-  const subscribeToMessages = (uid: string) => {
-    return supabase
-      .channel(`admin-chat-${uid}`)
-      .on(
-        'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'support_messages', filter: `user_id=eq.${uid}` },
-        (payload) => {
-          setMessages((prev) => {
-            if (prev.find(m => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
-          // 유저 목록 상태도 업데이트 (최근 메시지 갱신)
-          setUsers(prev => {
-            const updated = prev.map(u => u.id === uid ? { ...u, lastMessage: payload.new.content, lastTime: payload.new.created_at } : u);
-            return updated.sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
-          });
-        }
-      )
-      .subscribe();
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -128,20 +134,20 @@ export default function AdminChatPage() {
 
   return (
     <div className="flex h-screen bg-hanji-white overflow-hidden font-sans">
-      {/* Sidebar: User List */}
+      {/* Sidebar */}
       <aside className="w-80 sm:w-96 border-r border-border-light bg-white flex flex-col shadow-sm">
         <div className="p-8 border-b border-border-light bg-hanji-white/50">
           <div className="flex items-center gap-3 mb-8">
             <button onClick={() => router.push('/admin')} className="p-2 hover:bg-white rounded-full transition-all">
               <ArrowLeft className="w-5 h-5 text-charcoal" />
             </button>
-            <h1 className="font-serif text-2xl">고객 상담 센터</h1>
+            <h1 className="font-serif text-2xl">상담 센터</h1>
           </div>
           <div className="relative">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <input 
               type="text" 
-              placeholder="고객 ID 검색..." 
+              placeholder="고객 검색..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full bg-white border border-border-light pl-12 pr-4 py-3 rounded-sm text-sm focus:outline-none focus:border-deep-sage transition-all"
@@ -151,11 +157,7 @@ export default function AdminChatPage() {
 
         <div className="flex-1 overflow-y-auto">
           {loading ? (
-            <div className="flex items-center justify-center h-40">
-              <Loader2 className="w-6 h-6 animate-spin text-deep-sage" />
-            </div>
-          ) : filteredUsers.length === 0 ? (
-            <div className="text-center py-20 text-muted italic font-light text-sm">문의 내역이 없습니다.</div>
+            <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-deep-sage" /></div>
           ) : (
             filteredUsers.map((user) => (
               <button
@@ -163,70 +165,50 @@ export default function AdminChatPage() {
                 onClick={() => setSelectedUserId(user.id)}
                 className={`w-full p-6 flex items-start gap-4 border-b border-border-light transition-all hover:bg-hanji-white/50 ${selectedUserId === user.id ? 'bg-deep-sage/5 border-l-4 border-l-deep-sage' : ''}`}
               >
-                <div className="w-12 h-12 bg-hanji-white rounded-full flex items-center justify-center text-deep-sage shadow-sm flex-shrink-0">
-                  <User className="w-6 h-6" />
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm flex-shrink-0 ${user.isGuest ? 'bg-hanji-white text-muted' : 'bg-deep-sage/10 text-deep-sage'}`}>
+                  {user.isGuest ? <Hash className="w-5 h-5" /> : <User className="w-6 h-6" />}
                 </div>
                 <div className="flex-1 text-left overflow-hidden">
                   <div className="flex justify-between items-center mb-1">
-                    <p className="text-[10px] font-mono text-muted uppercase tracking-tighter">ID: {user.id.slice(0, 8)}</p>
-                    <span className="text-[9px] text-muted flex items-center gap-1">
-                      <Clock className="w-2.5 h-2.5" /> {new Date(user.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <p className="text-[10px] font-mono text-muted uppercase">{user.isGuest ? 'GUEST' : 'MEMBER'}</p>
+                    <span className="text-[9px] text-muted flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {new Date(user.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
-                  <p className={`text-sm truncate ${selectedUserId === user.id ? 'text-deep-sage font-medium' : 'text-charcoal font-light'}`}>
-                    {user.lastMessage}
-                  </p>
+                  <p className={`text-sm truncate ${selectedUserId === user.id ? 'text-deep-sage font-medium' : 'text-charcoal font-light'}`}>{user.lastMessage}</p>
                 </div>
-                <ChevronRight className={`w-4 h-4 mt-4 transition-transform ${selectedUserId === user.id ? 'rotate-90 text-deep-sage' : 'text-muted/30'}`} />
               </button>
             ))
           )}
         </div>
       </aside>
 
-      {/* Main: Chat View */}
-      <main className="flex-1 flex flex-col bg-white relative shadow-inner">
+      {/* Chat View */}
+      <main className="flex-1 flex flex-col bg-white relative">
         {selectedUserId ? (
           <>
-            {/* Chat Header */}
-            <div className="p-6 border-b border-border-light flex justify-between items-center bg-white/80 backdrop-blur-sm sticky top-0 z-10">
+            <div className="p-6 border-b border-border-light flex justify-between items-center bg-white/80 backdrop-blur-sm sticky top-0 z-10 shadow-sm">
               <div className="flex items-center gap-4">
-                <div className="w-10 h-10 bg-deep-sage/10 rounded-full flex items-center justify-center text-deep-sage">
-                  <User className="w-5 h-5" />
-                </div>
+                <div className="w-10 h-10 bg-charcoal text-white rounded-full flex items-center justify-center"><User className="w-5 h-5" /></div>
                 <div>
-                  <h3 className="font-serif text-xl">고객 상담 중</h3>
-                  <p className="text-[10px] text-muted font-mono uppercase">User: {selectedUserId}</p>
+                  <h3 className="font-serif text-xl">{selectedUserId.startsWith('guest_') ? '비회원 상담' : '회원 상담'}</h3>
+                  <p className="text-[10px] text-muted font-mono">{selectedUserId}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 text-deep-sage text-[10px] font-bold uppercase tracking-widest bg-deep-sage/5 px-4 py-2 rounded-full border border-deep-sage/10">
-                <span className="w-2 h-2 bg-deep-sage rounded-full animate-pulse" /> Realtime Connected
+                <span className="w-2 h-2 bg-deep-sage rounded-full animate-pulse" /> LIVE
               </div>
             </div>
 
-            {/* Messages */}
-            <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-6 bg-hanji-white/20 scroll-smooth">
+            <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-6 bg-hanji-white/20">
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.is_admin ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex flex-col ${msg.is_admin ? 'items-end' : 'items-start'} max-w-[70%]`}>
-                    <div
-                      className={`p-5 rounded-sm shadow-sm text-sm leading-relaxed ${
-                        msg.is_admin
-                          ? 'bg-charcoal text-white font-medium'
-                          : 'bg-white text-charcoal border border-border-light font-light'
-                      }`}
-                    >
-                      {msg.content}
-                    </div>
-                    <span className="text-[9px] text-muted mt-2 px-1">
-                      {new Date(msg.created_at).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                  <div className={`flex flex-col ${msg.is_admin ? 'items-end' : 'items-start'} max-w-[75%]`}>
+                    <div className={`p-5 rounded-sm shadow-sm text-sm leading-relaxed ${msg.is_admin ? 'bg-charcoal text-white font-medium' : 'bg-white text-charcoal border border-border-light font-light'}`}>{msg.content}</div>
+                    <span className="text-[9px] text-muted mt-2 px-1">{new Date(msg.created_at).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Admin Input */}
             <form onSubmit={handleSend} className="p-8 bg-white border-t border-border-light flex gap-4 items-center">
               <input
                 type="text"
@@ -240,18 +222,16 @@ export default function AdminChatPage() {
                 disabled={sendLoading || !input.trim()}
                 className="bg-charcoal text-white px-10 py-4 rounded-sm flex items-center gap-3 hover:bg-deep-sage transition-all shadow-lg disabled:opacity-30 uppercase text-xs font-bold tracking-widest"
               >
-                {sendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 전송하기
+                {sendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />} 전송
               </button>
             </form>
           </>
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center space-y-6 text-muted">
-            <div className="w-24 h-24 bg-hanji-white rounded-full flex items-center justify-center shadow-inner">
-              <MessageSquare className="w-10 h-10 opacity-20" />
-            </div>
+            <div className="w-24 h-24 bg-hanji-white rounded-full flex items-center justify-center shadow-inner"><MessageSquare className="w-10 h-10 opacity-20" /></div>
             <div className="text-center space-y-2">
               <p className="font-serif text-2xl text-charcoal/40">상담할 고객을 선택해 주세요</p>
-              <p className="text-[10px] uppercase tracking-[0.2em] font-light">Select a customer from the left to start chatting</p>
+              <p className="text-[10px] uppercase tracking-[0.2em] font-light italic">Waiting for new messages...</p>
             </div>
           </div>
         )}
