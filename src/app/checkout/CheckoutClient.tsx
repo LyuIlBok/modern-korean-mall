@@ -9,7 +9,8 @@ import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
 import Script from 'next/script';
-import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search } from 'lucide-react';
+import * as PortOne from '@portone/browser-sdk/v2';
+import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search, MapPin, Plus } from 'lucide-react';
 
 export default function CheckoutClient() {
   const { items, clearCart } = useCartStore();
@@ -18,7 +19,11 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // Form State
+  // 1. 배송지 목록 및 선택 상태 관리
+  const [addressList, setAddressList] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new');
+
+  // 폼 상태 (새 배송지 입력 또는 메모/결제수단용)
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -29,56 +34,32 @@ export default function CheckoutClient() {
     paymentMethod: 'card'
   });
 
-  // Fetch user info for auto-fill
+  // 주소 목록 가져오기
   useEffect(() => {
-    const fetchUserProfile = async () => {
+    const fetchAddresses = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) return;
 
-        const userId = session.user.id;
-
-        // 1. Fetch default address
         const { data: addrData } = await supabase
           .from('addresses')
           .select('*')
-          .eq('user_id', userId)
-          .eq('is_default', true)
-          .single();
+          .eq('user_id', session.user.id)
+          .order('is_default', { ascending: false });
 
-        if (addrData) {
-          setFormData(prev => ({
-            ...prev,
-            name: addrData.receiver_name || prev.name,
-            phone: addrData.receiver_phone || prev.phone,
-            postcode: addrData.postcode || prev.postcode,
-            address: addrData.address || prev.address,
-            detailAddress: addrData.detail_address || prev.detailAddress
-          }));
+        if (addrData && addrData.length > 0) {
+          setAddressList(addrData);
+          const defaultAddr = addrData.find(a => a.is_default) || addrData[0];
+          setSelectedAddressId(defaultAddr.id);
         } else {
-          // 2. Fallback to profile if no default address
-          const { data: profileData } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
-          if (profileData) {
-            setFormData(prev => ({
-              ...prev,
-              name: profileData.full_name || prev.name,
-              phone: profileData.phone || prev.phone
-            }));
-          }
+          setSelectedAddressId('new');
         }
       } catch (err) {
-        console.error('Error fetching profile for auto-fill:', err);
+        console.error('Error fetching addresses:', err);
       }
     };
 
-    if (hasMounted) {
-      fetchUserProfile();
-    }
+    if (hasMounted) fetchAddresses();
   }, [hasMounted]);
 
   const handleAddressSearch = () => {
@@ -96,15 +77,11 @@ export default function CheckoutClient() {
     }
   };
 
-  const handleCheckout = useCallback(async (currentItems: any[]) => {
+  // 3 & 4 & 5. 결제 및 주문 제출 로직 (Bypass 버그 방지)
+  const handleSubmitOrder = useCallback(async (currentItems: any[]) => {
     setIsLoading(true);
 
     try {
-      // 신용카드 선택 시 가상의 결제창 로딩 연출
-      if (formData.paymentMethod === 'card') {
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      }
-
       const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
       if (sessionError) throw sessionError;
       const session = sessionData?.session;
@@ -113,47 +90,109 @@ export default function CheckoutClient() {
       const shippingFee = subtotal >= 50000 ? 0 : 3000;
       const total = subtotal + shippingFee;
 
-      // 무통장 입금은 '입금대기', 신용카드는 '결제완료'로 상태 저장
-      const orderStatus = formData.paymentMethod === 'transfer' ? '입금대기' : '결제완료';
+      // 사용할 배송지 정보 확정
+      let finalAddressData: any;
+      if (selectedAddressId === 'new') {
+        if (!formData.name || !formData.address) {
+          alert('배송지 정보를 모두 입력해 주세요.');
+          setIsLoading(false);
+          return;
+        }
+        finalAddressData = {
+          name: formData.name,
+          phone: formData.phone,
+          fullAddress: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
+          postcode: formData.postcode,
+          address1: formData.address,
+          address2: formData.detailAddress
+        };
+      } else {
+        const selected = addressList.find(a => a.id === selectedAddressId);
+        finalAddressData = {
+          name: selected.receiver_name,
+          phone: selected.receiver_phone,
+          fullAddress: `(${selected.postcode}) ${selected.address} ${selected.detail_address}`.trim(),
+          postcode: selected.postcode,
+          address1: selected.address,
+          address2: selected.detail_address
+        };
+      }
 
+      let orderStatus: '결제완료' | '입금대기' = '결제완료';
+
+      // [핵심] 신용카드 결제 시 포트원 SDK 호출 및 조기 종료(Return)
+      if (formData.paymentMethod === 'card') {
+        const orderName = currentItems.length > 1 
+          ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
+          : currentItems[0].name;
+
+        const paymentResponse = await PortOne.requestPayment({
+          storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
+          channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
+          paymentId: `order-${Date.now()}`,
+          orderName: orderName,
+          totalAmount: total,
+          currency: 'KRW',
+          payMethod: 'CARD',
+          customer: {
+            fullName: finalAddressData.name,
+            phoneNumber: finalAddressData.phone,
+            addressLine1: finalAddressData.address1,
+            addressLine2: finalAddressData.address2,
+            zipcode: finalAddressData.postcode,
+          },
+        });
+
+        // 강력 조기 종료: 결제 실패나 창 닫기 발생 시 절대 DB 저장으로 넘어가지 않음
+        if (paymentResponse.code != null) {
+          alert(`결제가 중단되었습니다: ${paymentResponse.message || '사용자 취소'}`);
+          setIsLoading(false);
+          return; // 여기서 실행 종료 (Bypass 방지)
+        }
+
+        alert('테스트 결제가 성공적으로 완료되었습니다!');
+        orderStatus = '결제완료';
+      } 
+      else if (formData.paymentMethod === 'transfer') {
+        orderStatus = '입금대기';
+      }
+
+      // [성공 시에만 도달] DB 주문 데이터 저장
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
           user_id: session?.user?.id || null,
-          customer_name: formData.name,
-          customer_phone: formData.phone,
-          address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
+          customer_name: finalAddressData.name,
+          customer_phone: finalAddressData.phone,
+          address: finalAddressData.fullAddress,
           total_price: total,
           status: orderStatus,
-          payment_method: formData.paymentMethod
+          payment_method: formData.paymentMethod,
+          memo: formData.memo
         }])
         .select()
         .single();
 
-      if (orderError) throw new Error(`주문 생성 실패: ${orderError.message}`);
-      if (!order) throw new Error('주문 데이터가 생성되지 않았습니다.');
+      if (orderError) throw new Error(`주문 저장 실패: ${orderError.message}`);
 
       const orderItems = currentItems.map(item => ({
         order_id: order.id,
         product_id: item.id,
-        quantity: item.quantity || 1,
-        price: item.price || 0
+        quantity: item.quantity,
+        price: item.price
       }));
 
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw new Error(`주문 항목 저장 실패: ${itemsError.message}`);
+      await supabase.from('order_items').insert(orderItems);
 
       clearCart();
       router.push('/order-success');
     } catch (err: any) {
-      console.error('Checkout error:', err);
-      alert(language === 'ko' 
-        ? `결제 처리 중 문제가 발생했습니다: ${err.message || '알 수 없는 오류'}` 
-        : `Error during checkout: ${err.message || 'Unknown error'}`);
+      console.error('Order Error:', err);
+      alert(`주문 처리 중 오류가 발생했습니다: ${err.message}`);
     } finally {
       setIsLoading(false);
     }
-  }, [formData, language, router, clearCart]);
+  }, [formData, selectedAddressId, addressList, router, clearCart]);
 
   if (items.length === 0) {
     return (
@@ -181,48 +220,82 @@ export default function CheckoutClient() {
           <h1 className="font-serif text-4xl text-charcoal">주문/결제</h1>
         </header>
 
-        <form onSubmit={(e) => { e.preventDefault(); handleCheckout(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
+        <form onSubmit={(e) => { e.preventDefault(); handleSubmitOrder(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           <div className="lg:col-span-7 space-y-12">
+            
+            {/* 1 & 2. 배송지 카드형 UI 선택 영역 */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                <Truck className="w-6 h-6 text-deep-sage" /> 배송지 정보
+                <MapPin className="w-6 h-6 text-deep-sage" /> 배송지 선택
               </h2>
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
-                    <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함을 입력해 주세요" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
-                    <input required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="010-0000-0000" />
-                  </div>
-                </div>
-
-                <div className="space-y-4 pt-4 border-t border-border-light/50">
-                  <div className="flex gap-4 items-end">
-                    <div className="flex-1 space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
-                      <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="00000" />
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {addressList.map((addr) => (
+                  <button
+                    key={addr.id}
+                    type="button"
+                    onClick={() => setSelectedAddressId(addr.id)}
+                    className={`p-6 rounded-sm border text-left transition-all relative group ${selectedAddressId === addr.id ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
+                  >
+                    <div className="flex justify-between items-start mb-3">
+                      <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 bg-deep-sage text-white rounded-full">
+                        {addr.address_name || '기본'}
+                      </span>
+                      {selectedAddressId === addr.id && <ShieldCheck className="w-4 h-4 text-charcoal" />}
                     </div>
-                    <button type="button" onClick={handleAddressSearch} className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all flex items-center gap-2 mb-1">
-                      <Search className="w-3 h-3" /> 주소 찾기
-                    </button>
+                    <p className="font-serif text-charcoal text-lg mb-1">{addr.receiver_name}</p>
+                    <p className="text-xs text-muted mb-3">{addr.receiver_phone}</p>
+                    <p className="text-xs text-charcoal leading-relaxed line-clamp-2">
+                      ({addr.postcode}) {addr.address} {addr.detail_address}
+                    </p>
+                  </button>
+                ))}
+                
+                {/* 직접 입력 카드 */}
+                <button
+                  type="button"
+                  onClick={() => setSelectedAddressId('new')}
+                  className={`p-6 rounded-sm border border-dashed text-center transition-all flex flex-col items-center justify-center gap-3 group ${selectedAddressId === 'new' ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
+                >
+                  <div className="w-10 h-10 rounded-full bg-hanji-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <Plus className="w-5 h-5 text-muted" />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">기본 주소</label>
-                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="주소 찾기를 이용해 주세요" />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest font-bold text-muted">상세 주소</label>
-                    <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="나머지 상세 주소를 입력해 주세요" />
-                  </div>
-                </div>
+                  <span className="text-[10px] uppercase tracking-widest font-bold text-muted">+ 새 배송지 직접 입력</span>
+                </button>
+              </div>
 
-                <div className="space-y-2 pt-4 border-t border-border-light/50">
-                  <label className="text-[10px] uppercase tracking-widest font-bold text-muted">배송 메모 (선택)</label>
-                  <input value={formData.memo} onChange={(e) => setFormData({...formData, memo: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="요청 사항을 적어주세요" />
+              {/* 조건부 렌더링: 새 배송지 입력 폼 */}
+              {selectedAddressId === 'new' && (
+                <div className="space-y-6 pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
+                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함" />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
+                      <input required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="010-0000-0000" />
+                    </div>
+                  </div>
+                  <div className="space-y-4 pt-4">
+                    <div className="flex gap-4 items-end">
+                      <div className="flex-1 space-y-2">
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
+                        <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="00000" />
+                      </div>
+                      <button type="button" onClick={handleAddressSearch} className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all">
+                        주소 찾기
+                      </button>
+                    </div>
+                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="기본 주소" />
+                    <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" placeholder="상세 주소" />
+                  </div>
                 </div>
+              )}
+
+              <div className="space-y-2 pt-8 border-t border-border-light/50 mt-8">
+                <label className="text-[10px] uppercase tracking-widest font-bold text-muted">배송 메모</label>
+                <input value={formData.memo} onChange={(e) => setFormData({...formData, memo: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="요청 사항을 입력해 주세요" />
               </div>
             </section>
 
@@ -230,7 +303,7 @@ export default function CheckoutClient() {
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
                 <CreditCard className="w-6 h-6 text-deep-sage" /> 결제 수단 선택
               </h2>
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="grid grid-cols-2 gap-4">
                 {[
                   { id: 'card', label: '신용카드' },
                   { id: 'transfer', label: '무통장 입금' },
@@ -239,30 +312,11 @@ export default function CheckoutClient() {
                     key={method.id}
                     type="button"
                     onClick={() => setFormData({...formData, paymentMethod: method.id})}
-                    className={`py-4 rounded-sm border transition-all text-sm font-medium ${formData.paymentMethod === method.id ? 'border-charcoal bg-charcoal text-white shadow-lg' : 'border-border-light hover:border-charcoal'}`}
+                    className={`py-5 rounded-sm border transition-all text-sm font-medium ${formData.paymentMethod === method.id ? 'border-charcoal bg-charcoal text-white shadow-md' : 'border-border-light hover:border-charcoal'}`}
                   >
                     {method.label}
                   </button>
                 ))}
-              </div>
-
-              {/* 결제 수단별 안내 문구 */}
-              <div className="bg-hanji-white p-6 rounded-sm border border-border-light/50">
-                {formData.paymentMethod === 'transfer' ? (
-                  <div className="space-y-2 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <p className="text-[10px] uppercase tracking-widest font-bold text-deep-sage mb-2">입금 계좌 안내</p>
-                    <p className="font-serif text-lg text-charcoal">농협 351-1234-5678-90</p>
-                    <p className="text-xs text-muted">예금주: 농업회사법인 복이네농장(주)</p>
-                    <p className="text-[11px] text-muted mt-4 italic">* 주문 후 24시간 이내 미입금 시 자동 취소됩니다.</p>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 animate-in fade-in slide-in-from-top-1 duration-300">
-                    <ShieldCheck className="w-5 h-5 text-deep-sage" />
-                    <p className="text-sm text-charcoal font-light">
-                      결제하기 버튼을 누르면 안전한 카드 결제창으로 연결됩니다.
-                    </p>
-                  </div>
-                )}
               </div>
             </section>
           </div>
@@ -270,7 +324,7 @@ export default function CheckoutClient() {
           <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-8">
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">주문 내역</h2>
-              <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-4 custom-scrollbar mb-8">
+              <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-4 mb-8 custom-scrollbar">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-4">
                     <div className="relative w-16 h-20 bg-hanji-white rounded-sm overflow-hidden flex-shrink-0">
@@ -301,24 +355,18 @@ export default function CheckoutClient() {
 
               <button 
                 type="submit" 
-                disabled={isLoading || items.length === 0}
-                className="w-full bg-charcoal text-white py-6 rounded-sm mt-10 hover:bg-deep-sage transition-all font-serif text-xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:bg-muted disabled:cursor-not-allowed"
+                disabled={isLoading}
+                className="w-full bg-charcoal text-white py-6 rounded-sm mt-10 hover:bg-deep-sage transition-all font-serif text-xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
               >
                 {isLoading ? (
-                  <div className="flex items-center gap-3">
+                  <>
                     <Loader2 className="w-6 h-6 animate-spin" />
-                    <span className="text-sm font-sans uppercase tracking-widest">
-                      {formData.paymentMethod === 'card' ? 'Processing Payment...' : 'Creating Order...'}
-                    </span>
-                  </div>
+                    <span className="text-sm font-sans uppercase tracking-widest">Processing...</span>
+                  </>
                 ) : (
                   <>₩{total.toLocaleString()} 결제하기</>
                 )}
               </button>
-
-              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] text-muted uppercase tracking-widest font-bold">
-                <ShieldCheck className="w-3 h-3 text-deep-sage" /> Secure Checkout
-              </div>
             </section>
           </div>
         </form>
