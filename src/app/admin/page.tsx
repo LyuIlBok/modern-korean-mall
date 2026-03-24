@@ -50,6 +50,43 @@ export default function AdminDashboard() {
   const [detailFiles, setDetailFiles] = useState<File[]>([]);
   const [detailPreviews, setDetailPreviews] = useState<string[]>([]);
 
+  // fetchData 함수 복구
+  const fetchData = useCallback(async () => {
+    try {
+      setIsCheckingAuth(true);
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (sessionError || !session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
+        console.error('Access denied or session error');
+        router.replace('/');
+        return;
+      }
+
+      setIsAdmin(true);
+      
+      // 데이터 병렬 페칭
+      const [productsRes, ordersRes, alertsRes] = await Promise.all([
+        supabase.from('products').select('*').order('created_at', { ascending: false }),
+        supabase.from('orders').select('*, order_items(*, products(name))').order('created_at', { ascending: false }),
+        supabase.from('restock_alerts').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
+      ]);
+
+      if (productsRes.data) setProducts(productsRes.data);
+      if (ordersRes.data) setOrders(ordersRes.data);
+      if (alertsRes.data) setRestockAlerts(alertsRes.data);
+      
+    } catch (err) { 
+      console.error('Admin data fetch failed:', err);
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  }, [router]);
+
+  // 초기 마운트 시 데이터 로드
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
   // 2. 업로드 헬퍼 함수 (병렬 업로드 및 URL 반환)
   const uploadFiles = async (files: File[], folder: string) => {
     if (files.length === 0) return [];
