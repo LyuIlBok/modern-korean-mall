@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCartStore } from '@/store/useCartStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -103,31 +103,15 @@ export default function CheckoutPage() {
     }
   }, [hasMounted, items, router, language]);
 
-  if (!hasMounted || items.length === 0) return null;
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingFee = subtotal >= 50000 ? 0 : 3000;
-  const total = subtotal + shippingFee;
-
-  const handleCheckout = async (e: React.FormEvent) => {
+  const handleCheckout = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Zustand의 최신 상태를 직접 참조하여 클로저 문제 방지
-    const currentItems = useCartStore.getState().items;
-    
-    // 장바구니 최종 검증 (부드러운 체크)
-    if (!currentItems || currentItems.length === 0) {
-      // 만약 렌더링된 items가 있다면 그것을 사용하고, 정말 하나도 없다면 중단
-      if (items && items.length > 0) {
-        console.log('Using closure items as fallback');
-      } else {
-        alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
-        router.push('/');
-        return;
-      }
+    // 렌더링에 사용되는 items를 직접 사용하여 데이터 일관성 보장
+    if (!items || items.length === 0) {
+      alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
+      router.push('/');
+      return;
     }
-
-    const checkoutItems = currentItems.length > 0 ? currentItems : items;
 
     setIsLoading(true);
 
@@ -145,7 +129,7 @@ export default function CheckoutPage() {
           customer_name: formData.name,
           customer_phone: formData.phone,
           address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`.trim(),
-          total_price: total,
+          total_price: items.reduce((sum, item) => sum + item.price * item.quantity, 0) + (items.reduce((sum, item) => sum + item.price * item.quantity, 0) >= 50000 ? 0 : 3000),
           status: '결제완료'
         }])
         .select()
@@ -154,8 +138,8 @@ export default function CheckoutPage() {
       if (orderError) throw new Error(`주문 생성 실패: ${orderError.message}`);
       if (!order) throw new Error('주문 데이터가 생성되지 않았습니다.');
 
-      // 2. order_items 테이블에 상세 내역 생성 (items null 방어)
-      const orderItems = checkoutItems.map(item => {
+      // 2. order_items 테이블에 상세 내역 생성
+      const orderItems = items.map(item => {
         if (!item || !item.id) throw new Error('잘못된 상품 정보가 포함되어 있습니다.');
         return {
           order_id: order.id,
@@ -179,7 +163,13 @@ export default function CheckoutPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [items, formData, language, router, clearCart]);
+
+  if (!hasMounted || items.length === 0) return null;
+
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingFee = subtotal >= 50000 ? 0 : 3000;
+  const total = subtotal + shippingFee;
 
   return (
     <div className="bg-hanji-white min-h-screen pt-24 pb-32">
@@ -303,8 +293,8 @@ export default function CheckoutPage() {
 
               <button 
                 type="submit" 
-                disabled={isLoading}
-                className="w-full bg-charcoal text-white py-6 rounded-sm mt-10 hover:bg-deep-sage transition-all font-serif text-xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50"
+                disabled={isLoading || items.length === 0}
+                className="w-full bg-charcoal text-white py-6 rounded-sm mt-10 hover:bg-deep-sage transition-all font-serif text-xl shadow-xl flex items-center justify-center gap-3 disabled:opacity-50 disabled:bg-muted disabled:cursor-not-allowed"
               >
                 {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <>₩{total.toLocaleString()} 결제하기</>}
               </button>
