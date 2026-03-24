@@ -37,6 +37,7 @@ export default function AdminDashboard() {
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newStock, setNewStock] = useState('100');
+  const [newShippingFee, setNewShippingFee] = useState('0');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
   
@@ -185,6 +186,7 @@ export default function AdminDashboard() {
         name: newName, 
         price: Number(newPrice), 
         stock: Number(newStock), 
+        shipping_fee: Number(newShippingFee),
         category: newCategory, 
         description: newDesc, 
         imageUrl: customImageUrl,
@@ -228,6 +230,7 @@ export default function AdminDashboard() {
         name: editingProduct.name, 
         price: Number(editingProduct.price), 
         stock: Number(editingProduct.stock), 
+        shipping_fee: Number(editingProduct.shipping_fee || 0),
         category: editingProduct.category, 
         description: editingProduct.description, 
         imageUrl: finalMainUrl,
@@ -360,8 +363,9 @@ export default function AdminDashboard() {
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="상품명을 입력해 주세요" className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-lg font-serif" /></div>
                         <div className="grid grid-cols-2 gap-8">
                           <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee (KRW)</label><input required value={newShippingFee} onChange={(e) => setNewShippingFee(e.target.value)} type="number" placeholder="배송비" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                         </div>
+                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                       </div>
                       <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품에 대한 상세한 설명을 적어주세요." className="w-full h-full min-h-[200px] bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
@@ -569,8 +573,9 @@ export default function AdminDashboard() {
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage text-lg font-serif bg-transparent" /></div>
                     <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label><input required type="number" value={editingProduct.shipping_fee || 0} onChange={(e) => setEditingProduct({...editingProduct, shipping_fee: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     </div>
+                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                   </div>
                   <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required rows={6} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-full bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>

@@ -90,7 +90,8 @@ export default function CheckoutClient() {
 
     try {
       const subtotal = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      const shippingFee = subtotal >= 50000 ? 0 : 3000;
+      // 가장 비싼 배송비 하나만 적용 (묶음 배송 기준)
+      const shippingFee = Math.max(...currentItems.map(item => item.shipping_fee || 0));
       const total = subtotal + shippingFee;
 
       // 사용할 배송지 정보 확정
@@ -215,7 +216,7 @@ export default function CheckoutClient() {
   }
 
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingFee = subtotal >= 50000 ? 0 : 3000;
+  const shippingFee = Math.max(...items.map(item => item.shipping_fee || 0));
   const total = subtotal + shippingFee;
 
   return (
