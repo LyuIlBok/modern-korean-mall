@@ -26,9 +26,9 @@ export default function AdminDashboard() {
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
-  // Search & Filter State
+  // Search & Filter State 복구
   const [searchTerm, setSearchTerm] = useState('');
-  const [categoryFilter, setNewCategoryFilter] = useState('전체');
+  const [categoryFilter, setCategoryFilter] = useState('전체');
 
   // Editing state
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -86,6 +86,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // filteredProducts 필터링 로직 복구
+  const filteredProducts = useMemo(() => {
+    return products.filter(p => {
+      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesCategory = categoryFilter === '전체' || p.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, categoryFilter]);
 
   // 2. 업로드 헬퍼 함수 (병렬 업로드 및 URL 반환)
   const uploadFiles = async (files: File[], folder: string) => {
