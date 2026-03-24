@@ -1,20 +1,16 @@
-import Image from 'next/image';
-import Link from 'next/link';
-import { products as mockProducts, Product } from '@/data/mockData';
-import { notFound } from 'next/navigation';
-import PurchaseButtons from './AddToCartButton';
-import ProductTabs from './ProductTabs';
-import ProductCard from '@/components/ProductCard';
-import { ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { notFound } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
+import { products as mockProducts } from '@/data/mockData';
 
-// This is now a Server Component
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export default async function ProductDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
   const productId = params.id;
 
-  // 서버에서 데이터 직접 페칭 (SEO 최적화 및 로딩 속도 향상)
+  // Supabase에서 상품 정보 가져오기 (images, detail_content_images, specs 포함)
   const { data: product, error } = await supabase
     .from('products')
     .select('*, reviews(rating)')
@@ -22,14 +18,14 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
     .single();
 
   if (error || !product) {
-    // DB에 없으면 Mock 데이터 확인
+    // DB에 없으면 Mock 데이터에서 확인 (테스트용)
     const mockProduct = mockProducts.find(p => p.id === productId);
-    if (!mockProduct) notFound();
+    if (!mockProduct) return notFound();
     
     return <ProductDetailClient product={mockProduct} relatedProducts={mockProducts.slice(0, 4)} />;
   }
 
-  // 관련 상품 페칭
+  // 관련 상품 가져오기
   const { data: relatedProducts } = await supabase
     .from('products')
     .select('*')
