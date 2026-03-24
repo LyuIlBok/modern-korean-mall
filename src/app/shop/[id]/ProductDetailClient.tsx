@@ -4,6 +4,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, ChevronRight, Plus, Minus, ShoppingBag, CreditCard } from 'lucide-react';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
@@ -19,6 +20,7 @@ export default function ProductDetailClient({
   product: any, 
   relatedProducts: any[] 
 }) {
+  const router = useRouter();
   const { language, t } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
   const { addItem, toggleCart } = useCartStore();
@@ -32,6 +34,7 @@ export default function ProductDetailClient({
   const detailImages = product.detail_content_images || [];
 
   const handleAddToCart = () => {
+    if (!product) return;
     addItem({ 
       id: product.id, 
       name: product.name, 
@@ -40,6 +43,18 @@ export default function ProductDetailClient({
       quantity 
     });
     toggleCart(true);
+  };
+
+  const handleBuyNow = () => {
+    if (!product) return;
+    addItem({ 
+      id: product.id, 
+      name: product.name, 
+      price: product.price, 
+      imageUrl: product.imageUrl, 
+      quantity 
+    });
+    router.push('/checkout');
   };
 
   return (
@@ -156,6 +171,7 @@ export default function ProductDetailClient({
                   <ShoppingBag className="w-5 h-5" /> 장바구니 담기
                 </button>
                 <button 
+                  onClick={handleBuyNow}
                   disabled={product.is_sold_out}
                   className="flex items-center justify-center gap-3 py-5 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-lg rounded-sm shadow-xl disabled:opacity-50"
                 >
