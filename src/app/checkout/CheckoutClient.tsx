@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Script from 'next/script';
 import * as PortOne from '@portone/browser-sdk/v2';
-import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search, MapPin, Plus } from 'lucide-center';
+import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search, MapPin, Plus } from 'lucide-react';
 
 export default function CheckoutClient() {
   const { items, clearCart } = useCartStore();
