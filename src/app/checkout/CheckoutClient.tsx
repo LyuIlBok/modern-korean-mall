@@ -141,8 +141,12 @@ export default function CheckoutClient() {
           customer: {
             fullName: finalAddressData.name,
             phoneNumber: finalAddressData.phone,
-            address: finalAddressData.fullAddress,
-            zipcode: finalAddressData.postcode,
+            address: {
+              country: "KR",
+              addressLine1: finalAddressData.address1,
+              addressLine2: finalAddressData.address2,
+              zipcode: finalAddressData.postcode,
+            },
           },
         });
 
