@@ -129,6 +129,7 @@ export default function CheckoutClient() {
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
+        // 1. PortOne SDK 호출 (가장 먼저 배치)
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
@@ -140,17 +141,17 @@ export default function CheckoutClient() {
           customer: {
             fullName: finalAddressData.name,
             phoneNumber: finalAddressData.phone,
-            addressLine1: finalAddressData.address1,
-            addressLine2: finalAddressData.address2,
+            address: finalAddressData.fullAddress,
             zipcode: finalAddressData.postcode,
           },
         });
 
-        // 강력 조기 종료 (Bypass 차단)
-        if (paymentResponse.code != null) {
-          alert(`결제가 중단되었습니다: ${paymentResponse.message || '사용자 취소'}`);
+        // [중요] 응답 객체가 없거나 에러 코드가 있는 경우 (Bypass 차단)
+        if (!paymentResponse || paymentResponse.code != null) {
+          const errorMessage = paymentResponse?.message || '결제창을 닫았거나 결제에 실패했습니다.';
+          alert(`결제가 중단되었습니다: ${errorMessage}`);
           setIsLoading(false);
-          return;
+          return; // 여기서 얄짤없이 종료
         }
 
         alert('테스트 결제가 성공적으로 완료되었습니다!');
