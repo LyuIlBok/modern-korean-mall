@@ -62,6 +62,7 @@ export default function AdminChatPage() {
             id: msg.user_id,
             lastMessage: msg.content,
             lastTime: msg.created_at,
+            lastIsAdmin: msg.is_admin,
             isGuest: msg.user_id.startsWith('guest_')
           });
         }
@@ -80,23 +81,29 @@ export default function AdminChatPage() {
         (payload) => {
           const newMsg = payload.new;
           
-          // 현재 대화 중인 유저의 메시지라면 대화창 업데이트
+          // 1. 대화창 실시간 업데이트
           setSelectedUserId(currentId => {
             if (currentId === newMsg.user_id) {
-              setMessages(prev => [...prev, newMsg]);
+              setMessages(prev => {
+                if (prev.find(m => m.id === newMsg.id)) return prev;
+                return [...prev, newMsg];
+              });
             }
             return currentId;
           });
 
-          // 유저 목록 실시간 갱신
+          // 2. 유저 목록 실시간 갱신 및 최상단 이동 (Sorting)
           setUsers(prev => {
-            const exists = prev.find(u => u.id === newMsg.user_id);
-            if (exists) {
-              const updated = prev.map(u => u.id === newMsg.user_id ? { ...u, lastMessage: newMsg.content, lastTime: newMsg.created_at } : u);
-              return updated.sort((a, b) => new Date(b.lastTime).getTime() - new Date(a.lastTime).getTime());
-            } else {
-              return [{ id: newMsg.user_id, lastMessage: newMsg.content, lastTime: newMsg.created_at, isGuest: newMsg.user_id.startsWith('guest_') }, ...prev];
-            }
+            const others = prev.filter(u => u.id !== newMsg.user_id);
+            const target = {
+              id: newMsg.user_id,
+              lastMessage: newMsg.content,
+              lastTime: newMsg.created_at,
+              lastIsAdmin: newMsg.is_admin,
+              isGuest: newMsg.user_id.startsWith('guest_')
+            };
+            // 새 메시지가 온 유저를 맨 앞으로 배치
+            return [target, ...others];
           });
         }
       )
@@ -168,12 +175,17 @@ export default function AdminChatPage() {
                 <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm flex-shrink-0 ${user.isGuest ? 'bg-hanji-white text-muted' : 'bg-deep-sage/10 text-deep-sage'}`}>
                   {user.isGuest ? <Hash className="w-5 h-5" /> : <User className="w-6 h-6" />}
                 </div>
-                <div className="flex-1 text-left overflow-hidden">
+                <div className="flex-1 text-left overflow-hidden relative">
                   <div className="flex justify-between items-center mb-1">
                     <p className="text-[10px] font-mono text-muted uppercase">{user.isGuest ? 'GUEST' : 'MEMBER'}</p>
-                    <span className="text-[9px] text-muted flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {new Date(user.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <div className="flex items-center gap-2">
+                      {!user.lastIsAdmin && (
+                        <span className="flex h-2 w-2 rounded-full bg-terracotta animate-pulse" title="새로운 메시지" />
+                      )}
+                      <span className="text-[9px] text-muted flex items-center gap-1"><Clock className="w-2.5 h-2.5" /> {new Date(user.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
                   </div>
-                  <p className={`text-sm truncate ${selectedUserId === user.id ? 'text-deep-sage font-medium' : 'text-charcoal font-light'}`}>{user.lastMessage}</p>
+                  <p className={`text-sm truncate ${!user.lastIsAdmin ? 'text-deep-sage font-bold' : 'text-charcoal font-light'}`}>{user.lastMessage}</p>
                 </div>
               </button>
             ))
