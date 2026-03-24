@@ -41,10 +41,21 @@ export default function CheckoutPage() {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // 장바구니 최종 검증
+    if (!items || items.length === 0) {
+      alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
+      router.push('/');
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      // 세션 확인 (null 방어)
+      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) throw sessionError;
+      const session = sessionData?.session;
       
       // 1. orders 테이블에 주문 생성
       const { data: order, error: orderError } = await supabase
@@ -60,25 +71,31 @@ export default function CheckoutPage() {
         .select()
         .single();
 
-      if (orderError) throw orderError;
+      if (orderError) throw new Error(`주문 생성 실패: ${orderError.message}`);
+      if (!order) throw new Error('주문 데이터가 생성되지 않았습니다.');
 
-      // 2. order_items 테이블에 상세 내역 생성
-      const orderItems = items.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }));
+      // 2. order_items 테이블에 상세 내역 생성 (items null 방어)
+      const orderItems = items.map(item => {
+        if (!item || !item.id) throw new Error('잘못된 상품 정보가 포함되어 있습니다.');
+        return {
+          order_id: order.id,
+          product_id: item.id,
+          quantity: item.quantity || 1,
+          price: item.price || 0
+        };
+      });
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw itemsError;
+      if (itemsError) throw new Error(`주문 항목 저장 실패: ${itemsError.message}`);
 
       // 3. 장바구니 비우기 및 성공 페이지 이동
       clearCart();
       router.push('/order-success');
     } catch (err: any) {
       console.error('Checkout error:', err);
-      alert(language === 'ko' ? '주문 처리 중 오류가 발생했습니다.' : 'Error processing order.');
+      alert(language === 'ko' 
+        ? `결제 처리 중 문제가 발생했습니다: ${err.message || '알 수 없는 오류'}` 
+        : `Error during checkout: ${err.message || 'Unknown error'}`);
     } finally {
       setIsLoading(false);
     }
