@@ -1,139 +1,117 @@
-'use client';
-
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as mockProducts } from '@/data/mockData';
-import { ArrowRight, Loader2 } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { ArrowRight, Leaf, Sparkles, TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
-import ProductCard, { ProductWithRating } from '@/components/ProductCard';
-import { useLanguageStore } from '@/store/useLanguageStore';
+import ProductCard from '@/components/ProductCard';
+import { translations } from '@/lib/translations';
 
-export default function Home() {
-  const { t } = useLanguageStore();
-  const [featuredProducts, setFeaturedProducts] = useState<ProductWithRating[]>([]);
-  const [loading, setLoading] = useState(true);
+// This is now a Server Component
+export default async function Home() {
+  const t = translations.ko; // Default to Korean for server rendering
 
-  useEffect(() => {
-    const fetchFeaturedProducts = async () => {
-      setLoading(true);
-      try {
-        const { data, error } = await supabase
-          .from('products')
-          .select('*, reviews(rating)')
-          .limit(3)
-          .order('created_at', { ascending: false });
-        
-        if (error) throw error;
-        
-        if (data && data.length > 0) {
-          const productsWithRatings = data.map((p: any) => {
-            const ratings = p.reviews?.map((r: any) => r.rating) || [];
-            const avgRating = ratings.length > 0 
-              ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
-              : 0;
-            return {
-              ...p,
-              avgRating,
-              reviewCount: ratings.length
-            };
-          });
-          setFeaturedProducts(productsWithRatings);
-        } else {
-          setFeaturedProducts(mockProducts.slice(0, 3));
-        }
-      } catch (err) {
-        console.error('Error fetching featured products:', err);
-        setFeaturedProducts(mockProducts.slice(0, 3));
-      } finally {
-        setLoading(false);
-      }
+  // 1. Supabase에서 실제 상품 데이터 가져오기 (서버 사이드)
+  const { data: products, error } = await supabase
+    .from('products')
+    .select('*, reviews(rating)')
+    .order('created_at', { ascending: false })
+    .limit(8);
+
+  if (error) {
+    console.error('Error fetching products:', error);
+  }
+
+  // 평점 계산 로직 (서버 사이드)
+  const productsWithRatings = products?.map((p: any) => {
+    const ratings = p.reviews?.map((r: any) => r.rating) || [];
+    const avgRating = ratings.length > 0 
+      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+      : 0;
+    return {
+      ...p,
+      avgRating,
+      reviewCount: ratings.length
     };
-
-    fetchFeaturedProducts();
-  }, []);
+  }) || [];
 
   return (
-    <>
+    <div className="flex-1 bg-hanji-white">
       {/* Hero Section */}
-      <section className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <Image 
-            src="https://images.unsplash.com/photo-1501262174620-2f1624c965e6?auto=format&fit=crop&q=80&w=2000"
-            alt="한국의 자연"
-            fill
-            className="object-cover opacity-80"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-hanji-white/40 via-transparent to-hanji-white" />
-        </div>
-        
-        <div className="relative z-10 text-center max-w-3xl px-4">
-          <h1 className="font-serif text-5xl md:text-7xl mb-8 text-charcoal leading-[1.2] tracking-tighter whitespace-pre-line">
-            {t.home.heroTitle}
+      <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
+        <Image 
+          src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000" 
+          alt="자연의 결 히어로" 
+          fill 
+          className="object-cover brightness-[0.9]"
+          priority
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-hanji-white" />
+        <div className="relative z-10 text-center px-4 space-y-8 max-w-4xl">
+          <div className="flex justify-center mb-4">
+            <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-[10px] text-white uppercase tracking-[0.3em] font-medium">
+              <Leaf className="w-3 h-3 text-deep-sage" /> Nature Texture
+            </span>
+          </div>
+          <h1 className="font-serif text-5xl md:text-7xl text-white leading-tight tracking-tight drop-shadow-sm">
+            자연이 빚고,<br/>시간이 완성한 결
           </h1>
-          <p className="text-lg md:text-xl text-charcoal/80 mb-12 max-w-xl mx-auto font-light leading-relaxed">
-            {t.home.heroDesc}
+          <p className="text-lg md:text-xl text-white/90 font-light tracking-wide max-w-2xl mx-auto leading-relaxed">
+            연천의 맑은 공기와 비옥한 토양이 키워낸 정직한 산물.<br/>
+            인위적인 가공을 최소화한 자연 본연의 결을 경험하세요.
           </p>
-          <Link 
-            href="/shop" 
-            className="inline-flex items-center gap-3 bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all duration-500 tracking-widest text-sm uppercase"
-          >
-            {t.home.exploreBtn} <ArrowRight className="w-4 h-4" />
-          </Link>
+          <div className="pt-8">
+            <Link href="/shop" className="group inline-flex items-center gap-3 px-10 py-4 bg-charcoal text-white rounded-sm hover:bg-deep-sage transition-all duration-500 font-serif text-lg shadow-2xl">
+              {t.home.exploreBtn} <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+            </Link>
+          </div>
         </div>
       </section>
 
-      {/* Featured Products */}
-      <section className="py-32 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto w-full">
-        <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-          <div>
-            <h2 className="font-serif text-3xl md:text-4xl mb-4 text-charcoal">{t.home.featuredTitle}</h2>
-            <p className="text-muted text-sm tracking-wide">{t.home.featuredDesc}</p>
+      {/* Featured Product Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
+        <div className="flex flex-col md:flex-row justify-between items-end mb-20 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 text-deep-sage font-bold tracking-[0.2em] text-xs uppercase">
+              <TrendingUp className="w-4 h-4" /> Recommended
+            </div>
+            <h2 className="font-serif text-4xl md:text-5xl text-charcoal">{t.home.featuredTitle}</h2>
+            <p className="text-muted font-light max-w-md">{t.home.featuredDesc}</p>
           </div>
-          <Link href="/shop" className="text-deep-sage hover:text-terracotta transition-all border-b border-current pb-1 flex items-center gap-2 text-xs uppercase tracking-[0.2em]">
-            {t.home.viewAll} <ArrowRight className="w-3.5 h-3.5" />
+          <Link href="/shop" className="text-xs uppercase tracking-[0.2em] font-bold border-b border-charcoal/20 pb-2 hover:border-deep-sage hover:text-deep-sage transition-all">
+            {t.home.viewAll}
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-10 gap-y-20 min-h-[400px]">
-          {loading ? (
-            <div className="col-span-full flex items-center justify-center py-20">
-              <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
-            </div>
-          ) : (
-            featuredProducts.map(product => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+          {productsWithRatings.length > 0 ? (
+            productsWithRatings.map((product) => (
               <ProductCard key={product.id} product={product} />
             ))
+          ) : (
+            <div className="col-span-full py-32 text-center border border-dashed border-border-light rounded-sm bg-white/50">
+              <p className="text-muted italic font-light">등록된 상품이 없습니다. 관리자 페이지에서 첫 상품을 등록해 주세요.</p>
+            </div>
           )}
         </div>
       </section>
-      
-      {/* Brand Story Teaser */}
-      <section className="bg-charcoal text-hanji-white py-32 mt-auto relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+
+      {/* Brand Ethos Section */}
+      <section className="bg-charcoal text-hanji-white py-32 relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-full opacity-5 pointer-events-none">
            <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[120%] bg-hanji-white blur-[120px] rounded-full rotate-12" />
         </div>
-        <div className="max-w-4xl mx-auto px-4 text-center relative z-10">
-          <div className="flex justify-center mb-8">
-            <div className="relative w-24 h-24 opacity-80">
-              <Image 
-                src="/seal.png" 
-                alt="복이네농장 인감" 
-                fill 
-                className="object-contain filter brightness-0 invert" 
-              />
-            </div>
-          </div>
-          <h2 className="font-serif text-3xl md:text-5xl mb-8 tracking-tight">{t.home.brandStoryTitle}</h2>
-          <p className="text-lg md:text-xl/relaxed opacity-80 mb-12 font-light leading-relaxed">
+        <div className="max-w-5xl mx-auto px-4 text-center space-y-12 relative z-10">
+          <Sparkles className="w-10 h-10 mx-auto text-deep-sage/40" />
+          <h2 className="font-serif text-4xl md:text-6xl tracking-tight leading-tight">"우리는 자연의 질감을<br/>가장 투명하게 전달합니다"</h2>
+          <p className="text-lg md:text-xl font-light text-hanji-white/60 leading-relaxed max-w-3xl mx-auto">
             {t.home.brandStoryDesc}
           </p>
-          <Link href="/about" className="text-xs uppercase tracking-[0.3em] border-b border-white/30 pb-2 hover:text-deep-sage hover:border-deep-sage transition-all">
-            {t.common.about}
-          </Link>
+          <div className="pt-8">
+            <Link href="/about" className="text-xs uppercase tracking-[0.3em] border-b border-white/30 pb-2 hover:text-deep-sage hover:border-deep-sage transition-all">
+              Our Story
+            </Link>
+          </div>
         </div>
       </section>
-    </>
+    </div>
   );
 }
