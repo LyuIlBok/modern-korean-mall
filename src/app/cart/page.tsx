@@ -8,6 +8,7 @@ import { useHasMounted } from '@/hooks/useHasMounted';
 import { Minus, Plus, Trash2, ArrowRight, ShoppingBag } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+// Cart page with fixed TypeScript types
 export default function CartPage() {
   const { items, removeItem, updateQuantity } = useCartStore();
   const { t } = useLanguageStore();
