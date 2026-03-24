@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { products as mockProducts } from '@/data/mockData';
+import { products as mockProducts, Product } from '@/data/mockData';
 import { notFound, useParams } from 'next/navigation';
 import PurchaseButtons from './AddToCartButton';
 import ProductTabs from './ProductTabs';
