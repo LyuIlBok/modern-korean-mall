@@ -167,7 +167,7 @@ export default function AdminDashboard() {
         stock: Number(newStock), 
         category: newCategory, 
         description: newDesc, 
-        imageUrl: mainUrlArr[0],
+        imageUrl: mainUrlArr.length > 0 ? mainUrlArr[0] : 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
         images: galleryUrls,
         detail_content_images: detailUrls,
         is_sold_out: Number(newStock) <= 0,
