@@ -26,6 +26,56 @@ export default function CheckoutPage() {
     paymentMethod: 'card'
   });
 
+  // Fetch user info for auto-fill
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        const userId = session.user.id;
+
+        // 1. Fetch default address
+        const { data: addrData } = await supabase
+          .from('addresses')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('is_default', true)
+          .single();
+
+        if (addrData) {
+          setFormData(prev => ({
+            ...prev,
+            name: addrData.receiver_name || prev.name,
+            phone: addrData.receiver_phone || prev.phone,
+            address: `${addrData.address} ${addrData.detail_address}`.trim() || prev.address
+          }));
+        } else {
+          // 2. Fallback to profile if no default address
+          const { data: profileData } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+          if (profileData) {
+            setFormData(prev => ({
+              ...prev,
+              name: profileData.full_name || prev.name,
+              phone: profileData.phone || prev.phone
+            }));
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching profile for auto-fill:', err);
+      }
+    };
+
+    if (hasMounted) {
+      fetchUserProfile();
+    }
+  }, [hasMounted]);
+
   useEffect(() => {
     if (hasMounted && items.length === 0) {
       alert(language === 'ko' ? '장바구니가 비어 있습니다.' : 'Your cart is empty.');
