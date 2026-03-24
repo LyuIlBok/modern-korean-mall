@@ -19,11 +19,11 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. 배송지 목록 및 선택 상태 관리
+  // 1. 배송지 목록 및 선택 상태 (selectedAddressId)
   const [addressList, setAddressList] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new');
 
-  // 폼 상태 (새 배송지 입력 또는 메모/결제수단용)
+  // 직접 입력 폼 상태
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -34,7 +34,7 @@ export default function CheckoutClient() {
     paymentMethod: 'card'
   });
 
-  // 주소 목록 가져오기
+  // DB에서 저장된 배송지 목록 가져오기
   useEffect(() => {
     const fetchAddresses = async () => {
       try {
@@ -49,9 +49,11 @@ export default function CheckoutClient() {
 
         if (addrData && addrData.length > 0) {
           setAddressList(addrData);
+          // 기본 배송지가 있으면 선택, 없으면 첫 번째 선택
           const defaultAddr = addrData.find(a => a.is_default) || addrData[0];
           setSelectedAddressId(defaultAddr.id);
         } else {
+          // 저장된 주소가 없으면 '새 배송지 입력' 활성화
           setSelectedAddressId('new');
         }
       } catch (err) {
@@ -77,7 +79,7 @@ export default function CheckoutClient() {
     }
   };
 
-  // 3 & 4 & 5. 결제 및 주문 제출 로직 (Bypass 버그 방지)
+  // 강력한 결제 및 주문 제출 로직 (The Bypass Bug Fix)
   const handleSubmitOrder = useCallback(async (currentItems: any[]) => {
     setIsLoading(true);
 
@@ -120,12 +122,13 @@ export default function CheckoutClient() {
 
       let orderStatus: '결제완료' | '입금대기' = '결제완료';
 
-      // [핵심] 신용카드 결제 시 포트원 SDK 호출 및 조기 종료(Return)
+      // [핵심] 신용카드 결제 시 PortOne SDK 호출 및 강력 조기 종료(Return)
       if (formData.paymentMethod === 'card') {
         const orderName = currentItems.length > 1 
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
+        // 1. PortOne SDK 호출 (가장 먼저 배치)
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
@@ -143,13 +146,14 @@ export default function CheckoutClient() {
           },
         });
 
-        // 강력 조기 종료: 결제 실패나 창 닫기 발생 시 절대 DB 저장으로 넘어가지 않음
+        // 2. [강력 조기 종료] 결제 실패나 취소 시 즉시 return 하여 하단 DB 저장 로직 차단
         if (paymentResponse.code != null) {
           alert(`결제가 중단되었습니다: ${paymentResponse.message || '사용자 취소'}`);
           setIsLoading(false);
-          return; // 여기서 실행 종료 (Bypass 방지)
+          return; // 여기서 절대적으로 종료 (Bypass 원천 차단)
         }
 
+        // 성공 시에만 여기까지 도달
         alert('테스트 결제가 성공적으로 완료되었습니다!');
         orderStatus = '결제완료';
       } 
@@ -157,7 +161,7 @@ export default function CheckoutClient() {
         orderStatus = '입금대기';
       }
 
-      // [성공 시에만 도달] DB 주문 데이터 저장
+      // 3. [성공 시에만 도달] DB 주문 데이터 저장
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -182,7 +186,8 @@ export default function CheckoutClient() {
         price: item.price
       }));
 
-      await supabase.from('order_items').insert(orderItems);
+      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
+      if (itemsError) throw new Error(`주문 항목 저장 실패: ${itemsError.message}`);
 
       clearCart();
       router.push('/order-success');
@@ -223,13 +228,14 @@ export default function CheckoutClient() {
         <form onSubmit={(e) => { e.preventDefault(); handleSubmitOrder(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           <div className="lg:col-span-7 space-y-12">
             
-            {/* 1 & 2. 배송지 카드형 UI 선택 영역 */}
+            {/* 배송지 정보: 카드 선택형 UI (Overhaul) */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
                 <MapPin className="w-6 h-6 text-deep-sage" /> 배송지 선택
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {/* 기존 저장된 주소 카드 목록 */}
                 {addressList.map((addr) => (
                   <button
                     key={addr.id}
@@ -251,7 +257,7 @@ export default function CheckoutClient() {
                   </button>
                 ))}
                 
-                {/* 직접 입력 카드 */}
+                {/* 직접 입력 카드 (항상 마지막에 배치) */}
                 <button
                   type="button"
                   onClick={() => setSelectedAddressId('new')}
@@ -264,13 +270,13 @@ export default function CheckoutClient() {
                 </button>
               </div>
 
-              {/* 조건부 렌더링: 새 배송지 입력 폼 */}
+              {/* [조건부 렌더링] 새 배송지 직접 입력 폼 */}
               {selectedAddressId === 'new' && (
                 <div className="space-y-6 pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
-                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함" />
+                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함을 입력해 주세요" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
@@ -281,13 +287,13 @@ export default function CheckoutClient() {
                     <div className="flex gap-4 items-end">
                       <div className="flex-1 space-y-2">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
-                        <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="00000" />
+                        <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="00000" />
                       </div>
                       <button type="button" onClick={handleAddressSearch} className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all">
                         주소 찾기
                       </button>
                     </div>
-                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="기본 주소" />
+                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="기본 주소" />
                     <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" placeholder="상세 주소" />
                   </div>
                 </div>
@@ -299,6 +305,7 @@ export default function CheckoutClient() {
               </div>
             </section>
 
+            {/* 결제 수단 선택 */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
                 <CreditCard className="w-6 h-6 text-deep-sage" /> 결제 수단 선택
@@ -321,6 +328,7 @@ export default function CheckoutClient() {
             </section>
           </div>
 
+          {/* 우측 주문 요약 및 결제 버튼 */}
           <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-8">
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">주문 내역</h2>
@@ -367,6 +375,10 @@ export default function CheckoutClient() {
                   <>₩{total.toLocaleString()} 결제하기</>
                 )}
               </button>
+
+              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] text-muted uppercase tracking-widest font-bold">
+                <ShieldCheck className="w-3 h-3 text-deep-sage" /> Secure Checkout
+              </div>
             </section>
           </div>
         </form>
