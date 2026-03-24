@@ -40,6 +40,7 @@ export default function ProductDetailClient({
       name: product.name, 
       price: product.price, 
       imageUrl: product.imageUrl, 
+      shipping_fee: product.shipping_fee || 0,
       quantity 
     });
     toggleCart(true);
@@ -52,6 +53,7 @@ export default function ProductDetailClient({
       name: product.name, 
       price: product.price, 
       imageUrl: product.imageUrl, 
+      shipping_fee: product.shipping_fee || 0,
       quantity 
     });
     router.push('/checkout');
