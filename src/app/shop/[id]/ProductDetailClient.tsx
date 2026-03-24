@@ -19,7 +19,7 @@ export default function ProductDetailClient({
   product: any, 
   relatedProducts: any[] 
 }) {
-  const { language } = useLanguageStore();
+  const { language, t } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
   const { addItem, toggleCart } = useCartStore();
   const hasMounted = useHasMounted();
