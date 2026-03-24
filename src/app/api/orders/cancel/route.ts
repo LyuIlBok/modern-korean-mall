@@ -2,11 +2,10 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // 1. 요청자의 세션을 기반으로 동작하는 Supabase 클라이언트 설정 (서버 컴포넌트용 아님)
-// 이 API는 클라이언트의 쿠키(세션) 정보를 가져와 권한을 직접 확인합니다.
 const getSupabaseWithAuth = (authHeader: string | null) => {
   return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
     {
       global: {
         headers: {
@@ -19,8 +18,8 @@ const getSupabaseWithAuth = (authHeader: string | null) => {
 
 // 관리자용 무적 키는 주문 상태를 강제로 바꿀 때만 사용 (단, 소유권 확인 후)
 const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
 );
 
 export async function POST(req: Request) {
