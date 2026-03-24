@@ -506,11 +506,14 @@ export default function AdminDashboard() {
                               }}
                               className={`text-[11px] px-3 py-1.5 rounded-sm border focus:outline-none transition-all ${
                                 o.status === '결제완료' ? 'border-deep-sage text-deep-sage bg-deep-sage/5' :
+                                o.status === '배송준비중' ? 'border-amber-500 text-amber-500 bg-amber-500/5' :
                                 o.status === '배송중' ? 'border-blue-500 text-blue-500 bg-blue-500/5' :
+                                o.status === '배송완료' ? 'border-charcoal text-charcoal bg-charcoal/5' :
                                 'border-charcoal/20 text-charcoal/40 bg-charcoal/5'
                               }`}
                             >
                               <option value="결제완료">결제완료</option>
+                              <option value="배송준비중">배송준비중</option>
                               <option value="배송중">배송중</option>
                               <option value="배송완료">배송완료</option>
                               <option value="취소됨">취소됨</option>
