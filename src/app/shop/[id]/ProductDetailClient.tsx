@@ -80,7 +80,9 @@ export default function ProductDetailClient({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4 }}
-                  <div className="relative aspect-[4/5] w-full">
+                  className="w-full h-full"
+                >
+                  <div className="relative aspect-[4/5] w-full h-full">
                     <Image 
                       src={galleryImages[activeImage]} 
                       alt={product.name} 
@@ -89,7 +91,6 @@ export default function ProductDetailClient({
                       className="object-cover" 
                     />
                   </div>
-                  />
                 </motion.div>
               </AnimatePresence>
               

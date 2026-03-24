@@ -1,5 +1,3 @@
-'use client';
-
 import { Noto_Serif_KR, Noto_Sans_KR } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
@@ -7,9 +5,20 @@ import Footer from "@/components/Footer";
 import CartSidebar from "@/components/CartSidebar";
 import ToastContainer from "@/components/Toast";
 import ChatWidget from "@/components/ChatWidget";
-import { useLanguageStore } from "@/store/useLanguageStore";
 import Script from "next/script";
 import { Metadata } from 'next';
+
+const notoSerif = Noto_Serif_KR({
+  subsets: ["latin"],
+  weight: ["200", "300", "400", "500", "600", "700", "900"],
+  variable: "--font-serif",
+});
+
+const notoSans = Noto_Sans_KR({
+  subsets: ["latin"],
+  weight: ["100", "300", "400", "500", "700", "900"],
+  variable: "--font-sans",
+});
 
 export const metadata: Metadata = {
   title: {
@@ -50,10 +59,8 @@ export default function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const { language } = useLanguageStore();
-
   return (
-    <html lang={language}>
+    <html lang="ko">
       <head>
         {/* Google Tag Manager (GTM) */}
         <Script id="gtm-script" strategy="afterInteractive">
