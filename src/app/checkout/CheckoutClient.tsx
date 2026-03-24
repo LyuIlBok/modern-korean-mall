@@ -121,19 +121,44 @@ export default function CheckoutClient() {
         };
       }
 
-      let orderStatus: '결제완료' | '입금대기' = '결제완료';
+      // 1. [중요] DB에 주문 데이터 먼저 생성 (결제대기 상태)
+      const { data: order, error: orderError } = await supabase
+        .from('orders')
+        .insert([{
+          user_id: session?.user?.id || null,
+          customer_name: finalAddressData.name,
+          customer_phone: finalAddressData.phone,
+          address: finalAddressData.fullAddress,
+          total_price: total,
+          status: '결제대기',
+          payment_method: formData.paymentMethod,
+          memo: formData.memo
+        }])
+        .select()
+        .single();
 
-      // [핵심] 신용카드 결제 시 PortOne SDK 호출 및 강력 조기 종료(Return)
+      if (orderError) throw new Error(`주문 생성 실패: ${orderError.message}`);
+
+      // 주문 항목 저장
+      const orderItems = currentItems.map(item => ({
+        order_id: order.id,
+        product_id: item.id,
+        quantity: item.quantity,
+        price: item.price
+      }));
+      await supabase.from('order_items').insert(orderItems);
+
+      // 2. 결제 수단별 처리
       if (formData.paymentMethod === 'card') {
         const orderName = currentItems.length > 1 
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
-        // 1. PortOne SDK 호출 (가장 먼저 배치)
+        // PortOne SDK 호출 - DB 주문 ID를 paymentId로 사용
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
-          paymentId: `order-${Date.now()}`,
+          paymentId: order.id, // DB의 주문 UUID 사용
           orderName: orderName,
           totalAmount: total,
           currency: 'KRW',
@@ -149,47 +174,24 @@ export default function CheckoutClient() {
           },
         });
 
-        // [중요] 응답 객체가 없거나 에러 코드가 있는 경우 (Bypass 차단)
         if (!paymentResponse || paymentResponse.code != null) {
           const errorMessage = paymentResponse?.message || '결제창을 닫았거나 결제에 실패했습니다.';
+          // 결제 실패 시 주문 삭제 또는 상태 업데이트 (선택 사항)
+          await supabase.from('orders').update({ status: '결제실패' }).eq('id', order.id);
           alert(`결제가 중단되었습니다: ${errorMessage}`);
           setIsLoading(false);
-          return; // 여기서 얄짤없이 종료
+          return;
         }
 
+        // 프론트엔드 즉시 업데이트
+        await supabase.from('orders').update({ status: '결제완료' }).eq('id', order.id);
         alert('테스트 결제가 성공적으로 완료되었습니다!');
-        orderStatus = '결제완료';
       } 
       else if (formData.paymentMethod === 'transfer') {
-        orderStatus = '입금대기';
+        // 무통장 입금 (직접 처리 시)
+        await supabase.from('orders').update({ status: '입금대기' }).eq('id', order.id);
+        alert('주문이 접수되었습니다. 입금 확인 후 배송이 시작됩니다.');
       }
-
-      // [성공 시에만 도달] DB 주문 데이터 저장
-      const { data: order, error: orderError } = await supabase
-        .from('orders')
-        .insert([{
-          user_id: session?.user?.id || null,
-          customer_name: finalAddressData.name,
-          customer_phone: finalAddressData.phone,
-          address: finalAddressData.fullAddress,
-          total_price: total,
-          status: orderStatus,
-          payment_method: formData.paymentMethod,
-          memo: formData.memo
-        }])
-        .select()
-        .single();
-
-      if (orderError) throw new Error(`주문 저장 실패: ${orderError.message}`);
-
-      const orderItems = currentItems.map(item => ({
-        order_id: order.id,
-        product_id: item.id,
-        quantity: item.quantity,
-        price: item.price
-      }));
-
-      await supabase.from('order_items').insert(orderItems);
 
       clearCart();
       router.push('/order-success');
