@@ -154,9 +154,26 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      // 병렬 업로드 실행
-      const [mainUrlArr, galleryUrls, detailUrls] = await Promise.all([
-        mainImage ? uploadFiles([mainImage], 'main') : Promise.resolve(['https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800']),
+      let customImageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e';
+
+      // 1. 대표 이미지 업로드 (단일)
+      if (mainImage) {
+        const fileExt = mainImage.name.split('.').pop();
+        const fileName = `main_${Date.now()}.${fileExt}`;
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(`main/${fileName}`, mainImage);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(`main/${fileName}`);
+        customImageUrl = publicUrl;
+      }
+
+      // 2. 갤러리 및 상세 이미지 병렬 업로드
+      const [galleryUrls, detailUrls] = await Promise.all([
         uploadFiles(galleryFiles, 'gallery'),
         uploadFiles(detailFiles, 'details')
       ]);
@@ -167,18 +184,18 @@ export default function AdminDashboard() {
         stock: Number(newStock), 
         category: newCategory, 
         description: newDesc, 
-        imageUrl: mainUrlArr.length > 0 ? mainUrlArr[0] : 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800',
+        imageUrl: customImageUrl,
         images: galleryUrls,
         detail_content_images: detailUrls,
         is_sold_out: Number(newStock) <= 0,
-        specs: { origin: '연천군', producer: '복이네농장' } // 기본 스펙
+        specs: { origin: '연천군', producer: '복이네농장' }
       }]).select();
 
       if (error) throw error;
       
       alert('상품이 등록되었습니다!');
       setIsAdding(false);
-      fetchData(); // 데이터 갱신
+      fetchData(); 
     } catch (error: any) { 
       alert(error.message); 
     } finally { 
