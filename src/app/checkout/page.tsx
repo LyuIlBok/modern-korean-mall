@@ -112,12 +112,22 @@ export default function CheckoutPage() {
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // 장바구니 최종 검증
-    if (!items || items.length === 0) {
-      alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
-      router.push('/');
-      return;
+    // Zustand의 최신 상태를 직접 참조하여 클로저 문제 방지
+    const currentItems = useCartStore.getState().items;
+    
+    // 장바구니 최종 검증 (부드러운 체크)
+    if (!currentItems || currentItems.length === 0) {
+      // 만약 렌더링된 items가 있다면 그것을 사용하고, 정말 하나도 없다면 중단
+      if (items && items.length > 0) {
+        console.log('Using closure items as fallback');
+      } else {
+        alert(language === 'ko' ? '장바구니가 비어 있어 주문을 진행할 수 없습니다.' : 'Cart is empty. Cannot proceed.');
+        router.push('/');
+        return;
+      }
     }
+
+    const checkoutItems = currentItems.length > 0 ? currentItems : items;
 
     setIsLoading(true);
 
@@ -145,7 +155,7 @@ export default function CheckoutPage() {
       if (!order) throw new Error('주문 데이터가 생성되지 않았습니다.');
 
       // 2. order_items 테이블에 상세 내역 생성 (items null 방어)
-      const orderItems = items.map(item => {
+      const orderItems = checkoutItems.map(item => {
         if (!item || !item.id) throw new Error('잘못된 상품 정보가 포함되어 있습니다.');
         return {
           order_id: order.id,
