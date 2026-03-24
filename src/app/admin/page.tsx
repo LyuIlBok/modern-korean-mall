@@ -39,90 +39,81 @@ export default function AdminDashboard() {
   const [newStock, setNewStock] = useState('100');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  
+  // 1. 다중 이미지 State 추가
+  const [mainImage, setMainImage] = useState<File | null>(null);
+  const [mainPreview, setMainPreview] = useState<string | null>(null);
+  
+  const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
+  const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
+  
+  const [detailFiles, setDetailFiles] = useState<File[]>([]);
+  const [detailPreviews, setDetailPreviews] = useState<string[]>([]);
 
-  const fetchData = useCallback(async () => {
-    try {
-      setIsCheckingAuth(true);
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  // 2. 업로드 헬퍼 함수 (병렬 업로드 및 URL 반환)
+  const uploadFiles = async (files: File[], folder: string) => {
+    if (files.length === 0) return [];
+    
+    const uploadPromises = files.map(async (file) => {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+      const filePath = `${folder}/${fileName}`;
       
-      if (sessionError || !session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
-        console.error('Access denied or session error');
-        router.replace('/'); // push 대신 replace로 히스토리 관리
-        return;
-      }
-
-      setIsAdmin(true);
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+        
+      if (uploadError) throw new Error(`업로드 실패: ${uploadError.message}`);
       
-      // 데이터 로딩은 권한 확인 후에만 진행
-      const [productsRes, ordersRes, alertsRes] = await Promise.all([
-        supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('orders').select('*, order_items(*, products(name))').order('created_at', { ascending: false }),
-        supabase.from('restock_alerts').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
-      ]);
-
-      if (productsRes.data) setProducts(productsRes.data);
-      if (ordersRes.data) setOrders(ordersRes.data);
-      if (alertsRes.data) setRestockAlerts(alertsRes.data);
-      
-    } catch (err) { 
-      console.error('Admin initialization failed:', err);
-      router.replace('/');
-    } finally {
-      setIsCheckingAuth(false);
-    }
-  }, [router]);
-
-  useEffect(() => { fetchData(); }, [fetchData]);
-
-  // Derived State for Search & Filter
-  const filteredProducts = useMemo(() => {
-    return products.filter(p => {
-      const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesCategory = categoryFilter === '전체' || p.category === categoryFilter;
-      return matchesSearch && matchesCategory;
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+      return publicUrl;
     });
-  }, [products, searchTerm, categoryFilter]);
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      setImageFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => setImagePreview(reader.result as string);
-      reader.readAsDataURL(file);
+    return Promise.all(uploadPromises);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>, type: 'main' | 'gallery' | 'detail') => {
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    if (type === 'main') {
+      setMainImage(files[0]);
+      setMainPreview(URL.createObjectURL(files[0]));
+    } else if (type === 'gallery') {
+      setGalleryFiles(prev => [...prev, ...files]);
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setGalleryPreviews(prev => [...prev, ...newPreviews]);
+    } else {
+      setDetailFiles(prev => [...prev, ...files]);
+      const newPreviews = files.map(file => URL.createObjectURL(file));
+      setDetailPreviews(prev => [...prev, ...newPreviews]);
+    }
+  };
+
+  const removeFile = (index: number, type: 'gallery' | 'detail') => {
+    if (type === 'gallery') {
+      setGalleryFiles(prev => prev.filter((_, i) => i !== index));
+      setGalleryPreviews(prev => prev.filter((_, i) => i !== index));
+    } else {
+      setDetailFiles(prev => prev.filter((_, i) => i !== index));
+      setDetailPreviews(prev => prev.filter((_, i) => i !== index));
     }
   };
 
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName || !newPrice || !newDesc) {
-      alert('필수 정보를 모두 입력해 주세요.');
-      return;
-    }
+    if (!newName || !newPrice || !newDesc) return alert('필수 정보를 입력해 주세요.');
 
     setIsLoading(true);
     try {
-      let imageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800';
-      
-      // 이미지 업로드 처리
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `products/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(filePath, imageFile);
-          
-        if (uploadError) throw new Error(`이미지 업로드 실패: ${uploadError.message}`);
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-        imageUrl = publicUrl;
-      }
+      // 병렬 업로드 실행
+      const [mainUrlArr, galleryUrls, detailUrls] = await Promise.all([
+        mainImage ? uploadFiles([mainImage], 'main') : Promise.resolve(['https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&q=80&w=800']),
+        uploadFiles(galleryFiles, 'gallery'),
+        uploadFiles(detailFiles, 'details')
+      ]);
 
       const { data, error } = await supabase.from('products').insert([{
         name: newName, 
@@ -130,23 +121,20 @@ export default function AdminDashboard() {
         stock: Number(newStock), 
         category: newCategory, 
         description: newDesc, 
-        imageUrl, 
-        is_sold_out: Number(newStock) <= 0
+        imageUrl: mainUrlArr[0],
+        images: galleryUrls,
+        detail_content_images: detailUrls,
+        is_sold_out: Number(newStock) <= 0,
+        specs: { origin: '연천군', producer: '복이네농장' } // 기본 스펙
       }]).select();
 
       if (error) throw error;
       
-      if (data) {
-        setProducts([data[0], ...products]);
-        setIsAdding(false);
-        // 필드 초기화
-        setNewName(''); setNewPrice(''); setNewStock('100'); setNewDesc(''); 
-        setImageFile(null); setImagePreview(null);
-        alert('상품이 성공적으로 등록되었습니다!');
-      }
+      alert('상품이 등록되었습니다!');
+      setIsAdding(false);
+      fetchData(); // 데이터 갱신
     } catch (error: any) { 
-      console.error('Add product error:', error);
-      alert(error.message || '상품 등록 중 오류가 발생했습니다.'); 
+      alert(error.message); 
     } finally { 
       setIsLoading(false); 
     }
@@ -158,46 +146,32 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      let imageUrl = editingProduct.imageUrl;
+      const [newMainUrl, newGalleryUrls, newDetailUrls] = await Promise.all([
+        mainImage ? uploadFiles([mainImage], 'main') : Promise.resolve([]),
+        uploadFiles(galleryFiles, 'gallery'),
+        uploadFiles(detailFiles, 'details')
+      ]);
 
-      // 새 이미지가 선택된 경우 업로드
-      if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-        const filePath = `products/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(filePath, imageFile);
-          
-        if (uploadError) throw new Error(`이미지 업로드 실패: ${uploadError.message}`);
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-        imageUrl = publicUrl;
-      }
-
-      const { error } = await supabase.from('products').update({
+      const updatedData = {
         name: editingProduct.name, 
         price: Number(editingProduct.price), 
         stock: Number(editingProduct.stock), 
         category: editingProduct.category, 
         description: editingProduct.description, 
-        imageUrl,
+        imageUrl: newMainUrl.length > 0 ? newMainUrl[0] : editingProduct.imageUrl,
+        images: [...(editingProduct.images || []), ...newGalleryUrls],
+        detail_content_images: [...(editingProduct.detail_content_images || []), ...newDetailUrls],
         is_sold_out: Number(editingProduct.stock) <= 0
-      }).eq('id', editingProduct.id);
+      };
 
+      const { error } = await supabase.from('products').update(updatedData).eq('id', editingProduct.id);
       if (error) throw error;
       
-      await fetchData();
+      alert('수정되었습니다.');
       setEditingProduct(null);
-      setImageFile(null);
-      setImagePreview(null);
-      alert('상품 정보가 수정되었습니다.');
+      fetchData();
     } catch (err: any) { 
-      console.error('Update product error:', err);
-      alert(err.message || '수정 중 오류가 발생했습니다.'); 
+      alert(err.message); 
     } finally { 
       setIsLoading(false); 
     }
@@ -293,22 +267,72 @@ export default function AdminDashboard() {
               {isAdding && (
                 <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white border border-border-light p-10 rounded-sm shadow-xl relative overflow-hidden">
                   <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
-                  <form onSubmit={handleAddProduct} className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                    <div className="space-y-8">
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="상품명을 입력해 주세요" className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-lg font-serif" /></div>
-                      <div className="grid grid-cols-2 gap-8">
-                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                  <form onSubmit={handleAddProduct} className="space-y-12">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+                      <div className="space-y-8">
+                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="상품명을 입력해 주세요" className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-lg font-serif" /></div>
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                        </div>
+                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                       </div>
-                      <div className="flex items-center gap-6 mt-4">
-                        <div className="relative w-24 h-28 bg-hanji-white rounded-sm overflow-hidden border border-border-light shadow-inner">{imagePreview ? <Image src={imagePreview} alt="Preview" fill className="object-cover" /> : <div className="w-full h-full flex flex-col items-center justify-center text-muted/30"><Camera className="w-6 h-6 mb-1" /><span className="text-[8px] font-bold">IMAGE</span></div>}</div>
-                        <div className="flex-1 space-y-2"><p className="text-[10px] text-muted">대표 이미지를 선택해 주세요.</p><input type="file" accept="image/*" onChange={handleImageChange} className="text-xs text-muted" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품에 대한 상세한 설명을 적어주세요." className="w-full h-full min-h-[200px] bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
+                    </div>
+
+                    {/* Image Upload Sections */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
+                      {/* Main Image */}
+                      <div className="space-y-4">
+                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
+                        <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                          {mainPreview ? (
+                            <Image src={mainPreview} alt="Main" fill className="object-cover" />
+                          ) : (
+                            <div className="w-full h-full flex flex-col items-center justify-center text-muted/30"><Camera className="w-8 h-8 mb-2" /><span className="text-[9px] font-bold">대표 이미지</span></div>
+                          )}
+                          <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'main')} className="absolute inset-0 opacity-0 cursor-pointer" />
+                        </div>
+                      </div>
+
+                      {/* Gallery Images */}
+                      <div className="space-y-4 md:col-span-2">
+                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images (Multiple)</label>
+                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
+                          {galleryPreviews.map((src, idx) => (
+                            <div key={idx} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                              <Image src={src} alt="Gallery" fill className="object-cover" />
+                              <button type="button" onClick={() => removeFile(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-charcoal text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
+                            </div>
+                          ))}
+                          <label className="aspect-square bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
+                            <Plus className="w-6 h-6 text-muted/30" /><span className="text-[8px] font-bold text-muted/40 mt-1">ADD</span>
+                            <input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'gallery')} className="hidden" />
+                          </label>
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-8 flex flex-col">
-                      <div className="flex-1 space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품에 대한 상세한 설명을 적어주세요." className="w-full h-full min-h-[150px] bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
-                      <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-lg">{isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <CheckCircle className="w-6 h-6" />} 상품 등록 완료하기</button>
+
+                    {/* Detail Images */}
+                    <div className="space-y-4 border-t border-border-light pt-10">
+                      <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Detail Page Images (Professional Content)</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {detailPreviews.map((src, idx) => (
+                          <div key={idx} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
+                            <Image src={src} alt="Detail" fill className="object-cover" />
+                            <button type="button" onClick={() => removeFile(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-charcoal text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
+                          </div>
+                        ))}
+                        <label className="aspect-[2/3] bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
+                          <Camera className="w-8 h-8 text-muted/30" /><span className="text-[9px] font-bold text-muted/40 mt-2">ADD CONTENT</span>
+                          <input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'detail')} className="hidden" />
+                        </label>
+                      </div>
                     </div>
+
+                    <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl">
+                      {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <CheckCircle className="w-8 h-8" />} 상품 등록 완료하기
+                    </button>
                   </form>
                 </motion.div>
               )}
