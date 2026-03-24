@@ -2,9 +2,46 @@ import { supabase } from '@/lib/supabaseClient';
 import { notFound } from 'next/navigation';
 import ProductDetailClient from './ProductDetailClient';
 import { products as mockProducts } from '@/data/mockData';
+import { Metadata } from 'next';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
+  const params = await props.params;
+  const { data: product } = await supabase.from('products').select('*').eq('id', params.id).single();
+
+  if (!product) {
+    const mock = mockProducts.find(p => p.id === params.id);
+    if (!mock) return { title: '상품을 찾을 수 없습니다' };
+    return {
+      title: mock.name,
+      description: mock.description,
+      openGraph: {
+        title: `${mock.name} | 자연의 결`,
+        description: `${mock.price.toLocaleString()}원 - ${mock.description}`,
+        images: [{ url: mock.imageUrl }],
+      }
+    };
+  }
+
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: `${product.name} | 자연의 결`,
+      description: `${product.price.toLocaleString()}원 - ${product.description}`,
+      images: [{ url: product.imageUrl }],
+      type: 'article',
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title: product.name,
+      description: product.description,
+      images: [product.imageUrl],
+    },
+  };
+}
 
 export default async function ProductDetailPage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;

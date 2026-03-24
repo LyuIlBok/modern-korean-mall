@@ -80,14 +80,15 @@ export default function ProductDetailClient({
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.4 }}
-                  className="relative w-full h-full"
-                >
-                  <Image 
-                    src={galleryImages[activeImage]} 
-                    alt={product.name} 
-                    fill 
-                    className="object-cover"
-                    priority
+                  <div className="relative aspect-[4/5] w-full">
+                    <Image 
+                      src={galleryImages[activeImage]} 
+                      alt={product.name} 
+                      fill 
+                      priority
+                      className="object-cover" 
+                    />
+                  </div>
                   />
                 </motion.div>
               </AnimatePresence>
