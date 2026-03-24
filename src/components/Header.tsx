@@ -61,8 +61,15 @@ export default function Header() {
   }, [isSearchOpen]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    alert(language === 'ko' ? '로그아웃 되었습니다.' : 'Logged out successfully.');
+    const { error } = await supabase.auth.signOut();
+    if (error) {
+      console.error('Logout error:', error);
+      alert(language === 'ko' ? '로그아웃 중 오류가 발생했습니다.' : 'Error during logout.');
+    } else {
+      alert(language === 'ko' ? '로그아웃 되었습니다.' : 'Logged out successfully.');
+      router.push('/');
+      router.refresh();
+    }
   };
 
   const handleSearch = (e: React.FormEvent) => {

@@ -22,6 +22,7 @@ export default function ProductDetailPage() {
   const hasMounted = useHasMounted();
   
   const [product, setProduct] = useState<ProductWithRating | null>(null);
+  const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
 
@@ -29,10 +30,11 @@ export default function ProductDetailPage() {
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
 
   useEffect(() => {
-    const fetchProduct = async () => {
+    const fetchProductAndRelated = async () => {
       if (!params?.id) return;
       setLoading(true);
       try {
+        // 1. 메인 상품 정보 가져오기
         const { data, error } = await supabase
           .from('products')
           .select('*, reviews(rating)')
@@ -46,11 +48,26 @@ export default function ProductDetailPage() {
           const avgRating = ratings.length > 0 
             ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
             : 0;
-          setProduct({
+          const productData = {
             ...data,
             avgRating,
             reviewCount: ratings.length
-          });
+          };
+          setProduct(productData);
+
+          // 2. 관련 상품 가져오기 (같은 카테고리, 현재 상품 제외)
+          const { data: relatedData } = await supabase
+            .from('products')
+            .select('*')
+            .eq('category', data.category)
+            .neq('id', data.id)
+            .limit(4);
+          
+          if (relatedData && relatedData.length > 0) {
+            setRelatedProducts(relatedData);
+          } else {
+            setRelatedProducts(mockProducts.filter(p => p.category === data.category && p.id !== data.id).slice(0, 4));
+          }
         } else {
           const mockProduct = mockProducts.find(p => p.id === params.id);
           setProduct(mockProduct ? { ...mockProduct, avgRating: 0, reviewCount: 0 } : null);
@@ -64,7 +81,7 @@ export default function ProductDetailPage() {
       }
     };
 
-    fetchProduct();
+    fetchProductAndRelated();
   }, [params?.id]);
 
   if (loading) {
@@ -80,9 +97,6 @@ export default function ProductDetailPage() {
   }
 
   const allImages = product.images || [product.imageUrl];
-  const relatedProducts = mockProducts
-    .filter(p => p.category === product.category && p.id !== product.id)
-    .slice(0, 4);
 
   // 다국어 텍스트 안전 참조
   const deliveryText = language === 'ko' ? '오늘 주문 시, 내일 도착 보장' : 'Guaranteed delivery tomorrow';
