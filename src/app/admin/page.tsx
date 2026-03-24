@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
   ShoppingCart, Truck, CheckCircle, Image as ImageIcon,
-  MessageSquare, User, Trash2, Edit3, X, TrendingUp, Bell, Check, ArrowRight, Camera, Search, Filter, AlertTriangle, MoreVertical, ExternalLink
+  MessageSquare, User, Trash2, Edit3, X, TrendingUp, Bell, Check, ArrowRight, Camera, Search, Filter, AlertTriangle, MoreVertical, ExternalLink,
+  DollarSign, Save
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
