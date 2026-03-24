@@ -6,6 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CartSidebar from "@/components/CartSidebar";
 import ToastContainer from "@/components/Toast";
+import ChatWidget from "@/components/ChatWidget";
 import { useLanguageStore } from "@/store/useLanguageStore";
 import Script from "next/script";
 
@@ -90,6 +91,7 @@ export default function RootLayout({
         <Footer />
         <CartSidebar />
         <ToastContainer />
+        <ChatWidget />
       </body>
     </html>
   );

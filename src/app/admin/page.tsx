@@ -308,12 +308,19 @@ export default function AdminDashboard() {
         </div>
         <nav className="space-y-4 flex-1">
           {[
-            { id: 'dashboard', label: '운영 현황', icon: TrendingUp },
-            { id: 'products', label: '상품 관리', icon: Package },
-            { id: 'orders', label: '주문 관리', icon: ShoppingCart },
-            { id: 'restock', label: '재입고 알림', icon: Bell },
+            { id: 'dashboard', label: '운영 현황', icon: TrendingUp, path: '/admin' },
+            { id: 'products', label: '상품 관리', icon: Package, path: '/admin?tab=products' },
+            { id: 'orders', label: '주문 관리', icon: ShoppingCart, path: '/admin?tab=orders' },
+            { id: 'chat', label: '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
+            { id: 'restock', label: '재입고 알림', icon: Bell, path: '/admin?tab=restock' },
           ].map((item) => (
-            <button key={item.id} onClick={() => setActiveTab(item.id as ActiveTab)} className={`flex items-center gap-3 w-full p-3 rounded-sm transition-all text-sm ${activeTab === item.id ? 'bg-deep-sage text-white font-bold shadow-md' : 'text-muted hover:bg-hanji-white'}`}><item.icon className="w-4 h-4" /> {item.label}</button>
+            <button 
+              key={item.id} 
+              onClick={() => item.path.includes('?') || item.path === '/admin' ? setActiveTab(item.id as ActiveTab) : router.push(item.path)} 
+              className={`flex items-center gap-3 w-full p-3 rounded-sm transition-all text-sm ${activeTab === item.id ? 'bg-deep-sage text-white font-bold shadow-md' : 'text-muted hover:bg-hanji-white'}`}
+            >
+              <item.icon className="w-4 h-4" /> {item.label}
+            </button>
           ))}
         </nav>
         <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> 로그아웃</button>
