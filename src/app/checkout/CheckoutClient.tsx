@@ -18,12 +18,13 @@ export default function CheckoutClient() {
   const hasMounted = useHasMounted();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [session, setSession] = useState<any>(null);
 
   // 1. 배송지 목록 및 선택 상태
   const [addressList, setAddressList] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new');
 
-  // 직접 입력 폼 상태
+  // 입력 폼 상태
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -34,36 +35,38 @@ export default function CheckoutClient() {
     paymentMethod: 'card'
   });
 
-  // DB에서 저장된 배송지 목록 가져오기
+  // 세션 확인 및 주소 목록 가져오기
   useEffect(() => {
-    const fetchAddresses = async () => {
+    const checkSessionAndFetchAddresses = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          setSelectedAddressId('new');
-          return;
-        }
+        const { data: { session: currentSession } } = await supabase.auth.getSession();
+        setSession(currentSession);
 
-        const { data: addrData } = await supabase
-          .from('addresses')
-          .select('*')
-          .eq('user_id', session.user.id)
-          .order('is_default', { ascending: false });
+        if (currentSession) {
+          const { data: addrData } = await supabase
+            .from('addresses')
+            .select('*')
+            .eq('user_id', currentSession.user.id)
+            .order('is_default', { ascending: false });
 
-        if (addrData && addrData.length > 0) {
-          setAddressList(addrData);
-          const defaultAddr = addrData.find(a => a.is_default) || addrData[0];
-          setSelectedAddressId(defaultAddr.id);
+          if (addrData && addrData.length > 0) {
+            setAddressList(addrData);
+            const defaultAddr = addrData.find(a => a.is_default) || addrData[0];
+            setSelectedAddressId(defaultAddr.id);
+          } else {
+            setSelectedAddressId('new');
+          }
         } else {
+          // 비회원은 무조건 'new' (직접 입력)
           setSelectedAddressId('new');
         }
       } catch (err) {
-        console.error('Error fetching addresses:', err);
+        console.error('Error fetching data:', err);
         setSelectedAddressId('new');
       }
     };
 
-    if (hasMounted) fetchAddresses();
+    if (hasMounted) checkSessionAndFetchAddresses();
   }, [hasMounted]);
 
   const handleAddressSearch = () => {
@@ -81,15 +84,11 @@ export default function CheckoutClient() {
     }
   };
 
-  // 강력한 결제 및 주문 제출 로직 (The Bypass Bug Fix)
+  // 강력한 결제 및 주문 제출 로직 (우회 방지 로직 유지)
   const handleSubmitOrder = useCallback(async (currentItems: any[]) => {
     setIsLoading(true);
 
     try {
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
-      if (sessionError) throw sessionError;
-      const session = sessionData?.session;
-      
       const subtotal = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const shippingFee = subtotal >= 50000 ? 0 : 3000;
       const total = subtotal + shippingFee;
@@ -112,11 +111,6 @@ export default function CheckoutClient() {
         };
       } else {
         const selected = addressList.find(a => a.id === selectedAddressId);
-        if (!selected) {
-          alert('선택된 배송지 정보가 올바르지 않습니다.');
-          setIsLoading(false);
-          return;
-        }
         finalAddressData = {
           name: selected.receiver_name,
           phone: selected.receiver_phone,
@@ -135,7 +129,6 @@ export default function CheckoutClient() {
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
-        // 1. PortOne SDK 호출 (가장 먼저 배치)
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
@@ -153,11 +146,11 @@ export default function CheckoutClient() {
           },
         });
 
-        // 2. [강력 조기 종료] 결제 실패나 취소 시 즉시 return 하여 하단 DB 저장 로직 차단
+        // 강력 조기 종료 (Bypass 차단)
         if (paymentResponse.code != null) {
           alert(`결제가 중단되었습니다: ${paymentResponse.message || '사용자 취소'}`);
           setIsLoading(false);
-          return; // 여기서 얄짤없이 종료
+          return;
         }
 
         alert('테스트 결제가 성공적으로 완료되었습니다!');
@@ -167,7 +160,7 @@ export default function CheckoutClient() {
         orderStatus = '입금대기';
       }
 
-      // 3. [성공 시에만 도달] DB 주문 데이터 저장
+      // [성공 시에만 도달] DB 주문 데이터 저장
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -192,8 +185,7 @@ export default function CheckoutClient() {
         price: item.price
       }));
 
-      const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
-      if (itemsError) throw new Error(`주문 항목 저장 실패: ${itemsError.message}`);
+      await supabase.from('order_items').insert(orderItems);
 
       clearCart();
       router.push('/order-success');
@@ -203,7 +195,7 @@ export default function CheckoutClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, selectedAddressId, addressList, router, clearCart]);
+  }, [formData, selectedAddressId, addressList, session, router, clearCart]);
 
   if (items.length === 0) {
     return (
@@ -234,55 +226,57 @@ export default function CheckoutClient() {
         <form onSubmit={(e) => { e.preventDefault(); handleSubmitOrder(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           <div className="lg:col-span-7 space-y-12">
             
-            {/* 배송지 정보: 카드 선택형 UI */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                <Truck className="w-6 h-6 text-deep-sage" /> 배송지 선택
+                <Truck className="w-6 h-6 text-deep-sage" /> 배송지 정보
               </h2>
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {/* 저장된 주소 카드 목록 */}
-                {addressList.map((addr) => (
+              {/* 1. 회원용 UI: 카드 선택형 */}
+              {session && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                  {addressList.map((addr) => (
+                    <button
+                      key={addr.id}
+                      type="button"
+                      onClick={() => setSelectedAddressId(addr.id)}
+                      className={`p-6 rounded-sm border text-left transition-all relative group ${selectedAddressId === addr.id ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
+                    >
+                      <div className="flex justify-between items-start mb-3">
+                        <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 bg-deep-sage text-white rounded-full">
+                          {addr.address_name || '기본'}
+                        </span>
+                        {selectedAddressId === addr.id && <ShieldCheck className="w-4 h-4 text-charcoal" />}
+                      </div>
+                      <p className="font-serif text-charcoal text-lg mb-1">{addr.receiver_name}</p>
+                      <p className="text-xs text-muted mb-3">{addr.receiver_phone}</p>
+                      <p className="text-xs text-charcoal leading-relaxed line-clamp-2">
+                        ({addr.postcode}) {addr.address} {addr.detail_address}
+                      </p>
+                    </button>
+                  ))}
+                  
+                  {/* 항상 마지막에 렌더링되는 [+ 새 배송지 입력] 카드 */}
                   <button
-                    key={addr.id}
                     type="button"
-                    onClick={() => setSelectedAddressId(addr.id)}
-                    className={`p-6 rounded-sm border text-left transition-all relative group ${selectedAddressId === addr.id ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
+                    onClick={() => setSelectedAddressId('new')}
+                    className={`p-6 rounded-sm border border-dashed text-center transition-all flex flex-col items-center justify-center gap-3 group ${selectedAddressId === 'new' ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
                   >
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 bg-deep-sage text-white rounded-full">
-                        {addr.address_name || '배송지'}
-                      </span>
-                      {selectedAddressId === addr.id && <ShieldCheck className="w-4 h-4 text-charcoal" />}
+                    <div className="w-10 h-10 rounded-full bg-hanji-white flex items-center justify-center group-hover:scale-110 transition-transform">
+                      <Plus className="w-5 h-5 text-muted" />
                     </div>
-                    <p className="font-serif text-charcoal text-lg mb-1">{addr.receiver_name}</p>
-                    <p className="text-xs text-muted mb-3">{addr.receiver_phone}</p>
-                    <p className="text-xs text-charcoal leading-relaxed line-clamp-2">
-                      ({addr.postcode}) {addr.address} {addr.detail_address}
-                    </p>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-muted">+ 새 배송지 직접 입력</span>
                   </button>
-                ))}
-                
-                {/* 직접 입력 카드 (항상 무조건 렌더링) */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedAddressId('new')}
-                  className={`p-6 rounded-sm border border-dashed text-center transition-all flex flex-col items-center justify-center gap-3 group ${selectedAddressId === 'new' ? 'border-charcoal bg-hanji-white/40 ring-1 ring-charcoal' : 'border-border-light hover:border-muted'}`}
-                >
-                  <div className="w-10 h-10 rounded-full bg-hanji-white flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <Plus className="w-5 h-5 text-muted" />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-widest font-bold text-muted">+ 새 배송지 직접 입력</span>
-                </button>
-              </div>
+                </div>
+              )}
 
-              {/* [조건부 렌더링] 직접 입력 폼 */}
-              {selectedAddressId === 'new' && (
-                <div className="space-y-6 pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500">
+              {/* 2. 직접 입력 폼 (비회원 기본 / 회원 조건부) */}
+              {(selectedAddressId === 'new' || !session) && (
+                <div className={`space-y-6 ${session ? 'pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500' : ''}`}>
+                  {!session && <p className="text-[10px] uppercase tracking-widest font-bold text-deep-sage mb-4 italic">* 비회원 주문을 위해 배송 정보를 입력해 주세요.</p>}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
-                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함을 입력해 주세요" />
+                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함" />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
@@ -293,13 +287,13 @@ export default function CheckoutClient() {
                     <div className="flex gap-4 items-end">
                       <div className="flex-1 space-y-2">
                         <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
-                        <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="00000" />
+                        <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="00000" />
                       </div>
                       <button type="button" onClick={handleAddressSearch} className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all">
                         주소 찾기
                       </button>
                     </div>
-                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30 cursor-default" placeholder="기본 주소" />
+                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="기본 주소" />
                     <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" placeholder="상세 주소" />
                   </div>
                 </div>
@@ -311,7 +305,6 @@ export default function CheckoutClient() {
               </div>
             </section>
 
-            {/* 결제 수단 선택 */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
                 <CreditCard className="w-6 h-6 text-deep-sage" /> 결제 수단 선택
@@ -380,10 +373,6 @@ export default function CheckoutClient() {
                   <>₩{total.toLocaleString()} 결제하기</>
                 )}
               </button>
-
-              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] text-muted uppercase tracking-widest font-bold">
-                <ShieldCheck className="w-3 h-3 text-deep-sage" /> Secure Checkout
-              </div>
             </section>
           </div>
         </form>
