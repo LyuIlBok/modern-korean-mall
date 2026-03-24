@@ -109,11 +109,56 @@ export default function ProductDetailClient({
 
           <div className="prose prose-stone mb-16"><p className="text-charcoal/80 leading-relaxed text-lg font-light whitespace-pre-line">{product.description}</p></div>
 
+          {/* Mandatory Product Info Table */}
+          <div className="mb-16">
+            <h3 className="text-[10px] uppercase tracking-[0.2em] text-muted font-bold mb-4">{t?.shop?.specs || 'Specifications'}</h3>
+            <div className="border-t border-border-light text-[12px]">
+              <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
+                <span className="text-muted">{t?.shop?.origin || 'Origin'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.specs?.origin || '경기도 연천군 군남면'}</span>
+              </div>
+              <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
+                <span className="text-muted">{t?.shop?.producer || 'Producer'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.specs?.producer || '농업회사법인 복이네농장(주)'}</span>
+              </div>
+              <div className="grid grid-cols-3 py-3 border-b border-border-light/50">
+                <span className="text-muted">{t?.shop?.storage || 'Storage'}</span>
+                <span className="col-span-2 text-charcoal font-medium">직사광선을 피하고 서늘한 곳에 보관</span>
+              </div>
+            </div>
+          </div>
+
           <PurchaseButtons product={product} />
         </div>
       </div>
 
       <ProductTabs product={product} />
+
+      {/* NEW: Large Detail Content Section (Professional Mall Style) */}
+      <div className="mt-32 max-w-4xl mx-auto space-y-0">
+        <div className="text-center mb-24 space-y-6">
+          <span className="text-deep-sage text-xs font-bold tracking-[0.5em] uppercase">Brand Story</span>
+          <h2 className="font-serif text-4xl md:text-5xl text-charcoal">자연의 결이 선사하는<br/>가장 정직한 산물</h2>
+          <div className="w-px h-24 bg-border-light mx-auto"></div>
+        </div>
+
+        {product.detail_content_images?.length > 0 ? (
+          product.detail_content_images.map((img: string, idx: number) => (
+            <div key={idx} className="relative w-full aspect-[3/4] md:aspect-[2/3]">
+              <Image src={img} alt={`Detail ${idx}`} fill className="object-cover" />
+            </div>
+          ))
+        ) : (
+          <div className="relative w-full aspect-[3/4] md:aspect-[2/3]">
+            <Image 
+              src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=1200" 
+              alt="Default Detail" 
+              fill 
+              className="object-cover" 
+            />
+          </div>
+        )}
+      </div>
 
       <div className="mt-32 pt-24 border-t border-border-light">
         <h2 className="font-serif text-3xl md:text-4xl mb-16 text-charcoal">{t?.shop?.relatedTitle || 'Related'}</h2>
