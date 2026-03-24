@@ -10,7 +10,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Script from 'next/script';
 import * as PortOne from '@portone/browser-sdk/v2';
-import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search, MapPin, Plus } from 'lucide-react';
+import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Search, MapPin, Plus } from 'lucide-center';
 
 export default function CheckoutClient() {
   const { items, clearCart } = useCartStore();
@@ -19,7 +19,7 @@ export default function CheckoutClient() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
-  // 1. 배송지 목록 및 선택 상태 (selectedAddressId)
+  // 1. 배송지 목록 및 선택 상태
   const [addressList, setAddressList] = useState<any[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState<string | 'new'>('new');
 
@@ -39,7 +39,10 @@ export default function CheckoutClient() {
     const fetchAddresses = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        if (!session) return;
+        if (!session) {
+          setSelectedAddressId('new');
+          return;
+        }
 
         const { data: addrData } = await supabase
           .from('addresses')
@@ -49,15 +52,14 @@ export default function CheckoutClient() {
 
         if (addrData && addrData.length > 0) {
           setAddressList(addrData);
-          // 기본 배송지가 있으면 선택, 없으면 첫 번째 선택
           const defaultAddr = addrData.find(a => a.is_default) || addrData[0];
           setSelectedAddressId(defaultAddr.id);
         } else {
-          // 저장된 주소가 없으면 '새 배송지 입력' 활성화
           setSelectedAddressId('new');
         }
       } catch (err) {
         console.error('Error fetching addresses:', err);
+        setSelectedAddressId('new');
       }
     };
 
@@ -110,6 +112,11 @@ export default function CheckoutClient() {
         };
       } else {
         const selected = addressList.find(a => a.id === selectedAddressId);
+        if (!selected) {
+          alert('선택된 배송지 정보가 올바르지 않습니다.');
+          setIsLoading(false);
+          return;
+        }
         finalAddressData = {
           name: selected.receiver_name,
           phone: selected.receiver_phone,
@@ -150,10 +157,9 @@ export default function CheckoutClient() {
         if (paymentResponse.code != null) {
           alert(`결제가 중단되었습니다: ${paymentResponse.message || '사용자 취소'}`);
           setIsLoading(false);
-          return; // 여기서 절대적으로 종료 (Bypass 원천 차단)
+          return; // 여기서 얄짤없이 종료
         }
 
-        // 성공 시에만 여기까지 도달
         alert('테스트 결제가 성공적으로 완료되었습니다!');
         orderStatus = '결제완료';
       } 
@@ -228,14 +234,14 @@ export default function CheckoutClient() {
         <form onSubmit={(e) => { e.preventDefault(); handleSubmitOrder(items); }} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-start">
           <div className="lg:col-span-7 space-y-12">
             
-            {/* 배송지 정보: 카드 선택형 UI (Overhaul) */}
+            {/* 배송지 정보: 카드 선택형 UI */}
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                <MapPin className="w-6 h-6 text-deep-sage" /> 배송지 선택
+                <Truck className="w-6 h-6 text-deep-sage" /> 배송지 선택
               </h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-                {/* 기존 저장된 주소 카드 목록 */}
+                {/* 저장된 주소 카드 목록 */}
                 {addressList.map((addr) => (
                   <button
                     key={addr.id}
@@ -245,7 +251,7 @@ export default function CheckoutClient() {
                   >
                     <div className="flex justify-between items-start mb-3">
                       <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 bg-deep-sage text-white rounded-full">
-                        {addr.address_name || '기본'}
+                        {addr.address_name || '배송지'}
                       </span>
                       {selectedAddressId === addr.id && <ShieldCheck className="w-4 h-4 text-charcoal" />}
                     </div>
@@ -257,7 +263,7 @@ export default function CheckoutClient() {
                   </button>
                 ))}
                 
-                {/* 직접 입력 카드 (항상 마지막에 배치) */}
+                {/* 직접 입력 카드 (항상 무조건 렌더링) */}
                 <button
                   type="button"
                   onClick={() => setSelectedAddressId('new')}
@@ -270,7 +276,7 @@ export default function CheckoutClient() {
                 </button>
               </div>
 
-              {/* [조건부 렌더링] 새 배송지 직접 입력 폼 */}
+              {/* [조건부 렌더링] 직접 입력 폼 */}
               {selectedAddressId === 'new' && (
                 <div className="space-y-6 pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -328,10 +334,9 @@ export default function CheckoutClient() {
             </section>
           </div>
 
-          {/* 우측 주문 요약 및 결제 버튼 */}
           <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-8">
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
-              <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">주문 내역</h2>
+              <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">주문 요약</h2>
               <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-4 mb-8 custom-scrollbar">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-4">

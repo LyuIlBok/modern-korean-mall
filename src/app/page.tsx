@@ -10,9 +10,7 @@ export const revalidate = 0;
 
 /**
  * [복이네농장 공식 메인 페이지]
- * - Server Component를 활용한 실시간 데이터 연동
- * - 농업회사법인의 신뢰감을 주는 Hero Section
- * - 반응형 상품 진열대 및 브랜드 스토리
+ * - 모든 사용자에게 버튼이 항상 보이도록 수정됨
  */
 export default async function Home() {
   const t = translations.ko;
@@ -38,7 +36,7 @@ export default async function Home() {
 
   return (
     <main className="flex-1 bg-hanji-white min-h-screen">
-      {/* 1. Hero Section: 농업회사법인 복이네농장의 아이덴티티 */}
+      {/* Hero Section */}
       <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
         <Image 
           src="https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&q=80&w=2000" 
@@ -63,6 +61,8 @@ export default async function Home() {
             경기도 연천의 비옥한 토양과 맑은 물이 키워낸 정직한 결실.<br/>
             우리는 땅의 정직함을 믿으며, 자연 본연의 맛을 식탁까지 전합니다.
           </p>
+          
+          {/* [수정] 로그인 여부와 관계없이 무조건 렌더링되는 버튼 영역 */}
           <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-6">
             <Link href="/shop" className="group inline-flex items-center gap-4 px-12 py-5 bg-deep-sage text-white rounded-sm hover:bg-charcoal transition-all duration-700 font-serif text-xl shadow-2xl hover:scale-105">
               추천 농산물 보기 <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform duration-500" />
@@ -74,7 +74,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 2. Trust Badges: 신뢰 요소 강조 */}
+      {/* Trust Badges */}
       <section className="bg-white border-y border-border-light py-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="flex items-center justify-center gap-4 text-charcoal">
@@ -101,7 +101,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* 3. Product Grid: 추천 농산물 진열대 */}
+      {/* Product Grid */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
         <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
           <div className="space-y-6 text-left">
@@ -134,7 +134,7 @@ export default async function Home() {
         )}
       </section>
 
-      {/* 4. Brand Ethos: 브랜드 철학 */}
+      {/* Brand Ethos */}
       <section className="bg-charcoal text-hanji-white py-40 relative overflow-hidden">
         <div className="absolute inset-0 opacity-[0.05] pointer-events-none mix-blend-overlay">
           <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/handmade-paper.png')]" />
