@@ -58,13 +58,19 @@ export default function ChatWidget() {
       .channel(`chat-${uid}`)
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'support_messages', filter: `user_id=eq.${uid}` },
+        { event: '*', schema: 'public', table: 'support_messages', filter: `user_id=eq.${uid}` },
         (payload) => {
-          setMessages((prev) => {
-            // 중복 수신 방지
-            if (prev.find(m => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new];
-          });
+          const { eventType, new: newMsg, old: oldMsg } = payload;
+          
+          if (eventType === 'INSERT') {
+            setMessages((prev) => prev.find(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+          } 
+          else if (eventType === 'UPDATE') {
+            setMessages((prev) => prev.map(m => m.id === newMsg.id ? newMsg : m));
+          } 
+          else if (eventType === 'DELETE') {
+            setMessages((prev) => prev.filter(m => m.id !== oldMsg.id));
+          }
         }
       )
       .subscribe();

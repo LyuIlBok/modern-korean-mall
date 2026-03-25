@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, User, Send, Loader2, Search, 
-  ArrowLeft, Clock, ChevronRight, Hash, ShieldCheck
+  ArrowLeft, Clock, ChevronRight, Hash, ShieldCheck,
+  Edit2, Trash2, Check, X
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 
@@ -72,42 +73,61 @@ export default function AdminChatPage() {
     setLoading(false);
   };
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editInput, setEditInput] = useState('');
+
   const subscribeToAllMessages = () => {
     return supabase
       .channel('admin-chat-global')
       .on(
         'postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'support_messages' },
+        { event: '*', schema: 'public', table: 'support_messages' },
         (payload) => {
-          const newMsg = payload.new;
+          const { eventType, new: newMsg, old: oldMsg } = payload;
           
-          // 1. 대화창 실시간 업데이트
-          setSelectedUserId(currentId => {
-            if (currentId === newMsg.user_id) {
-              setMessages(prev => {
-                if (prev.find(m => m.id === newMsg.id)) return prev;
-                return [...prev, newMsg];
-              });
-            }
-            return currentId;
-          });
-
-          // 2. 유저 목록 실시간 갱신 및 최상단 이동 (Sorting)
-          setUsers(prev => {
-            const others = prev.filter(u => u.id !== newMsg.user_id);
-            const target = {
-              id: newMsg.user_id,
-              lastMessage: newMsg.content,
-              lastTime: newMsg.created_at,
-              lastIsAdmin: newMsg.is_admin,
-              isGuest: newMsg.user_id.startsWith('guest_')
-            };
-            // 새 메시지가 온 유저를 맨 앞으로 배치
-            return [target, ...others];
-          });
+          if (eventType === 'INSERT') {
+            setSelectedUserId(currentId => {
+              if (currentId === newMsg.user_id) {
+                setMessages(prev => prev.find(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+              }
+              return currentId;
+            });
+            updateUserList(newMsg);
+          } 
+          else if (eventType === 'UPDATE') {
+            setMessages(prev => prev.map(m => m.id === newMsg.id ? newMsg : m));
+            // 최신 메시지인 경우 목록 업데이트
+            setUsers(prev => prev.map(u => u.id === newMsg.user_id ? { ...u, lastMessage: newMsg.content } : u));
+          } 
+          else if (eventType === 'DELETE') {
+            setMessages(prev => prev.filter(m => m.id === oldMsg.id));
+            // 목록 갱신을 위해 재페칭 (단순화)
+            fetchChatUsers();
+          }
         }
       )
       .subscribe();
+  };
+
+  const updateUserList = (msg: any) => {
+    setUsers(prev => {
+      const others = prev.filter(u => u.id !== msg.user_id);
+      const target = prev.find(u => u.id === msg.user_id) || { id: msg.user_id, isGuest: msg.user_id.startsWith('guest_') };
+      return [{ ...target, lastMessage: msg.content, lastTime: msg.created_at, lastIsAdmin: msg.is_admin }, ...others];
+    });
+  };
+
+  const handleUpdateMessage = async (id: string) => {
+    if (!editInput.trim()) return;
+    const { error } = await supabase.from('support_messages').update({ content: editInput.trim(), updated_at: new Date().toISOString() }).eq('id', id);
+    if (error) alert('수정 실패');
+    setEditingId(null);
+  };
+
+  const handleDeleteMessage = async (id: string) => {
+    if (!confirm('정말 삭제하시겠습니까?')) return;
+    const { error } = await supabase.from('support_messages').delete().eq('id', id);
+    if (error) alert('삭제 실패');
   };
 
   const fetchMessages = async (uid: string) => {
@@ -250,8 +270,17 @@ export default function AdminChatPage() {
             {/* Messages Area (Scrollable) */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-10 space-y-8 bg-hanji-white/20 scroll-smooth custom-scrollbar">
               {messages.map((msg) => (
-                <div key={msg.id} className={`flex ${msg.is_admin ? 'justify-end' : 'justify-start'}`}>
-                  <div className={`flex flex-col ${msg.is_admin ? 'items-end' : 'items-start'} max-w-[70%]`}>
+                <div key={msg.id} className={`flex ${msg.is_admin ? 'justify-end' : 'justify-start'} group`}>
+                  <div className={`flex flex-col ${msg.is_admin ? 'items-end' : 'items-start'} max-w-[70%] relative`}>
+                    
+                    {/* Admin Controls */}
+                    {msg.is_admin && editingId !== msg.id && !msg.id.startsWith('temp-') && (
+                      <div className="absolute -left-16 top-0 hidden group-hover:flex items-center gap-2 bg-white/80 backdrop-blur-sm p-1.5 border border-border-light shadow-sm rounded-sm z-10">
+                        <button onClick={() => { setEditingId(msg.id); setEditInput(msg.content); }} className="p-1 hover:text-deep-sage transition-colors"><Edit2 className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => handleDeleteMessage(msg.id)} className="p-1 hover:text-terracotta transition-colors"><Trash2 className="w-3.5 h-3.5" /></button>
+                      </div>
+                    )}
+
                     <div
                       className={`p-5 rounded-sm shadow-sm text-sm leading-relaxed ${
                         msg.is_admin
@@ -259,11 +288,38 @@ export default function AdminChatPage() {
                           : 'bg-white text-charcoal border border-border-light font-light shadow-sm'
                       }`}
                     >
-                      {msg.content}
+                      {editingId === msg.id ? (
+                        <div className="flex flex-col gap-3 min-w-[200px]">
+                          <textarea 
+                            autoFocus
+                            value={editInput}
+                            onChange={(e) => setEditInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleUpdateMessage(msg.id);
+                              }
+                              if (e.key === 'Escape') setEditingId(null);
+                            }}
+                            className="w-full bg-white/10 border border-white/20 p-3 rounded-sm text-sm focus:outline-none focus:border-white/40 text-white min-h-[80px]"
+                          />
+                          <div className="flex justify-end gap-2">
+                            <button onClick={() => setEditingId(null)} className="p-1.5 hover:bg-white/10 rounded-sm"><X className="w-4 h-4" /></button>
+                            <button onClick={() => handleUpdateMessage(msg.id)} className="p-1.5 bg-white text-charcoal rounded-sm"><Check className="w-4 h-4" /></button>
+                          </div>
+                        </div>
+                      ) : (
+                        msg.content
+                      )}
                     </div>
-                    <span className="text-[9px] text-muted mt-2 px-1 tracking-tighter opacity-60">
-                      {new Date(msg.created_at).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+                    <div className="flex items-center gap-2 mt-2 px-1 opacity-60">
+                      {msg.updated_at && new Date(msg.updated_at).getTime() > new Date(msg.created_at).getTime() + 1000 && (
+                        <span className="text-[8px] text-deep-sage font-bold uppercase tracking-tighter">(수정됨)</span>
+                      )}
+                      <span className="text-[9px] text-muted mt-2 px-1 tracking-tighter opacity-60">
+                        {new Date(msg.created_at).toLocaleString('ko-KR', { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
                   </div>
                 </div>
               ))}
