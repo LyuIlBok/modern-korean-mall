@@ -63,10 +63,13 @@ export default function ChatWidget() {
           const { eventType, new: newMsg, old: oldMsg } = payload;
           
           if (eventType === 'INSERT') {
-            setMessages((prev) => prev.find(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
+            setMessages((prev) => {
+              if (prev.find(m => m.id === newMsg.id)) return prev;
+              return [...prev, newMsg];
+            });
           } 
           else if (eventType === 'UPDATE') {
-            setMessages((prev) => prev.map(m => m.id === newMsg.id ? newMsg : m));
+            setMessages((prev) => prev.map(m => m.id === newMsg.id ? { ...m, ...newMsg } : m));
           } 
           else if (eventType === 'DELETE') {
             setMessages((prev) => prev.filter(m => m.id !== oldMsg.id));

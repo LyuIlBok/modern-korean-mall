@@ -95,13 +95,11 @@ export default function AdminChatPage() {
             updateUserList(newMsg);
           } 
           else if (eventType === 'UPDATE') {
-            setMessages(prev => prev.map(m => m.id === newMsg.id ? newMsg : m));
-            // 최신 메시지인 경우 목록 업데이트
+            setMessages(prev => prev.map(m => m.id === newMsg.id ? { ...m, ...newMsg } : m));
             setUsers(prev => prev.map(u => u.id === newMsg.user_id ? { ...u, lastMessage: newMsg.content } : u));
           } 
           else if (eventType === 'DELETE') {
-            setMessages(prev => prev.filter(m => m.id === oldMsg.id));
-            // 목록 갱신을 위해 재페칭 (단순화)
+            setMessages(prev => prev.filter(m => m.id !== oldMsg.id));
             fetchChatUsers();
           }
         }
@@ -119,9 +117,23 @@ export default function AdminChatPage() {
 
   const handleUpdateMessage = async (id: string) => {
     if (!editInput.trim()) return;
-    const { error } = await supabase.from('support_messages').update({ content: editInput.trim(), updated_at: new Date().toISOString() }).eq('id', id);
-    if (error) alert('수정 실패');
-    setEditingId(null);
+    
+    try {
+      const { data, error } = await supabase
+        .from('support_messages')
+        .update({ content: editInput.trim(), updated_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      setMessages(prev => prev.map(m => m.id === id ? data : m));
+      setEditingId(null);
+    } catch (err) {
+      console.error('Update error:', err);
+      alert('메시지 수정에 실패했습니다.');
+    }
   };
 
   const handleDeleteMessage = async (id: string) => {
