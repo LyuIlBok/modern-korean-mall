@@ -186,6 +186,24 @@ export default function CheckoutClient() {
 
         // 프론트엔드 즉시 업데이트
         await supabase.from('orders').update({ status: '결제완료' }).eq('id', order.id);
+        
+        // [추가] 적립금 사용 처리
+        if (usePoints > 0 && session) {
+          await supabase.from('user_points').insert([{
+            user_id: session.user.id,
+            amount: -usePoints,
+            reason: `상품 주문 시 사용 (주문번호: ${order.id.slice(0,8).toUpperCase()})`
+          }]);
+        }
+
+        // [추가] 쿠폰 사용 처리
+        if (selectedCoupon) {
+          await supabase.from('user_coupons').update({ 
+            is_used: true, 
+            used_at: new Date().toISOString() 
+          }).eq('id', selectedCoupon.id);
+        }
+
         alert('테스트 결제가 성공적으로 완료되었습니다!');
       } 
       else if (formData.paymentMethod === 'transfer') {
@@ -215,9 +233,40 @@ export default function CheckoutClient() {
     );
   }
 
+  const [userPoints, setUserPoints] = useState(0);
+  const [usePoints, setUsePoints] = useState(0);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        const [pointsRes, couponsRes] = await Promise.all([
+          supabase.from('user_points').select('amount').eq('user_id', session.user.id),
+          supabase.from('user_coupons').select('*, coupons(*)').eq('user_id', session.user.id).eq('is_used', false)
+        ]);
+        
+        const totalPoints = pointsRes.data?.reduce((sum, p) => sum + p.amount, 0) || 0;
+        setUserPoints(totalPoints);
+        setCoupons(couponsRes.data || []);
+      }
+    };
+    fetchDiscounts();
+  }, []);
+
   const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const shippingFee = Math.max(...items.map(item => item.shipping_fee || 0));
-  const total = subtotal + shippingFee;
+  
+  // 할인 계산
+  let couponDiscount = 0;
+  if (selectedCoupon) {
+    const c = selectedCoupon.coupons;
+    if (c.discount_type === 'amount') couponDiscount = c.discount_value;
+    else if (c.discount_type === 'rate') couponDiscount = Math.floor(subtotal * (c.discount_value / 100));
+  }
+  
+  const total = Math.max(0, subtotal + shippingFee - usePoints - couponDiscount);
 
   return (
     <div className="bg-hanji-white min-h-screen pt-24 pb-32">
@@ -352,6 +401,57 @@ export default function CheckoutClient() {
               </div>
 
               <div className="space-y-4 pt-6 border-t border-border-light">
+                {/* 적립금 및 쿠폰 (회원 전용) */}
+                {session && (
+                  <div className="space-y-6 pb-6 border-b border-border-light/50">
+                    {/* 쿠폰 선택 */}
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">쿠폰 적용</label>
+                      <select 
+                        onChange={(e) => {
+                          const coupon = coupons.find(c => c.id === e.target.value);
+                          setSelectedCoupon(coupon || null);
+                        }}
+                        className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm focus:border-deep-sage outline-none"
+                      >
+                        <option value="">적용 가능한 쿠폰을 선택하세요</option>
+                        {coupons.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.coupons.name} ({c.coupons.discount_type === 'rate' ? `${c.coupons.discount_value}%` : `${c.coupons.discount_value.toLocaleString()}원`} 할인)
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {/* 적립금 사용 */}
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center">
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">적립금 사용</label>
+                        <span className="text-[10px] text-deep-sage font-medium">보유: ₩{userPoints.toLocaleString()}</span>
+                      </div>
+                      <div className="flex gap-3">
+                        <input 
+                          type="number"
+                          value={usePoints}
+                          onChange={(e) => {
+                            const val = Math.min(userPoints, Number(e.target.value));
+                            setUsePoints(val);
+                          }}
+                          className="flex-1 bg-hanji-white/30 border border-border-light px-4 py-2.5 rounded-sm text-sm focus:border-deep-sage outline-none"
+                          placeholder="0"
+                        />
+                        <button 
+                          type="button"
+                          onClick={() => setUsePoints(userPoints)}
+                          className="px-4 py-2 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all"
+                        >
+                          전액 사용
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-sm text-muted">
                   <span>총 상품 금액</span>
                   <span>₩{subtotal.toLocaleString()}</span>
@@ -360,6 +460,18 @@ export default function CheckoutClient() {
                   <span>배송비</span>
                   <span>{shippingFee === 0 ? '무료' : `₩${shippingFee.toLocaleString()}`}</span>
                 </div>
+                {usePoints > 0 && (
+                  <div className="flex justify-between text-sm text-terracotta">
+                    <span>적립금 할인</span>
+                    <span>- ₩{usePoints.toLocaleString()}</span>
+                  </div>
+                )}
+                {couponDiscount > 0 && (
+                  <div className="flex justify-between text-sm text-terracotta">
+                    <span>쿠폰 할인</span>
+                    <span>- ₩{couponDiscount.toLocaleString()}</span>
+                  </div>
+                )}
                 <div className="flex justify-between text-xl font-serif text-charcoal pt-4 border-t border-border-light">
                   <span>최종 결제 금액</span>
                   <span className="text-2xl">₩{total.toLocaleString()}</span>

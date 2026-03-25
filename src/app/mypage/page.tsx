@@ -48,6 +48,9 @@ function MyPageContent() {
 
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
+  const [points, setPoints] = useState(0);
+  const [couponCount, setCouponCount] = useState(0);
+
   const fetchData = useCallback(async () => {
     setDbError(null);
     try {
@@ -68,6 +71,16 @@ function MyPageContent() {
         });
       }
       
+      // 2. Points & Coupons Load
+      const [pointsRes, couponsRes] = await Promise.all([
+        supabase.from('user_points').select('amount').eq('user_id', currentUser.id),
+        supabase.from('user_coupons').select('id', { count: 'exact' }).eq('user_id', currentUser.id).eq('is_used', false)
+      ]);
+      
+      const totalPoints = pointsRes.data?.reduce((sum, p) => sum + p.amount, 0) || 0;
+      setPoints(totalPoints);
+      setCouponCount(couponsRes.count || 0);
+
       const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
       if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
 
@@ -257,6 +270,43 @@ function MyPageContent() {
             {isAdmin && <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">Admin Access</Link>}
             <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
           </div>
+        </div>
+
+        {/* Points & Coupons Dashboard */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="bg-white border border-border-light p-8 rounded-sm shadow-sm flex items-center justify-between group hover:border-deep-sage transition-all cursor-pointer"
+          >
+            <div className="space-y-3">
+              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold flex items-center gap-2">
+                <Database className="w-3 h-3 text-deep-sage" /> Available Points
+              </p>
+              <h3 className="font-serif text-4xl text-charcoal group-hover:text-deep-sage transition-colors">
+                ₩{points.toLocaleString()}
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-deep-sage/5 rounded-full flex items-center justify-center text-deep-sage group-hover:bg-deep-sage group-hover:text-white transition-all duration-500">
+              <Plus className="w-8 h-8" />
+            </div>
+          </motion.div>
+
+          <motion.div 
+            whileHover={{ y: -5 }}
+            className="bg-white border border-border-light p-8 rounded-sm shadow-sm flex items-center justify-between group hover:border-terracotta transition-all cursor-pointer"
+          >
+            <div className="space-y-3">
+              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold flex items-center gap-2">
+                <ClipboardCheck className="w-3 h-3 text-terracotta" /> Active Coupons
+              </p>
+              <h3 className="font-serif text-4xl text-charcoal group-hover:text-terracotta transition-colors">
+                {couponCount} <span className="text-xl">장</span>
+              </h3>
+            </div>
+            <div className="w-16 h-16 bg-terracotta/5 rounded-full flex items-center justify-center text-terracotta group-hover:bg-terracotta group-hover:text-white transition-all duration-500">
+              <Box className="w-8 h-8" />
+            </div>
+          </motion.div>
         </div>
 
         {/* Tab Navigation */}
