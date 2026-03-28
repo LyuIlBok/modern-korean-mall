@@ -105,7 +105,7 @@ export default function AdminChatPage() {
           if (eventType === 'INSERT') {
             if (selectedUserRef.current === newMsg.user_id) {
               setMessages(prev => prev.find(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
-              if (!newMsg.is_admin) markAllAsRead(selectedUserRef.current);
+              if (!newMsg.is_admin) markAllAsRead(newMsg.user_id);
             }
             updateUserList(newMsg);
           } 
