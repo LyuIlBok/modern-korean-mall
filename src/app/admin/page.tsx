@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
   ShoppingCart, Truck, CheckCircle, Image as ImageIcon,
-  MessageSquare, User, Trash2, Edit3, X, TrendingUp, Bell, Check, ArrowRight, Camera, Search, Filter, AlertTriangle, MoreVertical, ExternalLink,
+  MessageSquare, User, Users, Trash2, Edit3, X, TrendingUp, Bell, Check, ArrowRight, Camera, Search, Filter, AlertTriangle, MoreVertical, ExternalLink,
   DollarSign, Save
 } from 'lucide-react';
 import Image from 'next/image';
@@ -312,6 +312,7 @@ export default function AdminDashboard() {
             { id: 'products', label: '상품 관리', icon: Package, path: '/admin?tab=products' },
             { id: 'orders', label: '주문 관리', icon: ShoppingCart, path: '/admin?tab=orders' },
             { id: 'chat', label: '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
+            { id: 'members', label: '회원 관리', icon: Users, path: '/admin/members' },
             { id: 'restock', label: '재입고 알림', icon: Bell, path: '/admin?tab=restock' },
           ].map((item) => (
             <button 

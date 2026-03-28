@@ -1,14 +1,28 @@
 -- Supabase Advanced Server-side SQL (Modern Korean Mall)
 
--- 1. Profiles Table for Admin Management
+-- 1. Profiles Table for Admin Management & CRM
 CREATE TABLE IF NOT EXISTS public.profiles (
   id UUID REFERENCES auth.users(id) PRIMARY KEY,
   email TEXT,
   full_name TEXT,
   avatar_url TEXT,
   is_admin BOOLEAN DEFAULT false,
+  total_spent NUMERIC DEFAULT 0, -- 누적 구매액
+  tier TEXT DEFAULT 'FAMILY', -- 회원 등급 ('FAMILY', 'VIP', 'VVIP')
+  points NUMERIC DEFAULT 0, -- 보유 적립금
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 기존 테이블에 컬럼이 없을 경우를 대비한 추가 로직 (에러 무시 가능)
+DO $$ 
+BEGIN
+  ALTER TABLE public.profiles ADD COLUMN total_spent NUMERIC DEFAULT 0;
+  ALTER TABLE public.profiles ADD COLUMN tier TEXT DEFAULT 'FAMILY';
+  ALTER TABLE public.profiles ADD COLUMN points NUMERIC DEFAULT 0;
+EXCEPTION
+  WHEN duplicate_column THEN null;
+END $$;
+
 
 -- 유저가 가입할 때 자동으로 프로필 생성 및 관리자 부여 트리거
 CREATE OR REPLACE FUNCTION public.handle_new_user()
