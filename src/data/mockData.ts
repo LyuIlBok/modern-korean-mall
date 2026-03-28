@@ -9,8 +9,16 @@ export interface Product {
   imageUrl: string;
   shipping_fee: number;
   images?: string[];
+  detail_content_images?: string[];
   stock: number;
   is_sold_out: boolean;
+  discount_rate?: number; // 추가
+  reward_points?: number; // 추가
+  specs?: {
+    origin?: string;
+    producer?: string;
+    [key: string]: any;
+  };
 }
 
 export const products: Product[] = [
