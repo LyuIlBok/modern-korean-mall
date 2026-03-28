@@ -187,17 +187,17 @@ export default function AdminDashboard() {
 
       const { data, error } = await supabase.from('products').insert([{
         name: newName, 
-        price: Number(newPrice), 
-        stock: Number(newStock), 
-        shipping_fee: Number(newShippingFee),
+        price: Number(newPrice || 0), 
+        stock: Number(newStock || 0), 
+        shipping_fee: Number(newShippingFee || 0),
         category: newCategory, 
         description: newDesc, 
         imageUrl: customImageUrl,
         images: galleryUrls,
         detail_content_images: detailUrls,
-        is_sold_out: Number(newStock) <= 0,
-        reward_points: Number(newRewardPoints), // 추가
-        discount_rate: Number(newDiscountRate), // 추가
+        is_sold_out: Number(newStock || 0) <= 0,
+        reward_points: Number(newRewardPoints || 0),
+        discount_rate: Number(newDiscountRate || 0),
         specs: { origin: '연천군', producer: '복이네농장' }
       }]).select();
 
@@ -233,17 +233,17 @@ export default function AdminDashboard() {
 
       const { error } = await supabase.from('products').update({
         name: editingProduct.name, 
-        price: Number(editingProduct.price), 
-        stock: Number(editingProduct.stock), 
+        price: Number(editingProduct.price || 0), 
+        stock: Number(editingProduct.stock || 0), 
         shipping_fee: Number(editingProduct.shipping_fee || 0),
         category: editingProduct.category, 
         description: editingProduct.description, 
         imageUrl: finalMainUrl,
         images: finalGallery,
         detail_content_images: finalDetails,
-        reward_points: Number(editingProduct.reward_points || 0), // 추가
-        discount_rate: Number(editingProduct.discount_rate || 0), // 추가
-        is_sold_out: Number(editingProduct.stock) <= 0
+        reward_points: Number(editingProduct.reward_points || 0),
+        discount_rate: Number(editingProduct.discount_rate || 0),
+        is_sold_out: Number(editingProduct.stock || 0) <= 0
       }).eq('id', editingProduct.id);
 
       if (error) throw error;
