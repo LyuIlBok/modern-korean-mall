@@ -84,16 +84,47 @@ export default function CheckoutClient() {
     }
   };
 
-  // 강력한 결제 및 주문 제출 로직 (우회 방지 로직 유지)
+  const [userPoints, setUserPoints] = useState(0);
+  const [usePoints, setUsePoints] = useState(0);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
+
+  useEffect(() => {
+    const fetchDiscounts = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        // user_points 테이블 대신 profiles 테이블에서 직접 points를 가져옵니다.
+        const [profileRes, couponsRes] = await Promise.all([
+          supabase.from('profiles').select('points').eq('id', session.user.id).single(),
+          supabase.from('user_coupons').select('*, coupons(*)').eq('user_id', session.user.id).eq('is_used', false)
+        ]);
+        
+        const totalPoints = Number(profileRes.data?.points) || 0;
+        setUserPoints(totalPoints);
+        setCoupons(couponsRes.data || []);
+      }
+    };
+    fetchDiscounts();
+  }, []);
+
+  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const shippingFee = Math.max(...items.map(item => item.shipping_fee || 0));
+  
+  // 할인 계산
+  let couponDiscount = 0;
+  if (selectedCoupon) {
+    const c = selectedCoupon.coupons;
+    if (c.discount_type === 'amount') couponDiscount = c.discount_value;
+    else if (c.discount_type === 'rate') couponDiscount = Math.floor(subtotal * (c.discount_value / 100));
+  }
+  
+  const finalTotal = Math.max(0, subtotal + shippingFee - usePoints - couponDiscount);
+
+  // 강력한 결제 및 주문 제출 로직
   const handleSubmitOrder = useCallback(async (currentItems: any[]) => {
     setIsLoading(true);
 
     try {
-      const subtotal = currentItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-      // 가장 비싼 배송비 하나만 적용 (묶음 배송 기준)
-      const shippingFee = Math.max(...currentItems.map(item => item.shipping_fee || 0));
-      const total = subtotal + shippingFee;
-
       // 사용할 배송지 정보 확정
       let finalAddressData: any;
       if (selectedAddressId === 'new') {
@@ -122,7 +153,7 @@ export default function CheckoutClient() {
         };
       }
 
-      // 1. [중요] DB에 주문 데이터 먼저 생성 (결제대기 상태)
+      // 1. DB에 주문 데이터 생성 (차감된 최종 금액 반영)
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
@@ -130,7 +161,7 @@ export default function CheckoutClient() {
           customer_name: finalAddressData.name,
           customer_phone: finalAddressData.phone,
           address: finalAddressData.fullAddress,
-          total_price: total,
+          total_price: finalTotal, // 적립금/쿠폰이 적용된 최종 금액
           status: '결제대기',
           payment_method: formData.paymentMethod,
           memo: formData.memo
@@ -155,13 +186,13 @@ export default function CheckoutClient() {
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
-        // PortOne SDK 호출 - DB 주문 ID를 paymentId로 사용
+        // PortOne SDK 호출
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
-          paymentId: order.id, // DB의 주문 UUID 사용
+          paymentId: order.id,
           orderName: orderName,
-          totalAmount: total,
+          totalAmount: finalTotal, // 차감된 최종 금액으로 결제 요청
           currency: 'KRW',
           payMethod: 'CARD',
           customer: {
@@ -177,26 +208,25 @@ export default function CheckoutClient() {
 
         if (!paymentResponse || paymentResponse.code != null) {
           const errorMessage = paymentResponse?.message || '결제창을 닫았거나 결제에 실패했습니다.';
-          // 결제 실패 시 주문 삭제 또는 상태 업데이트 (선택 사항)
           await supabase.from('orders').update({ status: '결제실패' }).eq('id', order.id);
           alert(`결제가 중단되었습니다: ${errorMessage}`);
           setIsLoading(false);
           return;
         }
 
-        // 프론트엔드 즉시 업데이트
+        // 3. 결제 성공 후 후처리
         await supabase.from('orders').update({ status: '결제완료' }).eq('id', order.id);
         
-        // [추가] 적립금 사용 처리
+        // [중요] 사용한 적립금 차감 (profiles 테이블)
         if (usePoints > 0 && session) {
-          await supabase.from('user_points').insert([{
-            user_id: session.user.id,
-            amount: -usePoints,
-            reason: `상품 주문 시 사용 (주문번호: ${order.id.slice(0,8).toUpperCase()})`
-          }]);
+          const { data: profile } = await supabase.from('profiles').select('points').eq('id', session.user.id).single();
+          if (profile) {
+            const remainingPoints = Math.max(0, (Number(profile.points) || 0) - usePoints);
+            await supabase.from('profiles').update({ points: remainingPoints }).eq('id', session.user.id);
+          }
         }
 
-        // [추가] 쿠폰 사용 처리
+        // 쿠폰 사용 처리
         if (selectedCoupon) {
           await supabase.from('user_coupons').update({ 
             is_used: true, 
@@ -204,10 +234,9 @@ export default function CheckoutClient() {
           }).eq('id', selectedCoupon.id);
         }
 
-        alert('테스트 결제가 성공적으로 완료되었습니다!');
+        alert('결제가 성공적으로 완료되었습니다!');
       } 
       else if (formData.paymentMethod === 'transfer') {
-        // 무통장 입금 (직접 처리 시)
         await supabase.from('orders').update({ status: '입금대기' }).eq('id', order.id);
         alert('주문이 접수되었습니다. 입금 확인 후 배송이 시작됩니다.');
       }
@@ -220,53 +249,7 @@ export default function CheckoutClient() {
     } finally {
       setIsLoading(false);
     }
-  }, [formData, selectedAddressId, addressList, session, router, clearCart]);
-
-  if (items.length === 0) {
-    return (
-      <div className="bg-hanji-white min-h-[70vh] flex flex-col items-center justify-center p-8">
-        <h1 className="font-serif text-2xl text-charcoal mb-8">장바구니가 비어 있습니다.</h1>
-        <Link href="/shop" className="bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all tracking-widest text-sm uppercase">
-          Go Shopping
-        </Link>
-      </div>
-    );
-  }
-
-  const [userPoints, setUserPoints] = useState(0);
-  const [usePoints, setUsePoints] = useState(0);
-  const [coupons, setCoupons] = useState<any[]>([]);
-  const [selectedCoupon, setSelectedCoupon] = useState<any>(null);
-
-  useEffect(() => {
-    const fetchDiscounts = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        const [pointsRes, couponsRes] = await Promise.all([
-          supabase.from('user_points').select('amount').eq('user_id', session.user.id),
-          supabase.from('user_coupons').select('*, coupons(*)').eq('user_id', session.user.id).eq('is_used', false)
-        ]);
-        
-        const totalPoints = pointsRes.data?.reduce((sum, p) => sum + p.amount, 0) || 0;
-        setUserPoints(totalPoints);
-        setCoupons(couponsRes.data || []);
-      }
-    };
-    fetchDiscounts();
-  }, []);
-
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  const shippingFee = Math.max(...items.map(item => item.shipping_fee || 0));
-  
-  // 할인 계산
-  let couponDiscount = 0;
-  if (selectedCoupon) {
-    const c = selectedCoupon.coupons;
-    if (c.discount_type === 'amount') couponDiscount = c.discount_value;
-    else if (c.discount_type === 'rate') couponDiscount = Math.floor(subtotal * (c.discount_value / 100));
-  }
-  
-  const total = Math.max(0, subtotal + shippingFee - usePoints - couponDiscount);
+  }, [formData, selectedAddressId, addressList, session, router, clearCart, finalTotal, usePoints, selectedCoupon]);
 
   return (
     <div className="bg-hanji-white min-h-screen pt-24 pb-32">
@@ -474,7 +457,7 @@ export default function CheckoutClient() {
                 )}
                 <div className="flex justify-between text-xl font-serif text-charcoal pt-4 border-t border-border-light">
                   <span>최종 결제 금액</span>
-                  <span className="text-2xl">₩{total.toLocaleString()}</span>
+                  <span className="text-2xl">₩{finalTotal.toLocaleString()}</span>
                 </div>
               </div>
 
@@ -489,7 +472,7 @@ export default function CheckoutClient() {
                     <span className="text-sm font-sans uppercase tracking-widest">Processing...</span>
                   </>
                 ) : (
-                  <>₩{total.toLocaleString()} 결제하기</>
+                  <>₩{finalTotal.toLocaleString()} 결제하기</>
                 )}
               </button>
             </section>
