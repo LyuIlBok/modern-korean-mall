@@ -135,7 +135,26 @@ export default function ProductDetailClient({
                 </button>
               </div>
               <h1 className="font-serif text-5xl text-charcoal leading-tight mb-6 tracking-tight">{product.name}</h1>
-              <p className="text-3xl font-serif text-charcoal mb-8">₩{Number(product.price).toLocaleString()}</p>
+              <div className="mb-8">
+                {Number(product.discount_rate || 0) > 0 ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-3">
+                      <span className="bg-terracotta text-white px-2 py-1 text-xs font-bold rounded-sm">{product.discount_rate}% OFF</span>
+                      <p className="text-muted line-through decoration-muted/50 text-xl font-light">₩{Number(product.price).toLocaleString()}</p>
+                    </div>
+                    <p className="text-4xl font-serif text-terracotta font-extrabold">₩{Math.floor(product.price * (1 - product.discount_rate / 100)).toLocaleString()}</p>
+                  </div>
+                ) : (
+                  <p className="text-4xl font-serif text-charcoal">₩{Number(product.price).toLocaleString()}</p>
+                )}
+                
+                {Number(product.reward_points || 0) > 0 && (
+                  <div className="mt-4 inline-flex items-center gap-2 bg-deep-sage/5 border border-deep-sage/20 px-4 py-2 rounded-full">
+                    <Plus className="w-4 h-4 text-deep-sage" />
+                    <span className="text-sm font-medium text-deep-sage">구매 시 <span className="font-bold">{Number(product.reward_points).toLocaleString()}원</span> 적립</span>
+                  </div>
+                )}
+              </div>
               <p className="text-muted leading-relaxed font-light whitespace-pre-line text-lg">{product.description}</p>
             </div>
 

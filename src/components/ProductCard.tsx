@@ -41,6 +41,10 @@ export default function ProductCard({ product }: { product: ProductWithRating })
     setImgSrc('https://images.unsplash.com/photo-1582139329536-e7284fece509?auto=format&fit=crop&q=80&w=800');
   };
 
+  const discountRate = Number(product.discount_rate || 0);
+  const discountedPrice = Math.floor(product.price * (1 - discountRate / 100));
+  const rewardPoints = Number(product.reward_points || 0);
+
   return (
     <motion.div 
       whileHover={{ y: -8 }}
@@ -57,6 +61,22 @@ export default function ProductCard({ product }: { product: ProductWithRating })
               <div className="bg-white/95 border border-charcoal/10 px-5 py-2.5 shadow-xl transform -rotate-2">
                 <span className="font-serif text-xs tracking-[0.4em] text-charcoal uppercase font-bold">Sold Out</span>
               </div>
+            </div>
+          )}
+
+          {/* Discount Badge */}
+          {!product.is_sold_out && discountRate > 0 && (
+            <div className="absolute top-4 left-4 z-30 bg-terracotta text-white px-3 py-1.5 rounded-sm shadow-lg">
+              <span className="text-[11px] font-bold tracking-tighter">{discountRate}% OFF</span>
+            </div>
+          )}
+
+          {/* Reward Points Badge */}
+          {!product.is_sold_out && rewardPoints > 0 && (
+            <div className="absolute bottom-4 left-4 z-30 bg-deep-sage/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full shadow-lg border border-white/20">
+              <span className="text-[9px] font-bold flex items-center gap-1">
+                <Plus className="w-2.5 h-2.5" /> {rewardPoints.toLocaleString()}원 적립
+              </span>
             </div>
           )}
 
@@ -115,9 +135,20 @@ export default function ProductCard({ product }: { product: ProductWithRating })
           
           <div className="mt-auto flex items-end justify-between">
             <div className="flex flex-col">
-              <p className={`text-lg font-serif font-bold ${product.is_sold_out ? 'text-muted' : 'text-charcoal'}`}>
-                ₩{product.price.toLocaleString()}
-              </p>
+              {discountRate > 0 ? (
+                <div className="space-y-0.5">
+                  <p className="text-[10px] text-muted line-through decoration-muted/50 font-medium">
+                    ₩{product.price.toLocaleString()}
+                  </p>
+                  <p className="text-lg font-serif font-extrabold text-terracotta">
+                    ₩{discountedPrice.toLocaleString()}
+                  </p>
+                </div>
+              ) : (
+                <p className={`text-lg font-serif font-bold ${product.is_sold_out ? 'text-muted' : 'text-charcoal'}`}>
+                  ₩{product.price.toLocaleString()}
+                </p>
+              )}
               {!product.is_sold_out && <span className="text-[9px] text-deep-sage font-medium uppercase tracking-tighter">Free Shipping</span>}
             </div>
             

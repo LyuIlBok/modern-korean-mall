@@ -13,15 +13,51 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 기존 테이블에 컬럼이 없을 경우를 대비한 추가 로직 (에러 무시 가능)
+-- 기존 테이블에 컬럼이 없을 경우를 대비한 추가 로직
 DO $$ 
 BEGIN
-  ALTER TABLE public.profiles ADD COLUMN total_spent NUMERIC DEFAULT 0;
-  ALTER TABLE public.profiles ADD COLUMN tier TEXT DEFAULT 'FAMILY';
-  ALTER TABLE public.profiles ADD COLUMN points NUMERIC DEFAULT 0;
+  -- Profiles columns
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='total_spent') THEN
+    ALTER TABLE public.profiles ADD COLUMN total_spent NUMERIC DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='tier') THEN
+    ALTER TABLE public.profiles ADD COLUMN tier TEXT DEFAULT 'FAMILY';
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='profiles' AND column_name='points') THEN
+    ALTER TABLE public.profiles ADD COLUMN points NUMERIC DEFAULT 0;
+  END IF;
+
+  -- Products columns for Marketing
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='reward_points') THEN
+    ALTER TABLE public.products ADD COLUMN reward_points NUMERIC DEFAULT 0;
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name='products' AND column_name='discount_rate') THEN
+    ALTER TABLE public.products ADD COLUMN discount_rate NUMERIC DEFAULT 0;
+  END IF;
 EXCEPTION
-  WHEN duplicate_column THEN null;
+  WHEN others THEN null;
 END $$;
+
+-- 2. Coupons Table for Promotions
+CREATE TABLE IF NOT EXISTS public.coupons (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code TEXT UNIQUE NOT NULL, -- 프로모션 코드 (예: WELCOME2026)
+  name TEXT NOT NULL,
+  discount_type TEXT NOT NULL CHECK (discount_type IN ('fixed', 'percent')),
+  discount_value NUMERIC NOT NULL,
+  min_order_amount NUMERIC DEFAULT 0,
+  valid_from TIMESTAMPTZ DEFAULT now(),
+  valid_until TIMESTAMPTZ,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Coupons RLS
+ALTER TABLE public.coupons ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow public select active coupons" ON public.coupons 
+  FOR SELECT USING (is_active = true AND (valid_until IS NULL OR valid_until > now()));
+CREATE POLICY "Admin full access coupons" ON public.coupons 
+  FOR ALL TO authenticated USING (is_admin()) WITH CHECK (is_admin());
 
 
 -- 유저가 가입할 때 자동으로 프로필 생성 및 관리자 부여 트리거

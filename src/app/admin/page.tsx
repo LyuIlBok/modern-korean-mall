@@ -41,6 +41,8 @@ export default function AdminDashboard() {
   const [newShippingFee, setNewShippingFee] = useState('0');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
+  const [newRewardPoints, setNewRewardPoints] = useState('0'); // 추가
+  const [newDiscountRate, setNewDiscountRate] = useState('0'); // 추가
   
   // 1. 다중 이미지 State 추가
   const [mainImage, setMainImage] = useState<File | null>(null);
@@ -194,6 +196,8 @@ export default function AdminDashboard() {
         images: galleryUrls,
         detail_content_images: detailUrls,
         is_sold_out: Number(newStock) <= 0,
+        reward_points: Number(newRewardPoints), // 추가
+        discount_rate: Number(newDiscountRate), // 추가
         specs: { origin: '연천군', producer: '복이네농장' }
       }]).select();
 
@@ -237,6 +241,8 @@ export default function AdminDashboard() {
         imageUrl: finalMainUrl,
         images: finalGallery,
         detail_content_images: finalDetails,
+        reward_points: Number(editingProduct.reward_points || 0), // 추가
+        discount_rate: Number(editingProduct.discount_rate || 0), // 추가
         is_sold_out: Number(editingProduct.stock) <= 0
       }).eq('id', editingProduct.id);
 
@@ -382,6 +388,10 @@ export default function AdminDashboard() {
                         <div className="grid grid-cols-2 gap-8">
                           <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                           <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee (KRW)</label><input required value={newShippingFee} onChange={(e) => setNewShippingFee(e.target.value)} type="number" placeholder="배송비" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label><input value={newRewardPoints} onChange={(e) => setNewRewardPoints(e.target.value)} type="number" placeholder="지급 적립금" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label><input value={newDiscountRate} onChange={(e) => setNewDiscountRate(e.target.value)} type="number" placeholder="할인율" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
                         </div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
@@ -592,6 +602,10 @@ export default function AdminDashboard() {
                     <div className="grid grid-cols-2 gap-8">
                       <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                       <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label><input required type="number" value={editingProduct.shipping_fee || 0} onChange={(e) => setEditingProduct({...editingProduct, shipping_fee: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-8">
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label><input type="number" value={editingProduct.reward_points || 0} onChange={(e) => setEditingProduct({...editingProduct, reward_points: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label><input type="number" value={editingProduct.discount_rate || 0} onChange={(e) => setEditingProduct({...editingProduct, discount_rate: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" /></div>
                     </div>
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>

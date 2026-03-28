@@ -73,10 +73,18 @@ export async function POST(req: Request) {
 
       // 3. 결제 완료(PAID)인 경우 적립금 및 누적 금액 처리 (회원인 경우에만)
       if (status === 'PAID' && order.user_id && order.status !== '결제완료') {
-        const rewardPoints = Math.floor(Number(order.total_price) * 0.01); // 1% 적립
+        // 주문 상품들의 reward_points 합산 조회
+        const { data: itemsWithPoints } = await supabase
+          .from('order_items')
+          .select('quantity, products(reward_points)')
+          .eq('order_id', paymentId);
+
+        const totalRewardPoints = itemsWithPoints?.reduce((sum, item: any) => {
+          const points = Number(item.products?.reward_points || 0);
+          return sum + (points * item.quantity);
+        }, 0) || 0;
         
-        // profiles 테이블 업데이트 (RPC 대신 개별 쿼리로 처리)
-        // 주의: 동시성 이슈를 방지하려면 RPC가 좋지만, 여기서는 지시대로 직접 UPDATE 수행
+        // profiles 테이블 업데이트
         const { data: profile } = await supabase
           .from('profiles')
           .select('points, total_spent')
@@ -84,7 +92,7 @@ export async function POST(req: Request) {
           .single();
 
         if (profile) {
-          const newPoints = (Number(profile.points) || 0) + rewardPoints;
+          const newPoints = (Number(profile.points) || 0) + totalRewardPoints;
           const newTotalSpent = (Number(profile.total_spent) || 0) + Number(order.total_price);
 
           await supabase
@@ -96,7 +104,7 @@ export async function POST(req: Request) {
             })
             .eq('id', order.user_id);
             
-          console.log(`[Webhook Success] Points awarded: ${rewardPoints}, Total spent updated for ${order.user_id}`);
+          console.log(`[Webhook Success] Custom Reward: ${totalRewardPoints}, Total spent updated for ${order.user_id}`);
         }
       }
     }
