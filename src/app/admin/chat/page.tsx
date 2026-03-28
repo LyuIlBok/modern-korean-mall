@@ -155,14 +155,15 @@ export default function AdminChatPage() {
   const handleUpdateMessage = async (id: string) => {
     if (!editInput.trim()) return;
     
-    // 1. Supabase 업데이트 실행
+    // 1. Supabase 업데이트 실행 (관리자 메시지만 수정 가능하도록 명시)
     const { error } = await supabase
       .from('support_messages')
       .update({ 
         content: editInput.trim(), 
         updated_at: new Date().toISOString() 
       })
-      .eq('id', id);
+      .eq('id', id)
+      .eq('is_admin', true);
 
     if (error) {
       console.error('Update error:', error.message);

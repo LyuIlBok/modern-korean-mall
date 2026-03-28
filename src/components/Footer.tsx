@@ -21,6 +21,7 @@ export default function Footer() {
                 alt="자연의 결" 
                 fill 
                 className="object-contain filter grayscale"
+                unoptimized={true}
               />
             </div>
             <p className="text-sm text-muted leading-relaxed max-w-xs">

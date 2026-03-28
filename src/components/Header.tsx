@@ -120,7 +120,7 @@ export default function Header() {
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
             <div className="relative h-16 w-72 sm:w-80">
-              <Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" priority quality={100} />
+              <Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" priority quality={100} unoptimized={true} />
             </div>
           </Link>
 
@@ -230,7 +230,7 @@ export default function Header() {
             <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-y-0 left-0 w-[280px] bg-hanji-white shadow-2xl flex flex-col">
               <div className="flex items-center justify-between px-6 py-6 border-b border-border-light">
                 <Link href="/" onClick={() => setIsMenuOpen(false)}>
-                  <div className="relative h-8 w-32"><Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" /></div>
+                  <div className="relative h-8 w-32"><Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" unoptimized={true} /></div>
                 </Link>
                 <button onClick={() => setIsMenuOpen(false)} className="p-2 text-muted hover:text-charcoal"><X className="w-6 h-6" /></button>
               </div>

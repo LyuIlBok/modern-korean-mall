@@ -89,6 +89,7 @@ export default function SignupPage() {
                 alt="자연의 결" 
                 fill 
                 className="object-contain"
+                unoptimized={true}
               />
             </div>
           </Link>
