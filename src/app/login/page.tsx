@@ -46,10 +46,11 @@ export default function LoginPage() {
   };
 
   // 소셜 로그인 처리
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
-        provider,
+        // Supabase Custom Config에 맞춰 provider 명칭 전달 (타입 에러 방지를 위해 as any 사용)
+        provider: provider === 'naver' ? 'custom:naver' as any : provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
           queryParams: {
@@ -159,7 +160,7 @@ export default function LoginPage() {
               <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
             </button>
             <button 
-              onClick={() => window.location.href = '/api/auth/naver'}
+              onClick={() => handleSocialLogin('naver')}
               className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
               <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div> Naver
