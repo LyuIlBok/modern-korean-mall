@@ -45,16 +45,15 @@ export default function LoginPage() {
     }
   };
 
-  // 소셜 로그인 처리 (실제 작동을 위해선 Supabase 설정 필요)
-  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
+  // 소셜 로그인 처리
+  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: provider === 'google' ? {
+          queryParams: (provider === 'google' || provider === 'kakao') ? {
             prompt: 'select_account',
-            access_type: 'offline',
           } : undefined,
         },
       });
@@ -146,18 +145,24 @@ export default function LoginPage() {
             <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-3">
             <button 
               onClick={() => handleSocialLogin('google')}
-              className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-medium"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
-              <Chrome className="w-4 h-4 text-[#4285F4]" /> Google
+              <Chrome className="w-5 h-5 text-[#4285F4]" /> Google
             </button>
             <button 
               onClick={() => handleSocialLogin('kakao')}
-              className="flex items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-xs font-medium"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
-              <MessageCircle className="w-4 h-4 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
+              <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
+            </button>
+            <button 
+              onClick={() => window.location.href = '/api/auth/naver'}
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
+            >
+              <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div> Naver
             </button>
           </div>
         </div>
