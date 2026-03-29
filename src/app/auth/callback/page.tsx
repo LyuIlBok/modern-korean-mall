@@ -13,9 +13,12 @@ export default function AuthCallbackPage() {
       // URL에서 인증 코드를 추출하여 세션을 확정합니다.
       const { error } = await supabase.auth.getSession();
       
+      const searchParams = new URLSearchParams(window.location.search);
+      const next = searchParams.get('next') || '/';
+
       if (!error) {
-        // 로그인 성공 시 마이페이지로 이동
-        router.push('/mypage');
+        // 로그인 성공 시 메인 홈(/) 또는 지정된 경로로 이동
+        router.push(next);
       } else {
         console.error('Auth error:', error.message);
         router.push('/login?error=auth_failed');

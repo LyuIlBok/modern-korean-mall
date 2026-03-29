@@ -52,7 +52,7 @@ export default function LoginPage() {
         // Supabase Custom Config에 맞춰 provider 명칭 전달 (타입 에러 방지를 위해 as any 사용)
         provider: provider === 'naver' ? 'custom:naver' as any : provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
+          redirectTo: `${window.location.origin}/auth/callback?next=/`,
           queryParams: {
             prompt: 'select_account',
           },

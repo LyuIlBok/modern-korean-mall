@@ -81,7 +81,7 @@ function MyPageContent() {
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
-        .single();
+        .maybeSingle(); // .single() 대신 .maybeSingle()을 사용하여 데이터가 없을 때의 406 에러 방지
       
       // [개선] DB에 정보가 없거나 부족하면 소셜 메타데이터에서 자동 완성
       const metadata = currentUser.user_metadata;
@@ -95,16 +95,20 @@ function MyPageContent() {
         points: Number(profileData?.points) || 0
       });
 
-      // 만약 profiles 테이블에 데이터가 아예 없다면 초기화를 위해 upsert 유도 (선택 사항)
+      // 만약 profiles 테이블에 데이터가 아예 없다면 초기화를 위해 upsert (id 필수 포함)
       if (!profileData) {
         console.log('Syncing social metadata to profiles table...');
-        await supabase.from('profiles').upsert({
-          id: currentUser.id,
+        const { error: upsertError } = await supabase.from('profiles').upsert({
+          id: currentUser.id, // 필수 컬럼
           email: currentUser.email,
           full_name: socialName,
           avatar_url: metadata?.avatar_url || '',
           updated_at: new Date().toISOString()
         });
+        
+        if (upsertError) {
+          console.error('[Profile Sync Error]:', upsertError.message);
+        }
       }
 
       // 2. Orders Load
