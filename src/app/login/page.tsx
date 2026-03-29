@@ -46,15 +46,15 @@ export default function LoginPage() {
   };
 
   // 소셜 로그인 처리
-  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
+  const handleSocialLogin = async (provider: 'google' | 'kakao') => {
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: (provider === 'google' || provider === 'kakao') ? {
+          queryParams: {
             prompt: 'select_account',
-          } : undefined,
+          },
         },
       });
       if (error) throw error;
