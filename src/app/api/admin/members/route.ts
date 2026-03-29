@@ -1,29 +1,27 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// 서버 사이드 전용 Supabase 클라이언트 (Service Role 권한 활용 - 보안 주의)
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || '', // .env.local에 정의되어야 함
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false
-    }
-  }
-);
+export const dynamic = 'force-dynamic';
 
 export async function PATCH(request: Request) {
+  // 서버 사이드 전용 Supabase 클라이언트 (Service Role 권한 활용 - 보안 주의)
+  // 빌드 시 에러 방지를 위해 핸들러 내부에서 초기화
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
+    {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    }
+  );
+
   try {
-    // 1. 요청 보낸 사용자 세션 확인 (보안 강화)
-    // 실제 운영 환경에서는 auth.getUser()를 통해 세션을 재검증해야 함
-    // 여기서는 지시사항에 따라 보안 로직을 최상단에 배치
     const body = await request.json();
     const { userId, targetTier, targetPoints, adminToken } = body;
 
     // [보안] 관리자 신분증 검증 로직
-    // 실제 세션 쿠키를 확인하거나, 관리자 프로필을 DB에서 직접 조회
-    // 여기서는 간단하게 전달된 adminToken (세션 ID 등)을 통해 profiles 테이블의 is_admin을 서버에서 직접 확인
     const { data: adminProfile, error: authError } = await supabaseAdmin
       .from('profiles')
       .select('is_admin, email')

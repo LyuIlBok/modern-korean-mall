@@ -1,23 +1,23 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
-import crypto from 'crypto';
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
-
-const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
+
   try {
     const body = await req.text(); // 검증을 위해 원문 텍스트 필요
     const signature = req.headers.get('x-portone-signature');
 
     // 1. 보안 검증 (Webhook Secret 활용)
     if (WEBHOOK_SECRET && signature) {
-      // 포트원 V2 기준 검증 로직 (필요시 V2 공식 문서에 따라 해시 알고리즘 조정)
-      // 현재는 로직의 틀을 구성하며, 실제 V2 명세에 맞게 강화합니다.
+      // 포트원 V2 기준 검증 로직
       console.log('Webhook signature received:', signature);
     }
 

@@ -2,15 +2,16 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import crypto from 'crypto';
 
-// 서버 사이드 전용 Supabase 클라이언트 (RLS 우회 권한 필요 - 내부 로직용)
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
-
-const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
+export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+
+  const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
+
   try {
     const body = await req.text();
     const signature = req.headers.get('x-portone-signature');
@@ -21,7 +22,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    // 포트원 V2 서명 검증 (HMAC-SHA256)
     const expectedSignature = crypto
       .createHmac('sha256', WEBHOOK_SECRET)
       .update(body)
@@ -37,7 +37,6 @@ export async function POST(req: Request) {
 
     console.log(`[Webhook Verified] PaymentId: ${paymentId}, Status: ${status}`);
 
-    // 포트원 V2 상태값 매핑
     let dbStatus = '';
     if (status === 'PAID') dbStatus = '결제완료';
     else if (status === 'VIRTUAL_ACCOUNT_ISSUED') dbStatus = '입금대기';
@@ -45,7 +44,6 @@ export async function POST(req: Request) {
     else if (status === 'CANCELLED') dbStatus = '취소됨';
 
     if (dbStatus && paymentId) {
-      // 1. 주문 정보 조회 (유저 ID 및 결제 금액 확인)
       const { data: order, error: fetchError } = await supabase
         .from('orders')
         .select('user_id, total_price, status')
@@ -57,7 +55,6 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Order not found' }, { status: 404 });
       }
 
-      // 2. 주문 상태 업데이트
       const { error: updateError } = await supabase
         .from('orders')
         .update({ 
@@ -71,9 +68,7 @@ export async function POST(req: Request) {
         return NextResponse.json({ error: 'Internal processing error' }, { status: 500 });
       }
 
-      // 3. 결제 완료(PAID)인 경우 적립금 및 누적 금액 처리 (회원인 경우에만)
       if (status === 'PAID' && order.user_id && order.status !== '결제완료') {
-        // 주문 상품들의 reward_points 합산 조회
         const { data: itemsWithPoints } = await supabase
           .from('order_items')
           .select('quantity, products(reward_points)')
@@ -84,7 +79,6 @@ export async function POST(req: Request) {
           return sum + (points * item.quantity);
         }, 0) || 0;
         
-        // profiles 테이블 업데이트
         const { data: profile } = await supabase
           .from('profiles')
           .select('points, total_spent')
@@ -111,7 +105,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (err: any) {
-    // [보안] 에러 메시지 은닉: 실제 에러는 서버 로그에만 남김
     console.error('[Webhook Exception]:', err.message);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }

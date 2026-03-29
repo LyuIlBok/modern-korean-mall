@@ -1,15 +1,15 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
-// 어드민용 Supabase 클라이언트
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-);
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
+    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
+  );
+
   try {
-    // 1. 최근 30일간의 '결제완료' 및 '배송완료' 주문 조회
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -22,10 +22,8 @@ export async function GET() {
 
     if (error) throw error;
 
-    // 2. 데이터 가공 (일별 집계)
     const statsMap: Record<string, { date: string; revenue: number; count: number }> = {};
 
-    // 최근 30일간의 날짜 미리 채우기 (데이터가 없는 날도 0으로 표시하기 위함)
     for (let i = 29; i >= 0; i--) {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -42,8 +40,6 @@ export async function GET() {
     });
 
     const chartData = Object.values(statsMap);
-
-    // 3. 누적 정보 계산
     const totalRevenue = orders?.reduce((sum, o) => sum + Number(o.total_price), 0) || 0;
     const totalCount = orders?.length || 0;
 
