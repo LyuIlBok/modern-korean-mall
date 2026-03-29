@@ -135,6 +135,12 @@ function MyPageContent() {
     return { current: Math.max(5, percent), nextTier: 'VIP', remain };
   }, [profile.total_spent, profile.tier]);
 
+  const handleOpenReview = (product: any) => {
+    setSelectedReviewProduct(product);
+    setReviewData({ rating: 5, content: '', images: [] });
+    setIsReviewModalOpen(true);
+  };
+
   const handleCancelOrder = async (orderId: string) => {
     if (!confirm('주문을 취소하시겠습니까?')) return;
     setCancellingId(orderId);
