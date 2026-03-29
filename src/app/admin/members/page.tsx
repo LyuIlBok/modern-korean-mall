@@ -96,24 +96,41 @@ export default function AdminMembersPage() {
       }
     }
 
-    const { error } = await supabase
-      .from('profiles')
-      .update({ tier: selectedTier, points: newPoints })
-      .eq('id', selectedMember.id);
+    try {
+      // [보안 고도화] 클라이언트 직접 수정 대신 서버 API 호출
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      const response = await fetch('/api/admin/members', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: selectedMember.id,
+          targetTier: selectedTier,
+          targetPoints: newPoints,
+          adminToken: session?.user?.id // 서버에서 is_admin 여부 재검증용
+        })
+      });
 
-    if (error) {
-      alert('회원 정보 업데이트에 실패했습니다.');
-      console.error(error);
-    } else {
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || '업데이트 실패');
+      }
+
       // 로컬 상태 즉시 반영
       setMembers(prev => prev.map(m => 
         m.id === selectedMember.id 
           ? { ...m, tier: selectedTier, points: newPoints }
           : m
       ));
+      alert(result.message || '회원 정보가 성공적으로 수정되었습니다.');
       setIsModalOpen(false);
+    } catch (error: any) {
+      alert(error.message);
+      console.error(error);
+    } finally {
+      setActionLoading(false);
     }
-    setActionLoading(false);
   };
 
   const getTierColor = (tier: string) => {
