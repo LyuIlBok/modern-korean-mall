@@ -38,12 +38,12 @@ export async function proxy(request: NextRequest) {
     }
   );
 
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
   // 1. 일반 사용자 보호 경로 (/mypage, /checkout)
   if (pathname.startsWith('/mypage') || pathname.startsWith('/checkout')) {
-    if (!session) {
+    if (!user) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/login';
       redirectUrl.searchParams.set('redirectedFrom', pathname);
@@ -53,7 +53,7 @@ export async function proxy(request: NextRequest) {
 
   // 2. 관리자 경로 보호 (/admin)
   if (pathname.startsWith('/admin')) {
-    if (!session) {
+    if (!user) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
 
@@ -61,7 +61,7 @@ export async function proxy(request: NextRequest) {
     const { data: profile } = await supabase
       .from('profiles')
       .select('is_admin')
-      .eq('id', session.user.id)
+      .eq('id', user.id)
       .single();
 
     if (!profile?.is_admin) {

@@ -48,6 +48,11 @@ function MyPageContent() {
     points: 0 
   });
 
+  // [추가] 재인증 관련 상태
+  const [isVerified, setIsVerified] = useState(false);
+  const [verifyPassword, setVerifyPassword] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedProduct, setSelectedReviewProduct] = useState<any>(null);
   const [reviewData, setReviewData] = useState({ rating: 5, content: '', images: [] as string[] });
@@ -165,9 +170,52 @@ function MyPageContent() {
     }).eq('id', user?.id);
     
     if (error) alert('정보 수정 실패: ' + error.message);
-    else alert('회원 정보가 성공적으로 수정되었습니다.');
+    else {
+      alert('회원 정보가 성공적으로 수정되었습니다.');
+      setIsVerified(false); // 수정 후 보안을 위해 재인증 상태 초기화
+      setActiveTab('orders'); // 대시보드로 이동
+    }
     setIsSaving(false);
   };
+
+  // [추가] 비밀번호 재확인 로직
+  const handleVerifyPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email || !verifyPassword) return;
+    
+    setIsVerifying(true);
+    try {
+      // Supabase signInWithPassword를 활용하여 현재 유저의 비밀번호 검증
+      const { error } = await supabase.auth.signInWithPassword({
+        email: user.email,
+        password: verifyPassword
+      });
+
+      if (error) {
+        alert('비밀번호가 일치하지 않습니다. 다시 시도해주세요.');
+        setVerifyPassword('');
+      } else {
+        setIsVerified(true);
+      }
+    } catch (err) {
+      alert('인증 중 오류가 발생했습니다.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  // 탭 변경 시 리셋 로직
+  useEffect(() => {
+    if (activeTab !== 'profile') {
+      setIsVerified(false);
+      setVerifyPassword('');
+    } else {
+      // 소셜 로그인 사용자는 비밀번호 확인 없이 즉시 통과
+      if (user?.app_metadata?.provider !== 'email') {
+        setIsVerified(true);
+      }
+    }
+  }, [activeTab, user]);
 
   const handleSaveAddress = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -355,30 +403,101 @@ function MyPageContent() {
           )}
 
           {activeTab === 'profile' && (
-            <div className="max-w-2xl mx-auto bg-white border border-border-light p-12 rounded-sm shadow-sm">
-              <div className="mb-10 space-y-2">
-                <h3 className="font-serif text-3xl text-charcoal">정보 수정</h3>
-                <p className="text-xs text-muted font-light italic">회원님의 소중한 정보를 안전하게 관리합니다.</p>
-              </div>
-              <form onSubmit={handleUpdateProfile} className="space-y-10">
-                <div className="space-y-8">
-                  <div className="space-y-3">
-                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Full Name</label>
-                    <input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="성함을 입력해 주세요" />
-                  </div>
-                  <div className="space-y-3">
-                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Phone Number</label>
-                    <input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="010-0000-0000" />
-                  </div>
-                  <div className="space-y-3 opacity-50">
-                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Email Address</label>
-                    <div className="w-full bg-hanji-white/10 border border-border-light px-6 py-4 rounded-sm text-sm font-mono">{user.email}</div>
-                  </div>
-                </div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-xl shadow-xl disabled:opacity-50">
-                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> Save Changes</>}
-                </button>
-              </form>
+            <div className="max-w-2xl mx-auto">
+              <AnimatePresence mode="wait">
+                {!isVerified ? (
+                  /* 비밀번호 재확인 뷰 */
+                  <motion.div 
+                    key="verify"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="bg-white border border-border-light p-12 rounded-sm shadow-sm text-center"
+                  >
+                    <div className="w-20 h-20 bg-hanji-white rounded-full flex items-center justify-center mx-auto mb-8">
+                      <ShieldCheck className="w-10 h-10 text-deep-sage" />
+                    </div>
+                    <div className="mb-10 space-y-3">
+                      <h3 className="font-serif text-3xl text-charcoal">비밀번호 재확인</h3>
+                      <p className="text-sm text-muted font-light leading-relaxed">
+                        개인정보를 안전하게 보호하기 위해<br />
+                        현재 사용 중인 비밀번호를 다시 한번 입력해 주세요.
+                      </p>
+                    </div>
+                    <form onSubmit={handleVerifyPassword} className="space-y-6 text-left">
+                      <div className="space-y-3">
+                        <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Current Password</label>
+                        <input 
+                          type="password"
+                          required
+                          autoFocus
+                          value={verifyPassword}
+                          onChange={(e) => setVerifyPassword(e.target.value)}
+                          className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all"
+                          placeholder="비밀번호를 입력하세요"
+                        />
+                      </div>
+                      <div className="flex gap-4 pt-4">
+                        <button 
+                          type="button"
+                          onClick={() => setActiveTab('orders')}
+                          className="flex-1 py-4 border border-border-light text-sm font-bold text-muted hover:bg-hanji-white transition-all rounded-sm uppercase tracking-widest"
+                        >
+                          Cancel
+                        </button>
+                        <button 
+                          type="submit"
+                          disabled={isVerifying || !verifyPassword}
+                          className="flex-1 bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-bold shadow-xl disabled:opacity-50 uppercase tracking-widest"
+                        >
+                          {isVerifying ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Verify Identity'}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                ) : (
+                  /* 실제 정보 수정 폼 */
+                  <motion.div 
+                    key="edit"
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className="bg-white border border-border-light p-12 rounded-sm shadow-sm"
+                  >
+                    <div className="mb-10 space-y-2">
+                      <h3 className="font-serif text-3xl text-charcoal">정보 수정</h3>
+                      <p className="text-xs text-muted font-light italic">회원님의 소중한 정보를 안전하게 관리합니다.</p>
+                    </div>
+                    <form onSubmit={handleUpdateProfile} className="space-y-10">
+                      <div className="space-y-8">
+                        <div className="space-y-3">
+                          <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Full Name</label>
+                          <input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="성함을 입력해 주세요" />
+                        </div>
+                        <div className="space-y-3">
+                          <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Phone Number</label>
+                          <input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="010-0000-0000" />
+                        </div>
+                        <div className="space-y-3 opacity-50">
+                          <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Email Address</label>
+                          <div className="w-full bg-hanji-white/10 border border-border-light px-6 py-4 rounded-sm text-sm font-mono">{user.email}</div>
+                        </div>
+                      </div>
+                      <div className="flex gap-4">
+                        <button 
+                          type="button"
+                          onClick={() => setIsVerified(false)}
+                          className="px-8 py-5 border border-border-light text-sm font-bold text-muted hover:bg-hanji-white transition-all rounded-sm"
+                        >
+                          Back
+                        </button>
+                        <button type="submit" disabled={isSaving} className="flex-1 bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-xl shadow-xl disabled:opacity-50">
+                          {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> Save Changes</>}
+                        </button>
+                      </div>
+                    </form>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           )}
 
