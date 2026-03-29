@@ -65,7 +65,7 @@ export async function proxy(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
-      console.warn(`[Security Alert] Non-admin access attempt: ${session.user.email}`);
+      console.warn(`[Security Alert] Non-admin access attempt: ${user?.email}`);
       return NextResponse.redirect(new URL('/', request.url));
     }
   }
