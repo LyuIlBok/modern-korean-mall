@@ -1,13 +1,18 @@
 'use client';
 
-import { useEffect, useState, useCallback, Suspense } from 'react';
+import { useEffect, useState, useCallback, Suspense, useMemo } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, ExternalLink, MapPin, User, Save, Plus, Trash2, Star, Search, Loader2, X, ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, Box, Camera, AlertCircle, Edit2, Info, Database } from 'lucide-react';
+import { 
+  Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, 
+  MapPin, User, Save, Plus, Trash2, Star, Loader2, X, 
+  ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, 
+  Box, Camera, Edit2, Database, Crown, TrendingUp, ArrowUpRight
+} from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
@@ -16,13 +21,18 @@ import Script from 'next/script';
 
 type ActiveTab = 'orders' | 'wishlist' | 'addresses' | 'profile';
 
+// 등급별 기준 금액
+const TIER_THRESHOLDS = {
+  VIP: 200000,
+  VVIP: 500000
+};
+
 function MyPageContent() {
   const { t, language } = useLanguageStore();
   const [user, setUser] = useState<SupabaseUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
-  const [dbError, setDbError] = useState<string | null>(null);
   
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get('tab') as ActiveTab) || 'orders';
@@ -30,8 +40,13 @@ function MyPageContent() {
   
   const [orders, setOrders] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
-  const [profile, setProfile] = useState({ full_name: '', phone: '' });
-  const [orderCounts, setOrderCounts] = useState({ pending: 0, shipping: 0, completed: 0 });
+  const [profile, setProfile] = useState({ 
+    full_name: '', 
+    phone: '', 
+    tier: 'FAMILY', 
+    total_spent: 0, 
+    points: 0 
+  });
 
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedProduct, setSelectedReviewProduct] = useState<any>(null);
@@ -45,14 +60,9 @@ function MyPageContent() {
 
   const { items: wishItems, syncWithSupabase } = useWishlistStore();
   const router = useRouter();
-
   const [cancellingId, setCancellingId] = useState<string | null>(null);
 
-  const [points, setPoints] = useState(0);
-  const [couponCount, setCouponCount] = useState(0);
-
   const fetchData = useCallback(async () => {
-    setDbError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) { router.push('/login'); return; }
@@ -60,40 +70,38 @@ function MyPageContent() {
       setUser(currentUser);
       setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
-      // 1. Orders Load
-      const { data: orderData } = await supabase.from('orders').select(`*, order_items (*, products (*))`).eq('user_id', currentUser.id).order('created_at', { ascending: false });
-      if (orderData) {
-        setOrders(orderData);
-        setOrderCounts({
-          pending: orderData.filter(o => o.status === '결제완료').length,
-          shipping: orderData.filter(o => o.status === '배송중').length,
-          completed: orderData.filter(o => o.status === '배송완료').length
+      // 1. Profile & CRM Data Load
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', currentUser.id)
+        .single();
+      
+      if (profileData) {
+        setProfile({
+          full_name: profileData.full_name || '',
+          phone: profileData.phone || '',
+          tier: profileData.tier || 'FAMILY',
+          total_spent: Number(profileData.total_spent) || 0,
+          points: Number(profileData.points) || 0
         });
       }
-      
-      // 2. Points & Coupons Load
-      const [pointsRes, couponsRes] = await Promise.all([
-        supabase.from('user_points').select('amount').eq('user_id', currentUser.id),
-        supabase.from('user_coupons').select('id', { count: 'exact' }).eq('user_id', currentUser.id).eq('is_used', false)
-      ]);
-      
-      const totalPoints = pointsRes.data?.reduce((sum, p) => sum + p.amount, 0) || 0;
-      setPoints(totalPoints);
-      setCouponCount(couponsRes.count || 0);
 
-      const { data: profileData } = await supabase.from('profiles').select('*').eq('id', currentUser.id).single();
-      if (profileData) setProfile({ full_name: profileData.full_name || '', phone: profileData.phone || '' });
-
-      // 2. Addresses Load (안정성 최우선)
-      const { data: addrData, error: addrError } = await supabase
+      // 2. Orders Load
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select(`*, order_items (*, products (*))`)
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+      if (orderData) setOrders(orderData);
+      
+      // 3. Addresses Load
+      const { data: addrData } = await supabase
         .from('addresses')
         .select('*')
         .eq('user_id', currentUser.id);
       
-      if (addrError) {
-        setDbError(`Database Error: ${addrError.message}`);
-        console.error('Addr Load Error:', addrError);
-      } else if (addrData) {
+      if (addrData) {
         const sorted = [...addrData].sort((a, b) => {
           if (a.is_default !== b.is_default) return a.is_default ? -1 : 1;
           return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
@@ -104,7 +112,6 @@ function MyPageContent() {
       await syncWithSupabase();
     } catch (err: any) { 
       console.error('System Error:', err);
-      setDbError(err.message);
     } finally { 
       setLoading(false); 
     }
@@ -112,88 +119,48 @@ function MyPageContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // 등급 프로그레스 계산
+  const tierProgress = useMemo(() => {
+    const spent = profile.total_spent;
+    if (profile.tier === 'VVIP' || spent >= TIER_THRESHOLDS.VVIP) {
+      return { current: 100, nextTier: 'MAX', remain: 0 };
+    }
+    if (spent >= TIER_THRESHOLDS.VIP) {
+      const remain = TIER_THRESHOLDS.VVIP - spent;
+      const percent = ((spent - TIER_THRESHOLDS.VIP) / (TIER_THRESHOLDS.VVIP - TIER_THRESHOLDS.VIP)) * 100;
+      return { current: Math.max(10, percent), nextTier: 'VVIP', remain };
+    }
+    const remain = TIER_THRESHOLDS.VIP - spent;
+    const percent = (spent / TIER_THRESHOLDS.VIP) * 100;
+    return { current: Math.max(5, percent), nextTier: 'VIP', remain };
+  }, [profile.total_spent, profile.tier]);
+
   const handleCancelOrder = async (orderId: string) => {
-    if (!confirm(language === 'ko' ? '주문을 취소하시겠습니까?' : 'Do you want to cancel the order?')) return;
-    
+    if (!confirm('주문을 취소하시겠습니까?')) return;
     setCancellingId(orderId);
     try {
-      const response = await fetch('/api/orders/cancel', {
+      const res = await fetch('/api/orders/cancel', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
       });
-      
-      const result = await response.json();
-      if (response.ok) {
-        alert(language === 'ko' ? '주문이 취소되었습니다.' : 'Order cancelled.');
-        fetchData();
-      } else {
-        alert(`취소 오류: ${result.error}`);
-      }
-    } catch (err) {
-      alert('서버와 통신 중 오류가 발생했습니다.');
-    } finally {
-      setCancellingId(null);
-    }
-  };
-
-  const handleUpdateStatus = async (orderId: string, status: string) => {
-    await supabase.from('orders').update({ status }).eq('id', orderId);
-    fetchData();
-  };
-
-  const cancelableStatus = ['결제완료', '입금대기', '결제대기'];
-
-  const handleOpenReview = (product: any) => {
-    setSelectedReviewProduct(product);
-    setReviewData({ rating: 5, content: '', images: [] });
-    setIsReviewModalOpen(true);
-  };
-
-  const handleSubmitReview = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!user || !selectedProduct) return;
-    setIsSaving(true);
-    await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || user.email?.split('@')[0], rating: reviewData.rating, content: reviewData.content, is_verified: true });
-    setIsReviewModalOpen(false);
-    setIsSaving(false);
-    alert(language === 'ko' ? '리뷰가 등록되었습니다.' : 'Review submitted.');
+      if (res.ok) { alert('주문이 취소되었습니다.'); fetchData(); }
+    } catch (err) { alert('오류가 발생했습니다.'); }
+    finally { setCancellingId(null); }
   };
 
   const handleUpdateProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSaving(true);
-    await supabase.from('profiles').upsert({ id: user?.id, full_name: profile.full_name, phone: profile.phone, updated_at: new Date().toISOString() });
+    const { error } = await supabase.from('profiles').update({ 
+      full_name: profile.full_name, 
+      phone: profile.phone, 
+      updated_at: new Date().toISOString() 
+    }).eq('id', user?.id);
+    
+    if (error) alert('정보 수정 실패: ' + error.message);
+    else alert('회원 정보가 성공적으로 수정되었습니다.');
     setIsSaving(false);
-    alert(language === 'ko' ? '정보가 저장되었습니다.' : 'Profile updated.');
-  };
-
-  const handleAddressSearch = () => {
-    if (typeof window !== 'undefined' && (window as any).daum) {
-      new (window as any).daum.Postcode({
-        oncomplete: (data: any) => setNewAddr(prev => ({ ...prev, postcode: data.zonecode, address: data.address }))
-      }).open();
-    }
-  };
-
-  const handleOpenAddModal = () => {
-    setEditingAddrId(null);
-    setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false });
-    setIsAddrModalOpen(true);
-  };
-
-  const handleOpenEditModal = (addr: any) => {
-    setEditingAddrId(addr.id);
-    setNewAddr({
-      address_name: addr.address_name,
-      receiver_name: addr.receiver_name,
-      receiver_phone: addr.receiver_phone,
-      postcode: addr.postcode,
-      address: addr.address,
-      detail_address: addr.detail_address,
-      is_default: addr.is_default
-    });
-    setIsAddrModalOpen(true);
   };
 
   const handleSaveAddress = async (e: React.FormEvent) => {
@@ -201,112 +168,106 @@ function MyPageContent() {
     if (!user) return;
     setIsSaving(true);
     try {
-      if (newAddr.is_default) {
-        await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
-      }
-      
-      const payload = {
-        user_id: user.id,
-        address_name: newAddr.address_name,
-        receiver_name: newAddr.receiver_name,
-        receiver_phone: newAddr.receiver_phone,
-        postcode: newAddr.postcode,
-        address: newAddr.address,
-        detail_address: newAddr.detail_address,
-        is_default: newAddr.is_default
-      };
-
-      let res;
-      if (editingAddrId) {
-        res = await supabase.from('addresses').update(payload).eq('id', editingAddrId);
-      } else {
-        res = await supabase.from('addresses').insert(payload);
-      }
-      
-      if (res.error) throw res.error;
-      
-      await fetchData();
-      setIsAddrModalOpen(false);
-    } catch (err: any) { 
-      alert(`저장 오류: ${err.message}`);
-    } finally { setIsSaving(false); }
-  };
-
-  const handleDeleteAddress = async (id: string) => {
-    if (!confirm(language === 'ko' ? '정말 삭제하시겠습니까?' : 'Delete this address?')) return;
-    await supabase.from('addresses').delete().eq('id', id);
-    fetchData();
-  };
-
-  const handleSetDefaultAddress = async (id: string) => {
-    await supabase.from('addresses').update({ is_default: false }).eq('user_id', user?.id);
-    await supabase.from('addresses').update({ is_default: true }).eq('id', id);
-    fetchData();
+      if (newAddr.is_default) await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id);
+      const payload = { ...newAddr, user_id: user.id };
+      if (editingAddrId) await supabase.from('addresses').update(payload).eq('id', editingAddrId);
+      else await supabase.from('addresses').insert(payload);
+      fetchData(); setIsAddrModalOpen(false);
+    } catch (err: any) { alert(err.message); }
+    finally { setIsSaving(false); }
   };
 
   const handleLogout = async () => { await supabase.auth.signOut(); router.push('/'); };
 
-  if (loading) return <div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">{t.common.loading}</div>;
+  if (loading) return (
+    <div className="flex-1 flex flex-col items-center justify-center bg-hanji-white h-screen space-y-4">
+      <Loader2 className="w-10 h-10 animate-spin text-deep-sage" />
+      <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted">Authenticating User...</p>
+    </div>
+  );
+  
   if (!user) return null;
 
   const tabs = [
-    { id: 'orders', label: t?.mypage?.orderHistory || (language === 'ko' ? '주문 내역' : 'Orders'), icon: Package },
-    { id: 'wishlist', label: t?.mypage?.wishlist || (language === 'ko' ? '관심 상품' : 'Wishlist'), icon: Heart },
-    { id: 'addresses', label: t?.mypage?.addresses || (language === 'ko' ? '배송지 관리' : 'Addresses'), icon: MapPin },
-    { id: 'profile', label: t?.mypage?.profile || (language === 'ko' ? '내 정보 수정' : 'Profile'), icon: User },
+    { id: 'orders', label: '주문 내역', icon: Package },
+    { id: 'wishlist', label: '관심 상품', icon: Heart },
+    { id: 'addresses', label: '배송지 관리', icon: MapPin },
+    { id: 'profile', label: '정보 수정', icon: User },
   ];
 
   return (
     <div className="flex-1 bg-hanji-white py-12 px-4 sm:px-6 lg:px-8 min-h-screen font-sans">
       <Script src="//t1.daumcdn.net/mapjsapi/bundle/postcode/prod/postcode.v2.js" strategy="afterInteractive" />
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 border-b border-border-light pb-8">
-          <div>
-            <h1 className="font-serif text-4xl mb-4 text-charcoal">{t.mypage.title}</h1>
-            <p className="text-muted text-sm font-light"><span className="font-medium text-deep-sage border-b border-deep-sage/30 pb-0.5">{profile.full_name || user.email}</span> {language === 'ko' ? ' 님, 반갑습니다.' : ' welcome back.'}</p>
+        
+        {/* Top Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-12">
+          <div className="flex items-center gap-6">
+            <div className="relative w-20 h-20 bg-white rounded-full flex items-center justify-center border-4 border-hanji-white shadow-xl overflow-hidden group">
+              <User className="w-10 h-10 text-charcoal/20 group-hover:scale-110 transition-transform" />
+              {profile.tier !== 'FAMILY' && <Crown className="absolute -top-1 -right-1 w-6 h-6 text-amber-500 fill-current drop-shadow-md" />}
+            </div>
+            <div>
+              <div className="flex items-center gap-3 mb-1">
+                <h1 className="font-serif text-3xl font-bold text-charcoal">{profile.full_name || user.email?.split('@')[0]}님</h1>
+                <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-extrabold tracking-widest uppercase border ${profile.tier === 'VVIP' ? 'bg-purple-50 text-purple-600 border-purple-200' : profile.tier === 'VIP' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-charcoal/5 text-charcoal/40 border-charcoal/10'}`}>
+                  {profile.tier}
+                </span>
+              </div>
+              <p className="text-muted text-xs font-light">자연의 결을 아껴주시는 소중한 회원님입니다.</p>
+            </div>
           </div>
           <div className="flex gap-3">
-            {isAdmin && <Link href="/admin" className="px-4 py-2 bg-deep-sage/10 text-deep-sage rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all border border-deep-sage/20">Admin Access</Link>}
-            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2"><LogOut className="w-3 h-3" /> {t.common.logout}</button>
+            {isAdmin && <Link href="/admin" className="px-5 py-2.5 bg-charcoal text-white rounded-full text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage transition-all shadow-lg flex items-center gap-2">Admin Dashboard <ArrowUpRight className="w-3 h-3" /></Link>}
+            <button onClick={handleLogout} className="px-6 py-2.5 border border-border-light text-[10px] uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-2 font-bold"><LogOut className="w-3 h-3" /> Logout</button>
           </div>
         </div>
 
-        {/* Points & Coupons Dashboard */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-12">
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="bg-white border border-border-light p-8 rounded-sm shadow-sm flex items-center justify-between group hover:border-deep-sage transition-all cursor-pointer"
-          >
-            <div className="space-y-3">
-              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold flex items-center gap-2">
-                <Database className="w-3 h-3 text-deep-sage" /> Available Points
-              </p>
-              <h3 className="font-serif text-4xl text-charcoal group-hover:text-deep-sage transition-colors">
-                ₩{points.toLocaleString()}
-              </h3>
+        {/* CRM Dashboard Widgets */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          {/* Tier Progress Widget */}
+          <div className="lg:col-span-2 bg-white border border-border-light p-10 rounded-sm shadow-sm relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-4 opacity-5"><TrendingUp className="w-32 h-32" /></div>
+            <div className="relative z-10 space-y-8">
+              <div className="flex justify-between items-end">
+                <div className="space-y-2">
+                  <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold">Membership Tier Status</p>
+                  <h3 className="font-serif text-2xl text-charcoal">현재 <span className="text-deep-sage font-bold underline underline-offset-8">{profile.tier}</span> 등급입니다</h3>
+                </div>
+                {tierProgress.nextTier !== 'MAX' && (
+                  <p className="text-xs text-muted font-light"><span className="font-bold text-charcoal">₩{tierProgress.remain.toLocaleString()}</span> 추가 구매 시 <span className="text-amber-600 font-bold">{tierProgress.nextTier}</span> 승급</p>
+                )}
+              </div>
+              
+              <div className="space-y-3">
+                <div className="h-2 w-full bg-hanji-white rounded-full overflow-hidden border border-border-light/50">
+                  <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${tierProgress.current}%` }}
+                    transition={{ duration: 1, ease: "easeOut" }}
+                    className={`h-full ${profile.tier === 'VVIP' ? 'bg-purple-500' : 'bg-deep-sage'}`}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] uppercase tracking-tighter font-bold text-muted/60 px-1">
+                  <span>Family</span>
+                  <span className={profile.total_spent >= TIER_THRESHOLDS.VIP ? 'text-deep-sage' : ''}>VIP (20만원)</span>
+                  <span className={profile.total_spent >= TIER_THRESHOLDS.VVIP ? 'text-purple-500' : ''}>VVIP (50만원)</span>
+                </div>
+              </div>
             </div>
-            <div className="w-16 h-16 bg-deep-sage/5 rounded-full flex items-center justify-center text-deep-sage group-hover:bg-deep-sage group-hover:text-white transition-all duration-500">
-              <Plus className="w-8 h-8" />
-            </div>
-          </motion.div>
+          </div>
 
-          <motion.div 
-            whileHover={{ y: -5 }}
-            className="bg-white border border-border-light p-8 rounded-sm shadow-sm flex items-center justify-between group hover:border-terracotta transition-all cursor-pointer"
-          >
-            <div className="space-y-3">
-              <p className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold flex items-center gap-2">
-                <ClipboardCheck className="w-3 h-3 text-terracotta" /> Active Coupons
-              </p>
-              <h3 className="font-serif text-4xl text-charcoal group-hover:text-terracotta transition-colors">
-                {couponCount} <span className="text-xl">장</span>
-              </h3>
+          {/* Points Widget */}
+          <div className="bg-charcoal p-10 rounded-sm shadow-xl flex flex-col justify-between group cursor-pointer hover:bg-deep-sage transition-all duration-500 relative overflow-hidden">
+            <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:scale-110 transition-transform duration-700"><Database className="w-32 h-32 text-white" /></div>
+            <div className="space-y-2 relative z-10">
+              <p className="text-[10px] text-white/40 uppercase tracking-[0.2em] font-bold">Total Reward Points</p>
+              <h3 className="font-serif text-5xl text-white">₩{profile.points.toLocaleString()}</h3>
             </div>
-            <div className="w-16 h-16 bg-terracotta/5 rounded-full flex items-center justify-center text-terracotta group-hover:bg-terracotta group-hover:text-white transition-all duration-500">
-              <Box className="w-8 h-8" />
+            <div className="flex items-center gap-2 text-white/60 text-[9px] uppercase tracking-widest font-bold mt-8 group-hover:text-white transition-colors relative z-10">
+              Go to Store <ChevronRight className="w-3 h-3" />
             </div>
-          </motion.div>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -325,53 +286,56 @@ function MyPageContent() {
               {orders.length === 0 ? (
                 <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
                   <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Package className="w-8 h-8" /></div>
-                  <p className="text-muted font-light italic">{t.mypage.noOrder}</p>
-                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" /></Link>
+                  <p className="text-muted font-light italic">아직 주문 내역이 없습니다.</p>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2 font-bold"><ShoppingCart className="w-3.5 h-3.5" /> 상점 구경하기 <ChevronRight className="w-3 h-3" /></Link>
                 </div>
               ) : (
                 orders.map((order) => (
-                  <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
+                  <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
                     <div className="bg-hanji-white/50 px-8 py-5 border-b border-border-light flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                      <div className="flex items-center gap-6">
-                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest">주문일자</p><p className="text-sm font-medium">{new Date(order.created_at).toLocaleDateString()}</p></div>
-                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest">주문번호</p><p className="text-sm text-charcoal/60 font-mono">{order.id.slice(0, 8).toUpperCase()}</p></div>
+                      <div className="flex items-center gap-8">
+                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest font-bold">Order Date</p><p className="text-sm font-medium">{new Date(order.created_at).toLocaleDateString()}</p></div>
+                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest font-bold">Order ID</p><p className="text-sm text-charcoal/60 font-mono tracking-tighter">{order.id.slice(0, 12).toUpperCase()}</p></div>
                       </div>
-                      <div className="flex items-center gap-2"><span className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest ${order.status === '배송중' ? 'bg-deep-sage text-white' : order.status === '배송완료' ? 'bg-charcoal text-white' : 'bg-charcoal/5 text-charcoal/60'}`}>{order.status}</span></div>
+                      <div className="flex items-center gap-2">
+                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${
+                          order.status === '배송완료' ? 'bg-charcoal text-white border-charcoal' :
+                          order.status === '배송중' ? 'bg-deep-sage text-white border-deep-sage' :
+                          order.status === '배송준비중' ? 'bg-amber-50 text-amber-600 border-amber-200' :
+                          'bg-hanji-white text-muted border-border-light'
+                        }`}>
+                          {order.status}
+                        </span>
+                      </div>
                     </div>
                     <div className="p-8 space-y-8">
                       {order.order_items?.map((item: any, idx: number) => (
                         <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-8 group">
-                          <div className="flex gap-6">
-                            <div className="relative w-20 h-24 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-500" /></div>
-                            <div className="space-y-2"><h4 className="text-lg font-serif text-charcoal">{item.products?.name}</h4><p className="text-sm text-muted font-light">{item.quantity} 개 / ₩{item.price.toLocaleString()}</p><div className="pt-2 flex gap-2">{order.status === '배송완료' && (<button onClick={() => handleOpenReview(item.products)} className="text-[10px] border border-deep-sage text-deep-sage px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-deep-sage hover:text-white transition-all font-medium"><MessageSquare className="w-3 h-3" /> 리뷰 쓰기</button>)}<button onClick={() => router.push(`/shop/${item.products?.id}`)} className="text-[10px] border border-border-light px-3 py-1.5 rounded-sm flex items-center gap-1.5 hover:bg-hanji-white transition-all text-charcoal/60"><Box className="w-3 h-3" /> 재구매</button></div></div>
-                          </div>
-                          <div className="flex md:flex-col gap-2">
-                            {cancelableStatus.includes(order.status) && (
-                              <button 
-                                onClick={() => handleCancelOrder(order.id)}
-                                disabled={cancellingId === order.id}
-                                className="text-[10px] border border-border-light text-muted px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-terracotta hover:text-white hover:border-terracotta transition-all uppercase tracking-widest min-w-[120px] justify-center disabled:opacity-50"
-                              >
-                                {cancellingId === order.id ? (
-                                  <><Loader2 className="w-3 h-3 animate-spin" /> 취소 중...</>
-                                ) : (
-                                  <><X className="w-3 h-3" /> 주문 취소</>
+                          <div className="flex gap-8">
+                            <div className="relative w-24 h-28 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-700" /></div>
+                            <div className="space-y-2 py-1">
+                              <h4 className="text-xl font-serif text-charcoal tracking-tight">{item.products?.name}</h4>
+                              <p className="text-sm text-muted font-light">{item.quantity}개 / ₩{item.price.toLocaleString()}</p>
+                              <div className="pt-4 flex gap-3">
+                                {order.status === '배송완료' && (
+                                  <button onClick={() => handleOpenReview(item.products)} className="text-[10px] bg-white border border-charcoal text-charcoal px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all font-bold uppercase tracking-widest"><Camera className="w-3.5 h-3.5" /> Post Review</button>
                                 )}
+                                <button onClick={() => router.push(`/shop/${item.products?.id}`)} className="text-[10px] border border-border-light text-muted px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest"><Box className="w-3.5 h-3.5" /> Reorder</button>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex md:flex-col gap-3">
+                            <Link href="/support" className="text-[10px] border border-border-light text-charcoal/60 px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest min-w-[140px] justify-center font-bold font-sans">
+                              <MessageSquare className="w-3.5 h-3.5" /> 1:1 Inquiry
+                            </Link>
+                            {order.status === '배송중' && (
+                              <button className="text-[10px] bg-deep-sage text-white px-6 py-3 rounded-sm flex items-center gap-2 hover:opacity-90 transition-all uppercase tracking-widest min-w-[140px] justify-center font-bold font-sans shadow-lg">
+                                <Truck className="w-3.5 h-3.5" /> Track Package
                               </button>
                             )}
-                            
                             {order.status === '결제완료' && (
-                              <button 
-                                onClick={() => handleUpdateStatus(order.id, '배송완료')} 
-                                className="text-[10px] bg-deep-sage/10 text-deep-sage px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center"
-                              >
-                                <CheckCircle className="w-3 h-3" /> 배송완료 처리 (테스트)
-                              </button>
-                            )}
-                            
-                            {order.status === '배송완료' && (
-                              <button className="text-[10px] border border-charcoal text-charcoal px-5 py-2.5 rounded-sm flex items-center gap-2 hover:bg-charcoal hover:text-white transition-all uppercase tracking-widest min-w-[120px] justify-center">
-                                <ClipboardCheck className="w-3 h-3" /> 구매 확정 완료
+                              <button onClick={() => handleCancelOrder(order.id)} disabled={cancellingId === order.id} className="text-[10px] text-terracotta/60 hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-bold py-2 text-center disabled:opacity-30 underline underline-offset-4 decoration-terracotta/20">
+                                {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
                               </button>
                             )}
                           </div>
@@ -384,49 +348,73 @@ function MyPageContent() {
             </section>
           )}
 
-          {activeTab === 'addresses' && (
-            <div className="space-y-8">
-              {dbError && (
-                <div className="bg-terracotta/10 border border-terracotta/20 p-6 rounded-sm flex items-start gap-4 mb-8">
-                  <Database className="w-6 h-6 text-terracotta flex-shrink-0" />
-                  <div className="space-y-2">
-                    <p className="font-bold text-terracotta">데이터베이스 설정이 필요합니다.</p>
-                    <p className="text-xs text-terracotta/80 leading-relaxed">배송지 테이블이 생성되지 않았거나 설정이 올바르지 않습니다. 위에서 안내드린 SQL 코드를 실행해 주세요.</p>
-                    <p className="text-[10px] bg-white/50 p-2 rounded font-mono">{dbError}</p>
+          {activeTab === 'profile' && (
+            <div className="max-w-2xl mx-auto bg-white border border-border-light p-12 rounded-sm shadow-sm">
+              <div className="mb-10 space-y-2">
+                <h3 className="font-serif text-3xl text-charcoal">정보 수정</h3>
+                <p className="text-xs text-muted font-light italic">회원님의 소중한 정보를 안전하게 관리합니다.</p>
+              </div>
+              <form onSubmit={handleUpdateProfile} className="space-y-10">
+                <div className="space-y-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Full Name</label>
+                    <input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="성함을 입력해 주세요" />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Phone Number</label>
+                    <input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="010-0000-0000" />
+                  </div>
+                  <div className="space-y-3 opacity-50">
+                    <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Email Address</label>
+                    <div className="w-full bg-hanji-white/10 border border-border-light px-6 py-4 rounded-sm text-sm font-mono">{user.email}</div>
                   </div>
                 </div>
-              )}
-              
-              <div className="flex justify-between items-center mb-4">
-                <h3 className="font-serif text-2xl text-charcoal">{t.mypage.addresses}</h3>
-                <button onClick={handleOpenAddModal} className="bg-charcoal text-white px-6 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg"><Plus className="w-4 h-4" /> 새 배송지 추가</button>
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-xl shadow-xl disabled:opacity-50">
+                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Save className="w-6 h-6" /> Save Changes</>}
+                </button>
+              </form>
+            </div>
+          )}
+
+          {activeTab === 'addresses' && (
+            <div className="space-y-10">
+              <div className="flex justify-between items-end">
+                <div className="space-y-2">
+                  <h3 className="font-serif text-3xl text-charcoal">배송지 관리</h3>
+                  <p className="text-xs text-muted font-light">주문 시 사용할 배송지 정보를 관리합니다.</p>
+                </div>
+                <button onClick={() => { setEditingAddrId(null); setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false }); setIsAddrModalOpen(true); }} className="bg-charcoal text-white px-8 py-3.5 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-[0.2em] flex items-center gap-2 shadow-lg font-bold">
+                  <Plus className="w-4 h-4" /> Add New Address
+                </button>
               </div>
               
               {addresses.length === 0 ? (
                 <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-4">
-                  <div className="w-12 h-12 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Info className="w-6 h-6" /></div>
                   <p className="text-muted font-light italic">등록된 배송지가 없습니다.</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   {addresses.map((addr) => (
-                    <div key={addr.id} className={`p-8 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage ring-1 ring-deep-sage/20 shadow-md' : 'border-border-light hover:border-deep-sage/50'}`}>
-                      <div className="flex justify-between items-start mb-6">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${addr.is_default ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted'}`}><MapPin className="w-5 h-5" /></div>
-                          <div><span className="font-serif text-xl text-charcoal">{addr.address_name}</span>{addr.is_default && <span className="ml-2 bg-deep-sage text-white text-[8px] px-2 py-0.5 rounded-full uppercase align-middle">{t.mypage.defaultAddress}</span>}</div>
+                    <div key={addr.id} className={`p-10 bg-white border rounded-sm relative group transition-all ${addr.is_default ? 'border-deep-sage shadow-md' : 'border-border-light hover:border-deep-sage/40'}`}>
+                      <div className="flex justify-between items-start mb-8">
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-3">
+                            <span className="font-serif text-2xl text-charcoal">{addr.address_name}</span>
+                            {addr.is_default && <span className="bg-deep-sage text-white text-[8px] px-2.5 py-1 rounded-full uppercase font-extrabold tracking-widest">Default</span>}
+                          </div>
+                          <p className="text-xs text-muted font-light uppercase tracking-widest">{addr.receiver_name}</p>
                         </div>
-                        <div className="flex gap-1">
-                          <button onClick={() => handleOpenEditModal(addr)} className="p-2 text-muted hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
-                          <button onClick={() => handleDeleteAddress(addr.id)} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
+                        <div className="flex gap-2">
+                          <button onClick={() => { setEditingAddrId(addr.id); setNewAddr(addr); setIsAddrModalOpen(true); }} className="p-2 text-muted hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
+                          <button onClick={async () => { if(confirm('삭제하시겠습니까?')) { await supabase.from('addresses').delete().eq('id', addr.id); fetchData(); } }} className="p-2 text-muted hover:text-terracotta transition-colors"><Trash2 className="w-4 h-4" /></button>
                         </div>
                       </div>
-                      <div className="space-y-3 text-sm text-charcoal/80 font-light bg-hanji-white/30 p-4 rounded-sm">
-                        <p className="font-medium flex items-center gap-2"><User className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_name}</p>
-                        <p className="flex items-center gap-2"><Truck className="w-3.5 h-3.5 opacity-50" /> {addr.receiver_phone}</p>
-                        <p className="flex items-start gap-2 leading-relaxed"><MapPin className="w-3.5 h-3.5 opacity-50 mt-0.5" /> <span>({addr.postcode})<br/>{addr.address}<br/>{addr.detail_address}</span></p>
+                      <div className="text-sm text-charcoal/80 font-light leading-relaxed mb-8">
+                        <p className="mb-1">{addr.receiver_phone}</p>
+                        <p className="opacity-60">({addr.postcode}) {addr.address}</p>
+                        <p>{addr.detail_address}</p>
                       </div>
-                      {!addr.is_default && (<button onClick={() => handleSetDefaultAddress(addr.id)} className="mt-6 w-full py-2 border border-border-light text-[10px] text-muted hover:border-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm"><Star className="w-3 h-3" /> 기본 배송지로 설정</button>)}
+                      {!addr.is_default && (<button onClick={async () => { await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id); await supabase.from('addresses').update({ is_default: true }).eq('id', addr.id); fetchData(); }} className="w-full py-3 border border-border-light text-[10px] text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-2 rounded-sm uppercase tracking-widest font-bold font-sans">Set as Default</button>)}
                     </div>
                   ))}
                 </div>
@@ -435,24 +423,14 @@ function MyPageContent() {
           )}
 
           {activeTab === 'wishlist' && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
               {wishItems.length === 0 ? (
-                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6"><div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Heart className="w-8 h-8" /></div><p className="text-muted font-light italic">{t.mypage.noWish}</p><Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2"><ShoppingCart className="w-3.5 h-3.5" /> {t.mypage.goToShop} <ChevronRight className="w-3 h-3" /></Link></div>
-              ) : (wishItems.map(p => <ProductCard key={p.id} product={p} />))}
-            </div>
-          )}
-
-          {activeTab === 'profile' && (
-            <div className="max-w-2xl mx-auto bg-white border border-border-light p-10 rounded-sm shadow-sm">
-              <h3 className="font-serif text-2xl text-charcoal mb-8">{t.mypage.profile}</h3>
-              <form onSubmit={handleUpdateProfile} className="space-y-8">
-                <div className="space-y-6">
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.name}</label><input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">{t.checkout.phone}</label><input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
-                  <div className="space-y-2 opacity-50"><label className="text-[10px] text-muted uppercase tracking-widest ml-1">Email</label><input readOnly value={user.email} className="w-full bg-hanji-white/10 border border-border-light px-5 py-3 rounded-sm text-sm cursor-not-allowed" /></div>
+                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6 w-full col-span-full">
+                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Heart className="w-8 h-8" /></div>
+                  <p className="text-muted font-light italic">관심 상품이 비어 있습니다.</p>
+                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest font-bold">Explore Collection</Link>
                 </div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 font-serif text-lg shadow-lg disabled:opacity-50">{isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <><Save className="w-5 h-5" /> {t.mypage.saveBtn}</>}</button>
-              </form>
+              ) : (wishItems.map(p => <ProductCard key={p.id} product={p} />))}
             </div>
           )}
         </div>
@@ -461,16 +439,20 @@ function MyPageContent() {
       {/* Review Modal */}
       <AnimatePresence>
         {isReviewModalOpen && selectedProduct && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsReviewModalOpen(false)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-xl bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">리뷰 작성하기</h3><button onClick={() => setIsReviewModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
-              <div className="flex gap-6 mb-10 items-center bg-hanji-white/30 p-4 rounded-sm border border-border-light"><div className="relative w-16 h-20 bg-white rounded-sm overflow-hidden border border-border-light"><Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" /></div><div><p className="text-[10px] text-muted uppercase tracking-widest mb-1">Product</p><h4 className="text-xl font-serif text-charcoal">{selectedProduct.name}</h4></div></div>
-              <form onSubmit={handleSubmitReview} className="space-y-10">
-                <div className="text-center space-y-4"><p className="text-xs text-muted uppercase tracking-[0.2em]">상품은 만족스러우셨나요?</p><div className="flex justify-center gap-3">{[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all ${reviewData.rating >= star ? 'text-deep-sage scale-110' : 'text-border-light hover:text-deep-sage/40'}`}><Star className={`w-10 h-10 ${reviewData.rating >= star ? 'fill-current' : ''}`} /></button>))}</div></div>
-                <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-[0.1em] ml-1">솔직한 구매 후기를 들려주세요</label><textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="다른 구매자들에게 도움이 되는 정보를 공유해 주세요 (최소 10자)" rows={6} className="w-full bg-hanji-white/30 border border-border-light px-5 py-4 rounded-sm text-sm focus:border-deep-sage outline-none resize-none" /></div>
-                <div className="grid grid-cols-4 gap-4"><div className="aspect-square border-2 border-dashed border-border-light rounded-sm flex flex-col items-center justify-center text-muted hover:border-deep-sage transition-all cursor-pointer"><Camera className="w-6 h-6 mb-2" /><span className="text-[9px] uppercase font-bold">Photo</span></div></div>
-                <button type="submit" disabled={isSaving || reviewData.content.length < 10} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30">리뷰 등록 완료하기</button>
+            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-xl bg-white rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">리뷰 작성</h3><button onClick={() => setIsReviewModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
+              <div className="flex gap-6 mb-12 items-center bg-hanji-white/30 p-6 rounded-sm border border-border-light"><div className="relative w-16 h-20 bg-white rounded-sm overflow-hidden border border-border-light shadow-sm"><Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" /></div><div><p className="text-[10px] text-muted uppercase tracking-widest mb-1 font-bold">Review Target</p><h4 className="text-xl font-serif text-charcoal">{selectedProduct.name}</h4></div></div>
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                setIsSaving(true);
+                await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || '회원', rating: reviewData.rating, content: reviewData.content, is_verified: true });
+                setIsReviewModalOpen(false); setIsSaving(false); alert('리뷰가 등록되었습니다.');
+              }} className="space-y-12">
+                <div className="text-center space-y-6"><p className="text-[10px] text-muted uppercase tracking-[0.3em] font-bold">Rate your experience</p><div className="flex justify-center gap-4">{[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all ${reviewData.rating >= star ? 'text-deep-sage scale-110' : 'text-border-light hover:text-deep-sage/40'}`}><Star className={`w-12 h-12 ${reviewData.rating >= star ? 'fill-current' : ''}`} /></button>))}</div></div>
+                <div className="space-y-3"><label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Write your review</label><textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="상품에 대한 진솔한 후기를 남겨주세요." rows={6} className="w-full bg-hanji-white/30 border border-border-light px-6 py-5 rounded-sm text-sm focus:border-deep-sage outline-none resize-none transition-all" /></div>
+                <button type="submit" disabled={isSaving || reviewData.content.length < 5} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30 uppercase tracking-widest">Complete Review</button>
               </form>
             </motion.div>
           </div>
@@ -480,20 +462,20 @@ function MyPageContent() {
       {/* Address Modal */}
       <AnimatePresence>
         {isAddrModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-10 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">{editingAddrId ? '배송지 수정' : '새 배송지 등록'}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-md" />
+            <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
+              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">{editingAddrId ? 'Address Edit' : 'New Address'}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
               <form onSubmit={handleSaveAddress} className="space-y-8">
-                <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">배송지 별칭</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="우리 집, 회사 등" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
-                <div className="grid grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">받는 분 성함</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div><div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">연락처</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div></div>
+                <div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Label</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder="e.g. Home, Office" className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" /></div>
+                <div className="grid grid-cols-2 gap-6"><div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Receiver</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" /></div><div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Contact</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="010-0000-0000" className="w-full bg-hanji-white/30 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" /></div></div>
                 <div className="space-y-4">
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">우편번호</label><div className="flex gap-3"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" /><button type="button" onClick={handleAddressSearch} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase">주소 찾기</button></div></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">주소</label><input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-5 py-3.5 rounded-sm text-sm" /></div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase ml-1">상세 주소</label><input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder="상세 정보를 입력해 주세요" className="w-full border border-border-light px-5 py-3.5 rounded-sm text-sm focus:border-deep-sage outline-none" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Zip Code</label><div className="flex gap-3"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-sm font-mono" /><button type="button" onClick={() => { if(typeof window !== 'undefined' && (window as any).daum) new (window as any).daum.Postcode({ oncomplete: (data:any) => setNewAddr(prev => ({ ...prev, postcode: data.zonecode, address: data.address })) }).open(); }} className="px-6 py-2 bg-charcoal text-white text-[10px] rounded-sm flex items-center gap-2 flex-shrink-0 hover:bg-deep-sage transition-all uppercase font-bold tracking-widest">Search</button></div></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Address</label><input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-sm opacity-80" /></div>
+                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase font-bold ml-1 tracking-widest">Detail</label><input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder="Detail address info" className="w-full border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" /></div>
                 </div>
-                <div className="pt-4"><label className="flex items-center gap-3 cursor-pointer group"><input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-5 h-5 accent-deep-sage cursor-pointer" /><span className="text-xs text-muted group-hover:text-charcoal transition-colors">이 주소를 기본 배송지로 설정합니다.</span></label></div>
-                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-4">{isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />} {editingAddrId ? '주소 수정 완료' : '주소 저장하기'}</button>
+                <div className="pt-4"><label className="flex items-center gap-3 cursor-pointer group"><input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-5 h-5 accent-deep-sage cursor-pointer" /><span className="text-xs text-muted group-hover:text-charcoal transition-colors font-medium">Set as default shipping address.</span></label></div>
+                <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl mt-6 uppercase tracking-widest disabled:opacity-50">{isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : <Save className="w-6 h-6" />} Save Address</button>
               </form>
             </motion.div>
           </div>
@@ -505,7 +487,7 @@ function MyPageContent() {
 
 export default function MyPage() {
   return (
-    <Suspense fallback={<div className="flex-1 flex items-center justify-center bg-hanji-white h-screen text-xs uppercase tracking-widest text-deep-sage">Loading...</div>}>
+    <Suspense fallback={<div className="flex-1 flex flex-col items-center justify-center bg-hanji-white h-screen space-y-4 text-xs uppercase tracking-[0.3em] font-bold text-deep-sage">Loading MyPage...</div>}>
       <MyPageContent />
     </Suspense>
   );
