@@ -43,7 +43,7 @@ export async function GET(request: Request) {
     const name = naverUser.name || naverUser.nickname || 'Naver User';
 
     // 3. Supabase Admin 클라이언트 생성 (유저 강제 생성용)
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!, // 중요: Admin 권한 필요
