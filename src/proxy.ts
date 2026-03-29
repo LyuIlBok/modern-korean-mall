@@ -41,8 +41,10 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
-  // 1. 일반 사용자 보호 경로 (/mypage, /checkout)
-  if (pathname.startsWith('/mypage') || pathname.startsWith('/checkout')) {
+  // 1. 일반 사용자 보호 경로 (/checkout 만 엄격하게 보호)
+  // /mypage의 경우 세션 갱신 지연 등으로 인해 미들웨어에서 일시적으로 user를 못 읽을 수 있으므로
+  // 사용자 경험을 위해 강제 리다이렉트를 클라이언트에 맡깁니다.
+  if (pathname.startsWith('/checkout')) {
     if (!user) {
       const redirectUrl = request.nextUrl.clone();
       redirectUrl.pathname = '/login';

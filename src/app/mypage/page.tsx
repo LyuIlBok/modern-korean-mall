@@ -412,8 +412,8 @@ function MyPageContent() {
           {activeTab === 'profile' && (
             <div className="max-w-2xl mx-auto">
               <AnimatePresence mode="wait">
-                {!isVerified ? (
-                  /* 비밀번호 재확인 뷰 */
+                {(!isVerified && user?.app_metadata?.provider === 'email') ? (
+                  /* 이메일 사용자 전용 비밀번호 재확인 뷰 */
                   <motion.div 
                     key="verify"
                     initial={{ opacity: 0, y: 10 }}
@@ -463,10 +463,10 @@ function MyPageContent() {
                     </form>
                   </motion.div>
                 ) : (
-                  /* 실제 정보 수정 폼 */
+                  /* 소셜 로그인 사용자 또는 인증 완료된 이메일 사용자용 수정 폼 (즉시 렌더링) */
                   <motion.div 
                     key="edit"
-                    initial={{ opacity: 0, x: 20 }}
+                    initial={isVerified ? { opacity: 0, x: 20 } : { opacity: 1 }}
                     animate={{ opacity: 1, x: 0 }}
                     className="bg-white border border-border-light p-12 rounded-sm shadow-sm"
                   >
