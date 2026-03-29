@@ -11,7 +11,8 @@ import {
   Package, Truck, CheckCircle, LogOut, Heart, ShoppingBag, 
   MapPin, User, Save, Plus, Trash2, Star, Loader2, X, 
   ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, 
-  Box, Camera, Edit2, Database, Crown, TrendingUp, ArrowUpRight
+  Box, Camera, Edit2, Database, Crown, TrendingUp, ArrowUpRight,
+  ShieldCheck, Lock, Key, Eye, EyeOff
 } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
