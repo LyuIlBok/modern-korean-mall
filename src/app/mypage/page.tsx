@@ -205,16 +205,22 @@ function MyPageContent() {
     }
   };
 
-  // 탭 변경 시 리셋 로직
+  // 탭 변경 시 리셋 및 자동 패스 로직
   useEffect(() => {
-    if (activeTab !== 'profile') {
+    if (activeTab === 'profile') {
+      const provider = user?.app_metadata?.provider;
+      // [개선] 소셜 로그인 유저는 즉시 프리패스
+      if (provider && provider !== 'email') {
+        setIsVerified(true);
+      } else {
+        // 이메일 유저는 명시적 검증 필요
+        setIsVerified(false);
+        setVerifyPassword('');
+      }
+    } else {
+      // 다른 탭으로 이동 시 보안을 위해 상태 초기화
       setIsVerified(false);
       setVerifyPassword('');
-    } else {
-      // 소셜 로그인 사용자는 비밀번호 확인 없이 즉시 통과
-      if (user?.app_metadata?.provider !== 'email') {
-        setIsVerified(true);
-      }
     }
   }, [activeTab, user]);
 
