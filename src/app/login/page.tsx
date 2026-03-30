@@ -68,6 +68,7 @@ export default function LoginPage() {
 
       if (data?.url) {
         console.log(`[OAuth Success] Redirecting to: ${data.url}`);
+        window.location.href = data.url; // [핵심] 실제 리다이렉트 실행
       }
     } catch (err: any) {
       console.error(`[OAuth Exception] ${provider}:`, err);
