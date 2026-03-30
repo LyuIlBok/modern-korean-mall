@@ -14,19 +14,21 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
 
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session) router.push('/mypage');
+      if (data.session) router.push('/');
     };
     checkUser();
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return;
     setIsLoading(true);
     setErrorMsg('');
 
@@ -37,7 +39,7 @@ export default function LoginPage() {
       });
 
       if (error) throw error;
-      router.push('/mypage');
+      router.push('/');
     } catch (err: any) {
       setErrorMsg(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : err.message);
     } finally {
@@ -45,9 +47,12 @@ export default function LoginPage() {
     }
   };
 
-  // 소셜 로그인 처리
+  // 소셜 로그인 처리 고도화
   const handleSocialLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao' | 'naver') => {
-    e.preventDefault(); // [보안/기능] 기본 이벤트 전파 차단
+    e.preventDefault();
+    if (socialLoading) return; // 중복 클릭 방지
+
+    setSocialLoading(provider);
     console.log(`[OAuth Debug] ${provider} 로그인 시도 시작`);
 
     try {
@@ -65,6 +70,7 @@ export default function LoginPage() {
       if (error) {
         console.error(`[OAuth Error] ${provider}:`, error.message);
         alert(`로그인 실패 (${provider}): ${error.message}`);
+        setSocialLoading(null);
         return;
       }
 
@@ -73,14 +79,17 @@ export default function LoginPage() {
         // [Foolproof 리다이렉트] 2중 강제 이동 전략 적용
         window.location.assign(data.url);
         setTimeout(() => {
-          window.location.href = data.url;
-        }, 100);
+          if (typeof window !== 'undefined') window.location.href = data.url;
+        }, 150);
       }
     } catch (err: any) {
       console.error(`[OAuth Exception] ${provider}:`, err);
       alert(`시스템 오류가 발생했습니다: ${err.message}`);
+      setSocialLoading(null);
     }
   };
+
+  const isAnyLoading = isLoading || !!socialLoading;
 
   return (
     <div className="flex-1 flex items-center justify-center bg-hanji-white py-20 px-4 min-h-screen">
@@ -115,10 +124,11 @@ export default function LoginPage() {
                 <input 
                   required
                   type="email" 
+                  disabled={isAnyLoading}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="example@email.com"
-                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
                 />
               </div>
             </div>
@@ -133,10 +143,11 @@ export default function LoginPage() {
                 <input 
                   required
                   type="password" 
+                  disabled={isAnyLoading}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
                 />
               </div>
             </div>
@@ -153,8 +164,8 @@ export default function LoginPage() {
 
             <button 
               type="submit" 
-              disabled={isLoading}
-              className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98]"
+              disabled={isAnyLoading}
+              className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
             >
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>로그인하기 <ArrowRight className="w-4 h-4" /></>}
             </button>
@@ -168,28 +179,33 @@ export default function LoginPage() {
           <div className="grid grid-cols-3 gap-3">
             <button 
               type="button"
+              disabled={isAnyLoading}
               onClick={(e) => handleSocialLogin(e, 'google')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
             >
-              <Chrome className="w-5 h-5 text-[#4285F4]" /> Google
+              {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
+              Google
             </button>
             <button 
               type="button"
+              disabled={isAnyLoading}
               onClick={(e) => handleSocialLogin(e, 'kakao')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
             >
-              <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
+              {socialLoading === 'kakao' ? <Loader2 className="w-5 h-5 animate-spin text-[#3C1E1E]" /> : <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" />}
+              Kakao
             </button>
             <button 
               type="button"
+              disabled={isAnyLoading}
               onClick={(e) => handleSocialLogin(e, 'naver')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
             >
-              <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div> Naver
+              {socialLoading === 'naver' ? <Loader2 className="w-5 h-5 animate-spin text-[#03C75A]" /> : <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div>}
+              Naver
             </button>
           </div>
         </div>
-
 
         <div className="text-center mt-10">
           <p className="text-sm text-muted">
