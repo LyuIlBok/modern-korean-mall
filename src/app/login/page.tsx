@@ -165,6 +165,7 @@ export default function LoginPage() {
             >
               <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div> Naver
             </button>
+
           </div>
         </div>
 
