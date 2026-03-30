@@ -47,8 +47,9 @@ export default function LoginPage() {
 
   // 소셜 로그인 처리
   const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
+    console.log(`[OAuth Debug] ${provider} 로그인 시도 시작`);
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { data, error } = await supabase.auth.signInWithOAuth({
         // Supabase Custom Config에 맞춰 provider 명칭 전달 (타입 에러 방지를 위해 as any 사용)
         provider: provider === 'naver' ? 'custom:naver' as any : provider,
         options: {
@@ -58,9 +59,19 @@ export default function LoginPage() {
           },
         },
       });
-      if (error) throw error;
+
+      if (error) {
+        console.error(`[OAuth Error] ${provider}:`, error.message);
+        alert(`로그인 실패 (${provider}): ${error.message}`);
+        return;
+      }
+
+      if (data?.url) {
+        console.log(`[OAuth Success] Redirecting to: ${data.url}`);
+      }
     } catch (err: any) {
-      alert(`소셜 로그인 시도 중 오류가 발생했습니다: ${err.message}`);
+      console.error(`[OAuth Exception] ${provider}:`, err);
+      alert(`시스템 오류가 발생했습니다: ${err.message}`);
     }
   };
 
