@@ -46,8 +46,10 @@ export default function LoginPage() {
   };
 
   // 소셜 로그인 처리
-  const handleSocialLogin = async (provider: 'google' | 'kakao' | 'naver') => {
+  const handleSocialLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao' | 'naver') => {
+    e.preventDefault(); // [보안/기능] 기본 이벤트 전파 차단
     console.log(`[OAuth Debug] ${provider} 로그인 시도 시작`);
+
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         // Supabase Custom Config에 맞춰 provider 명칭 전달 (타입 에러 방지를 위해 as any 사용)
@@ -68,7 +70,11 @@ export default function LoginPage() {
 
       if (data?.url) {
         console.log(`[OAuth Success] Redirecting to: ${data.url}`);
-        window.location.href = data.url; // [핵심] 실제 리다이렉트 실행
+        // [Foolproof 리다이렉트] 2중 강제 이동 전략 적용
+        window.location.assign(data.url);
+        setTimeout(() => {
+          window.location.href = data.url;
+        }, 100);
       }
     } catch (err: any) {
       console.error(`[OAuth Exception] ${provider}:`, err);
@@ -92,6 +98,7 @@ export default function LoginPage() {
                 fill 
                 className="object-contain"
                 priority
+                unoptimized={true}
               />
             </div>
           </Link>
@@ -160,26 +167,29 @@ export default function LoginPage() {
 
           <div className="grid grid-cols-3 gap-3">
             <button 
-              onClick={() => handleSocialLogin('google')}
+              type="button"
+              onClick={(e) => handleSocialLogin(e, 'google')}
               className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
               <Chrome className="w-5 h-5 text-[#4285F4]" /> Google
             </button>
             <button 
-              onClick={() => handleSocialLogin('kakao')}
+              type="button"
+              onClick={(e) => handleSocialLogin(e, 'kakao')}
               className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
               <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" /> Kakao
             </button>
             <button 
-              onClick={() => handleSocialLogin('naver')}
+              type="button"
+              onClick={(e) => handleSocialLogin(e, 'naver')}
               className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter"
             >
               <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div> Naver
             </button>
-
           </div>
         </div>
+
 
         <div className="text-center mt-10">
           <p className="text-sm text-muted">
