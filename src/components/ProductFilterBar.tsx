@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Filter, ChevronDown, X, RotateCcw, TrendingUp, Flame } from 'lucide-react';
+import { Search, ChevronDown, X, RotateCcw, TrendingUp, Flame } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const categories = ['전체', '농산물', '농자재'];
@@ -12,6 +12,11 @@ const sortOptions = [
   { label: '가격 높은순', value: 'price_desc' },
   { label: '평점 높은순', value: 'rating_desc' },
 ];
+
+interface TrendingItem {
+  keyword: string;
+  count: number;
+}
 
 export default function ProductFilterBar() {
   const router = useRouter();
@@ -25,7 +30,7 @@ export default function ProductFilterBar() {
   
   // Trending State
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const [trending, setTrending] = useState<any[]>([]);
+  const [trending, setTrending] = useState<TrendingItem[]>([]);
 
   // URL 업데이트 함수
   const updateParams = useCallback((newParams: Record<string, string | null>) => {
@@ -45,14 +50,14 @@ export default function ProductFilterBar() {
     try {
       const res = await fetch('/api/search/trending');
       const json = await res.json();
-      if (json.success) setTrending(json.data);
+      if (json.success) setTrending(json.data as TrendingItem[]);
     } catch (err) {
-      console.error('Trending fetch error');
+      console.error('Trending fetch error', err);
     }
   };
 
   // 검색 로깅
-  const logSearch = async (keyword: string) => {
+  const logSearch = useCallback(async (keyword: string) => {
     if (!keyword || keyword.trim().length < 2) return;
     try {
       await fetch('/api/search/trending', {
@@ -61,9 +66,9 @@ export default function ProductFilterBar() {
         body: JSON.stringify({ keyword: keyword.trim() })
       });
     } catch (err) {
-      console.error('Search logging error');
+      console.error('Search logging error', err);
     }
-  };
+  }, []);
 
   // 외부 클릭 감지
   useEffect(() => {

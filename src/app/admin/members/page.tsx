@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 
-type Profile = {
+interface Profile {
   id: string;
   email: string;
   full_name: string;
@@ -18,7 +18,7 @@ type Profile = {
   tier: string;
   points: number;
   created_at?: string;
-};
+}
 
 export default function AdminMembersPage() {
   const [members, setMembers] = useState<Profile[]>([]);
@@ -27,7 +27,6 @@ export default function AdminMembersPage() {
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null);
   
-  // Modal states
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pointAction, setPointAction] = useState<'add' | 'sub'>('add');
   const [pointAmount, setPointAmount] = useState('');
@@ -35,6 +34,21 @@ export default function AdminMembersPage() {
   const [actionLoading, setActionLoading] = useState(false);
 
   const router = useRouter();
+
+  const fetchMembers = useCallback(async () => {
+    setLoading(true);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('is_admin', false);
+    
+    if (error) {
+      console.error('Error fetching members:', error);
+    } else {
+      setMembers((data as Profile[]) || []);
+    }
+    setLoading(false);
+  }, []);
 
   useEffect(() => {
     const checkAdminAndFetch = async () => {
@@ -46,22 +60,7 @@ export default function AdminMembersPage() {
       fetchMembers();
     };
     checkAdminAndFetch();
-  }, [router]);
-
-  const fetchMembers = async () => {
-    setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('is_admin', false);
-    
-    if (error) {
-      console.error('Error fetching members:', error);
-    } else {
-      setMembers(data || []);
-    }
-    setLoading(false);
-  };
+  }, [router, fetchMembers]);
 
   const filteredAndSortedMembers = members
     .filter(m => 
@@ -97,7 +96,6 @@ export default function AdminMembersPage() {
     }
 
     try {
-      // [보안 고도화] 클라이언트 직접 수정 대신 서버 API 호출
       const { data: { session } } = await supabase.auth.getSession();
       
       const response = await fetch('/api/admin/members', {
@@ -107,7 +105,7 @@ export default function AdminMembersPage() {
           userId: selectedMember.id,
           targetTier: selectedTier,
           targetPoints: newPoints,
-          adminToken: session?.user?.id // 서버에서 is_admin 여부 재검증용
+          adminToken: session?.user?.id
         })
       });
 
@@ -117,7 +115,6 @@ export default function AdminMembersPage() {
         throw new Error(result.error || '업데이트 실패');
       }
 
-      // 로컬 상태 즉시 반영
       setMembers(prev => prev.map(m => 
         m.id === selectedMember.id 
           ? { ...m, tier: selectedTier, points: newPoints }
@@ -125,8 +122,9 @@ export default function AdminMembersPage() {
       ));
       alert(result.message || '회원 정보가 성공적으로 수정되었습니다.');
       setIsModalOpen(false);
-    } catch (error: any) {
-      alert(error.message);
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      alert(msg);
       console.error(error);
     } finally {
       setActionLoading(false);
@@ -145,7 +143,6 @@ export default function AdminMembersPage() {
     <div className="min-h-screen bg-hanji-white font-sans p-8">
       <div className="max-w-7xl mx-auto space-y-8">
         
-        {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-xl shadow-sm border border-border-light">
           <div className="flex items-center gap-4">
             <button onClick={() => router.push('/admin')} className="p-2 hover:bg-hanji-white rounded-full transition-all">
@@ -182,7 +179,6 @@ export default function AdminMembersPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-xl shadow-sm border border-border-light overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
@@ -246,7 +242,6 @@ export default function AdminMembersPage() {
 
       </div>
 
-      {/* Action Modal */}
       <AnimatePresence>
         {isModalOpen && selectedMember && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -273,7 +268,6 @@ export default function AdminMembersPage() {
               </div>
 
               <div className="p-6 space-y-6">
-                {/* Tier Management */}
                 <div className="space-y-3">
                   <label className="text-xs font-bold uppercase tracking-widest text-muted flex items-center gap-2">
                     <Crown className="w-3.5 h-3.5" /> 회원 등급 변경
@@ -289,7 +283,6 @@ export default function AdminMembersPage() {
                   </select>
                 </div>
 
-                {/* Points Management */}
                 <div className="space-y-3 pt-4 border-t border-border-light">
                   <label className="text-xs font-bold uppercase tracking-widest text-muted flex items-center gap-2">
                     <DollarSign className="w-3.5 h-3.5" /> 적립금 관리 (현재: {new Intl.NumberFormat('ko-KR').format(selectedMember.points || 0)}P)

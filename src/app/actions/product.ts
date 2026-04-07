@@ -3,14 +3,21 @@
 import { supabase } from '@/lib/supabaseClient';
 import { revalidatePath } from 'next/cache';
 
-export async function addReview(formData: {
+interface ReviewFormData {
   productId: string;
   userId: string;
   userName: string;
   rating: number;
   content: string;
   photoUrl?: string | null;
-}) {
+}
+
+interface ProductToDelete {
+  id: string;
+  imageUrl?: string;
+}
+
+export async function addReview(formData: ReviewFormData) {
   const { error } = await supabase.from('reviews').insert([{
     product_id: formData.productId,
     user_id: formData.userId,
@@ -27,7 +34,7 @@ export async function addReview(formData: {
   revalidatePath(`/shop/${formData.productId}`);
 }
 
-export async function deleteProductAndImage(product: any) {
+export async function deleteProductAndImage(product: ProductToDelete) {
   // 1. Storage에서 이미지 삭제
   if (product.imageUrl && product.imageUrl.includes('product-images')) {
     const urlParts = product.imageUrl.split('product-images/');

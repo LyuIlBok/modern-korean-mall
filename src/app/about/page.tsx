@@ -6,6 +6,11 @@ export const metadata = {
   title: '우리의 결 | 자연의 결',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function AboutPage() {
   return (
     <div className="flex-1 flex flex-col bg-hanji-white">
@@ -83,8 +88,8 @@ export default function AboutPage() {
         <div className="text-center max-w-3xl mx-auto py-24">
           <h2 className="font-serif text-4xl mb-10">결결이 깃든 우리의 약속</h2>
           <p className="text-lg text-charcoal/70 leading-relaxed font-light italic">
-            "우리는 단순히 농산물을 파는 것이 아니라,<br/>
-            자연과 사람이 함께 호흡하는 단아한 삶의 방식을 제안합니다."
+            &quot;우리는 단순히 농산물을 파는 것이 아니라,<br/>
+            자연과 사람이 함께 호흡하는 단아한 삶의 방식을 제안합니다.&quot;
           </p>
           <div className="mt-12 w-12 h-0.5 bg-deep-sage mx-auto opacity-30" />
         </div>

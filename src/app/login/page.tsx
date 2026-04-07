@@ -7,10 +7,9 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
-import { useLanguageStore } from '@/store/useLanguageStore';
+import { Provider } from '@supabase/supabase-js';
 
 export default function LoginPage() {
-  const { t } = useLanguageStore();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -40,25 +39,23 @@ export default function LoginPage() {
 
       if (error) throw error;
       router.push('/');
-    } catch (err: any) {
-      setErrorMsg(err.message === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setErrorMsg(msg === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : msg);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // 소셜 로그인 처리 고도화
   const handleSocialLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao' | 'naver') => {
     e.preventDefault();
-    if (socialLoading) return; // 중복 클릭 방지
+    if (socialLoading) return;
 
     setSocialLoading(provider);
-    console.log(`[OAuth Debug] ${provider} 로그인 시도 시작`);
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
-        // Supabase Custom Config에 맞춰 provider 명칭 전달 (타입 에러 방지를 위해 as any 사용)
-        provider: provider === 'naver' ? 'custom:naver' as any : provider,
+        provider: (provider === 'naver' ? 'custom:naver' : provider) as Provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=/`,
           queryParams: {
@@ -75,16 +72,12 @@ export default function LoginPage() {
       }
 
       if (data?.url) {
-        console.log(`[OAuth Success] Redirecting to: ${data.url}`);
-        // [Foolproof 리다이렉트] 2중 강제 이동 전략 적용
         window.location.assign(data.url);
-        setTimeout(() => {
-          if (typeof window !== 'undefined') window.location.href = data.url;
-        }, 150);
       }
-    } catch (err: any) {
-      console.error(`[OAuth Exception] ${provider}:`, err);
-      alert(`시스템 오류가 발생했습니다: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      console.error(`[OAuth Exception] ${provider}:`, msg);
+      alert(`시스템 오류가 발생했습니다: ${msg}`);
       setSocialLoading(null);
     }
   };
@@ -190,7 +183,7 @@ export default function LoginPage() {
               type="button"
               disabled={isAnyLoading}
               onClick={(e) => handleSocialLogin(e, 'kakao')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
             >
               {socialLoading === 'kakao' ? <Loader2 className="w-5 h-5 animate-spin text-[#3C1E1E]" /> : <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" />}
               Kakao
@@ -199,7 +192,7 @@ export default function LoginPage() {
               type="button"
               disabled={isAnyLoading}
               onClick={(e) => handleSocialLogin(e, 'naver')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
+              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
             >
               {socialLoading === 'naver' ? <Loader2 className="w-5 h-5 animate-spin text-[#03C75A]" /> : <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div>}
               Naver

@@ -4,9 +4,30 @@ import ProductCard from '@/components/ProductCard';
 import ProductFilterBar from '@/components/ProductFilterBar';
 import { SearchX, ArrowRight, Loader2 } from 'lucide-react';
 import { Suspense } from 'react';
+import { Category } from '@/data/mockData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+interface Review {
+  rating: number;
+}
+
+interface ProductWithReviews {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  category: Category;
+  stock: number;
+  shipping_fee: number;
+  is_sold_out: boolean;
+  created_at: string;
+  reviews?: Review[];
+  avgRating?: number;
+  reviewCount?: number;
+}
 
 async function ProductList({ 
   searchParams 
@@ -48,8 +69,8 @@ async function ProductList({
   }
 
   // 4. 데이터 가공 (평점 평균 등)
-  let displayProducts = products?.map((p: any) => {
-    const ratings = p.reviews?.map((r: any) => r.rating) || [];
+  const displayProducts = (products as ProductWithReviews[] | null)?.map((p) => {
+    const ratings = p.reviews?.map((r) => r.rating) || [];
     const avgRating = ratings.length > 0 
       ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
       : 0;
@@ -58,7 +79,7 @@ async function ProductList({
 
   // 5. 평점순 정렬 (메모리 정렬)
   if (sort === 'rating_desc') {
-    displayProducts.sort((a, b) => b.avgRating - a.avgRating);
+    displayProducts.sort((a, b) => (b.avgRating || 0) - (a.avgRating || 0));
   }
 
   if (displayProducts.length === 0) {
@@ -101,7 +122,7 @@ export default async function ShopPage(props: {
         <header className="mb-20 space-y-6">
           <div className="flex items-center gap-4 text-deep-sage mb-2">
             <div className="w-12 h-px bg-current"></div>
-            <span className="text-[10px] uppercase tracking-[0.5em] font-bold">Nature's Essence Market</span>
+            <span className="text-[10px] uppercase tracking-[0.5em] font-bold">Nature&apos;s Essence Market</span>
           </div>
           <h1 className="font-serif text-5xl md:text-6xl text-charcoal tracking-tight">만물상</h1>
           <p className="text-muted font-light text-lg max-w-2xl leading-relaxed">

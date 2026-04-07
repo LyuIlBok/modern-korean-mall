@@ -50,8 +50,12 @@ export const metadata: Metadata = {
     description: '자연이 빚은 본연의 가치를 전합니다.',
     images: ['https://modern-korean-mall.vercel.app/logo_main.png'],
   },
-  viewport: 'width=device-width, initial-scale=1',
   robots: 'index, follow',
+};
+
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
 };
 
 export default function RootLayout({

@@ -12,6 +12,10 @@ interface WishlistState {
   syncWithSupabase: () => Promise<void>;
 }
 
+interface WishlistItem {
+  products: Product | null;
+}
+
 export const useWishlistStore = create<WishlistState>()(
   persist(
     (set, get) => ({
@@ -73,7 +77,9 @@ export const useWishlistStore = create<WishlistState>()(
           if (error) throw error;
           
           if (data) {
-            const products = data.map((item: any) => item.products).filter(Boolean);
+            const products = (data as unknown as WishlistItem[])
+              .map((item) => item.products)
+              .filter((p): p is Product => p !== null);
             set({ items: products });
           }
         } catch (error) {

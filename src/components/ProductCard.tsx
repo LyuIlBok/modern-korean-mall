@@ -7,7 +7,7 @@ import { useCartStore } from '@/store/useCartStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useState } from 'react';
 import Skeleton from './ui/Skeleton';
-import { Star, Heart, ShoppingBag, Plus } from 'lucide-react';
+import { Star, Heart, Plus } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { motion } from 'framer-motion';
 
@@ -52,7 +52,6 @@ export default function ProductCard({ product }: { product: ProductWithRating })
       className="h-full"
     >
       <Link href={`/shop/${product.id}`} className={`group block h-full flex flex-col ${product.is_sold_out ? 'cursor-default' : ''}`}>
-        {/* Image Container */}
         <div className="relative aspect-[4/5] overflow-hidden bg-hanji-white rounded-sm mb-5 shadow-sm group-hover:shadow-xl transition-all duration-500">
           {!isLoaded && <Skeleton className="absolute inset-0 z-10" />}
           
@@ -64,14 +63,12 @@ export default function ProductCard({ product }: { product: ProductWithRating })
             </div>
           )}
 
-          {/* Discount Badge */}
           {!product.is_sold_out && discountRate > 0 && (
             <div className="absolute top-4 left-4 z-30 bg-terracotta text-white px-3 py-1.5 rounded-sm shadow-lg">
               <span className="text-[11px] font-bold tracking-tighter">{discountRate}% OFF</span>
             </div>
           )}
 
-          {/* Reward Points Badge */}
           {!product.is_sold_out && rewardPoints > 0 && (
             <div className="absolute bottom-4 left-4 z-30 bg-deep-sage/90 backdrop-blur-md text-white px-3 py-1.5 rounded-full shadow-lg border border-white/20">
               <span className="text-[9px] font-bold flex items-center gap-1">
@@ -92,7 +89,6 @@ export default function ProductCard({ product }: { product: ProductWithRating })
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
           
-          {/* Action Buttons Overlay */}
           <div className="absolute bottom-4 right-4 flex flex-col gap-2 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all duration-500 delay-75">
             <button 
               onClick={handleAddToCart}
@@ -116,7 +112,6 @@ export default function ProductCard({ product }: { product: ProductWithRating })
           </button>
         </div>
 
-        {/* Info Area */}
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-bold text-terracotta/80 uppercase tracking-[0.2em]">{product.category}</span>

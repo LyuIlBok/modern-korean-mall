@@ -1,21 +1,40 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, User, Send, Loader2, Search, 
-  ArrowLeft, Clock, ChevronRight, Hash, ShieldCheck,
-  Edit2, Trash2, Check, X, Bell, UserCheck
+  ArrowLeft, Clock, ChevronRight, Hash,
+  Edit2, Trash2, Check, Bell, UserCheck
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 
+interface AdminChatMessage {
+  id: string;
+  user_id: string;
+  content: string;
+  is_admin: boolean;
+  is_read: boolean;
+  created_at: string;
+  updated_at?: string;
+}
+
+interface ChatUser {
+  id: string;
+  lastMessage: string;
+  lastTime: string;
+  lastIsAdmin: boolean;
+  isGuest: boolean;
+  unreadCount: number;
+}
+
 export default function AdminChatPage() {
-  const [users, setUsers] = useState<any[]>([]);
+  const [users, setUsers] = useState<ChatUser[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
-  const selectedUserRef = useRef<string | null>(null); // 실시간 구독 클로저 해결용
-  const [messages, setMessages] = useState<any[]>([]);
+  const selectedUserRef = useRef<string | null>(null);
+  const [messages, setMessages] = useState<AdminChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [sendLoading, setSendLoading] = useState(false);
@@ -24,14 +43,119 @@ export default function AdminChatPage() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  // 선택된 유저 ID가 바뀔 때마다 Ref 업데이트
+  const fetchMessages = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from('support_messages')
+      .select('*')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: true });
+    if (data) setMessages(data as AdminChatMessage[]);
+  }, []);
+
+  const markAllAsRead = useCallback(async (uid: string) => {
+    await supabase
+      .from('support_messages')
+      .update({ is_read: true })
+      .eq('user_id', uid)
+      .eq('is_admin', false);
+    
+    setUsers(prev => prev.map(u => u.id === uid ? { ...u, unreadCount: 0 } : u));
+  }, []);
+
   useEffect(() => {
     selectedUserRef.current = selectedUserId;
     if (selectedUserId) {
       fetchMessages(selectedUserId);
       markAllAsRead(selectedUserId);
     }
-  }, [selectedUserId]);
+  }, [selectedUserId, fetchMessages, markAllAsRead]);
+
+  const fetchChatUsers = useCallback(async () => {
+    const { data } = await supabase
+      .from('support_messages')
+      .select('user_id, created_at, content, is_admin, is_read')
+      .order('created_at', { ascending: false });
+
+    if (data) {
+      const userMap = new Map<string, ChatUser>();
+      data.forEach((msg) => {
+        if (!userMap.has(msg.user_id)) {
+          const unreadCount = data.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
+          userMap.set(msg.user_id, {
+            id: msg.user_id,
+            lastMessage: msg.content,
+            lastTime: msg.created_at,
+            lastIsAdmin: msg.is_admin,
+            isGuest: msg.user_id.startsWith('guest_'),
+            unreadCount
+          });
+        }
+      });
+      setUsers(Array.from(userMap.values()));
+    }
+    setLoading(false);
+  }, []);
+
+  const updateUserList = useCallback((msg: AdminChatMessage) => {
+    setUsers(prev => {
+      const others = prev.filter(u => u.id !== msg.user_id);
+      const target = prev.find(u => u.id === msg.user_id) || { 
+        id: msg.user_id, 
+        isGuest: msg.user_id.startsWith('guest_'),
+        unreadCount: 0,
+        lastMessage: '',
+        lastTime: '',
+        lastIsAdmin: false
+      };
+      
+      const newUnreadCount = (msg.user_id !== selectedUserRef.current && !msg.is_admin) 
+        ? (target.unreadCount + 1) 
+        : target.unreadCount;
+
+      return [{ 
+        ...target, 
+        lastMessage: msg.content, 
+        lastTime: msg.created_at, 
+        lastIsAdmin: msg.is_admin,
+        unreadCount: newUnreadCount 
+      }, ...others];
+    });
+  }, []);
+
+  const subscribeToAllMessages = useCallback(() => {
+    const channel = supabase
+      .channel('admin-chat-global')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'support_messages' },
+        (payload) => {
+          const { eventType, new: newMsg, old: oldMsg } = payload;
+          
+          if (eventType === 'INSERT') {
+            const msg = newMsg as AdminChatMessage;
+            if (selectedUserRef.current === msg.user_id) {
+              setMessages(prev => prev.find(m => m.id === msg.id) ? prev : [...prev, msg]);
+              if (!msg.is_admin) markAllAsRead(msg.user_id);
+            }
+            updateUserList(msg);
+          } 
+          else if (eventType === 'UPDATE') {
+            const msg = newMsg as AdminChatMessage;
+            if (selectedUserRef.current === msg.user_id) {
+              setMessages(prev => prev.map(m => m.id === msg.id ? { ...m, ...msg } : m));
+            }
+            setUsers(prev => prev.map(u => u.id === msg.user_id ? { ...u, lastMessage: msg.content } : u));
+          } 
+          else if (eventType === 'DELETE') {
+            const msg = oldMsg as AdminChatMessage;
+            setMessages(prev => prev.filter(m => m.id !== msg.id));
+            fetchChatUsers();
+          }
+        }
+      )
+      .subscribe();
+    return channel;
+  }, [fetchChatUsers, markAllAsRead, updateUserList]);
 
   useEffect(() => {
     const checkAdmin = async () => {
@@ -49,7 +173,7 @@ export default function AdminChatPage() {
       };
     };
     checkAdmin();
-  }, []);
+  }, [router, fetchChatUsers, subscribeToAllMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -57,105 +181,12 @@ export default function AdminChatPage() {
     }
   }, [messages]);
 
-  const fetchChatUsers = async () => {
-    const { data } = await supabase
-      .from('support_messages')
-      .select('user_id, created_at, content, is_admin, is_read')
-      .order('created_at', { ascending: false });
-
-    if (data) {
-      const userMap = new Map();
-      data.forEach((msg) => {
-        if (!userMap.has(msg.user_id)) {
-          const unreadCount = data.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
-          userMap.set(msg.user_id, {
-            id: msg.user_id,
-            lastMessage: msg.content,
-            lastTime: msg.created_at,
-            lastIsAdmin: msg.is_admin,
-            isGuest: msg.user_id.startsWith('guest_'),
-            unreadCount
-          });
-        }
-      });
-      setUsers(Array.from(userMap.values()));
-    }
-    setLoading(false);
-  };
-
-  const markAllAsRead = async (uid: string) => {
-    await supabase
-      .from('support_messages')
-      .update({ is_read: true })
-      .eq('user_id', uid)
-      .eq('is_admin', false);
-    
-    setUsers(prev => prev.map(u => u.id === uid ? { ...u, unreadCount: 0 } : u));
-  };
-
-  const subscribeToAllMessages = () => {
-    const channel = supabase
-      .channel('admin-chat-global')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'support_messages' },
-        (payload) => {
-          const { eventType, new: newMsg, old: oldMsg } = payload;
-          
-          if (eventType === 'INSERT') {
-            if (selectedUserRef.current === newMsg.user_id) {
-              setMessages(prev => prev.find(m => m.id === newMsg.id) ? prev : [...prev, newMsg]);
-              if (!newMsg.is_admin) markAllAsRead(newMsg.user_id);
-            }
-            updateUserList(newMsg);
-          } 
-          else if (eventType === 'UPDATE') {
-            if (selectedUserRef.current === newMsg.user_id) {
-              setMessages(prev => prev.map(m => m.id === newMsg.id ? { ...m, ...newMsg } : m));
-            }
-            setUsers(prev => prev.map(u => u.id === newMsg.user_id ? { ...u, lastMessage: newMsg.content } : u));
-          } 
-          else if (eventType === 'DELETE') {
-            // 삭제 시에는 oldMsg에 ID만 담겨올 수 있으므로 ID로 필터링
-            setMessages(prev => prev.filter(m => m.id !== oldMsg.id));
-            fetchChatUsers(); // 목록 갱신을 위해 재조회
-          }
-        }
-      )
-      .subscribe();
-    return channel;
-  };
-
-  const updateUserList = (msg: any) => {
-    setUsers(prev => {
-      const others = prev.filter(u => u.id !== msg.user_id);
-      const target = prev.find(u => u.id === msg.user_id) || { 
-        id: msg.user_id, 
-        isGuest: msg.user_id.startsWith('guest_'),
-        unreadCount: 0
-      };
-      
-      const newUnreadCount = (msg.user_id !== selectedUserRef.current && !msg.is_admin) 
-        ? (target.unreadCount + 1) 
-        : target.unreadCount;
-
-      return [{ 
-        ...target, 
-        lastMessage: msg.content, 
-        lastTime: msg.created_at, 
-        lastIsAdmin: msg.is_admin,
-        unreadCount: newUnreadCount 
-      }, ...others];
-    });
-  };
-
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editInput, setEditInput] = useState('');
 
   const handleUpdateMessage = async (id: string) => {
     if (!editInput.trim()) return;
     
-    // 1. Supabase 업데이트 실행 (관리자 메시지만 수정 가능하도록 명시)
     const { error } = await supabase
       .from('support_messages')
       .update({ 
@@ -171,7 +202,6 @@ export default function AdminChatPage() {
       return;
     }
 
-    // 2. 성공 시 로컬 상태 즉시 변경
     setMessages(prev => prev.map(m => 
       m.id === id ? { ...m, content: editInput.trim(), updated_at: new Date().toISOString() } : m
     ));
@@ -181,7 +211,6 @@ export default function AdminChatPage() {
   const handleDeleteMessage = async (id: string) => {
     if (!confirm('정말 삭제하시겠습니까?')) return;
     
-    // 1. Supabase 삭제 실행
     const { error } = await supabase
       .from('support_messages')
       .delete()
@@ -193,17 +222,7 @@ export default function AdminChatPage() {
       return;
     }
 
-    // 2. 성공 시 로컬 상태 배열에서 즉시 제거
     setMessages(prev => prev.filter(m => m.id !== id));
-  };
-
-  const fetchMessages = async (uid: string) => {
-    const { data } = await supabase
-      .from('support_messages')
-      .select('*')
-      .eq('user_id', uid)
-      .order('created_at', { ascending: true });
-    if (data) setMessages(data);
   };
 
   const handleSend = async (e: React.FormEvent) => {
@@ -212,7 +231,7 @@ export default function AdminChatPage() {
 
     const content = input.trim();
     const tempId = `temp-${Date.now()}`;
-    const optimisticMsg = {
+    const optimisticMsg: AdminChatMessage = {
       id: tempId,
       user_id: selectedUserId,
       content,
@@ -233,7 +252,7 @@ export default function AdminChatPage() {
         .single();
 
       if (error) throw error;
-      setMessages(prev => prev.map(m => m.id === tempId ? data : m));
+      setMessages(prev => prev.map(m => m.id === tempId ? (data as AdminChatMessage) : m));
     } catch (err) {
       console.error('Send error:', err);
       setMessages(prev => prev.filter(m => m.id !== tempId));
@@ -248,7 +267,6 @@ export default function AdminChatPage() {
 
   return (
     <div className="flex h-screen bg-hanji-white overflow-hidden font-sans">
-      {/* Sidebar */}
       <aside className="w-80 sm:w-[400px] border-r border-border-light bg-white flex flex-col shadow-lg z-20">
         <div className="p-8 space-y-6 bg-white border-b border-border-light">
           <div className="flex items-center justify-between">
@@ -327,11 +345,9 @@ export default function AdminChatPage() {
         </div>
       </aside>
 
-      {/* Main: Chat View */}
       <main className="flex-1 flex flex-col bg-white relative">
         {selectedUserId ? (
           <>
-            {/* Chat Header */}
             <div className="px-10 py-6 border-b border-border-light flex justify-between items-center bg-white shadow-sm z-10">
               <div className="flex items-center gap-5">
                 <div className="w-12 h-12 bg-charcoal text-white rounded-2xl flex items-center justify-center shadow-lg">
@@ -357,7 +373,6 @@ export default function AdminChatPage() {
               </div>
             </div>
 
-            {/* Messages Area */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-12 space-y-10 bg-hanji-white/20 custom-scrollbar scroll-smooth">
               {messages.map((msg, index) => {
                 const isNewDay = index === 0 || 
@@ -375,7 +390,6 @@ export default function AdminChatPage() {
                     <div className={`flex ${msg.is_admin ? 'justify-end' : 'justify-start'} group`}>
                       <div className={`flex flex-col ${msg.is_admin ? 'items-end' : 'items-start'} max-w-[70%] relative`}>
                         
-                        {/* Admin Controls */}
                         {msg.is_admin && editingId !== msg.id && !msg.id.startsWith('temp-') && (
                           <div className="absolute -left-20 top-0 hidden group-hover:flex items-center gap-2 bg-white p-2 border border-border-light shadow-xl rounded-xl z-10">
                             <button onClick={() => { setEditingId(msg.id); setEditInput(msg.content); }} className="p-1.5 hover:text-deep-sage transition-colors"><Edit2 className="w-4 h-4" /></button>
@@ -434,7 +448,6 @@ export default function AdminChatPage() {
               })}
             </div>
 
-            {/* Admin Input Area */}
             <div className="p-10 bg-white border-t border-border-light shadow-[0_-10px_30px_rgba(0,0,0,0.03)]">
               <form onSubmit={handleSend} className="flex gap-5 items-center max-w-6xl mx-auto">
                 <div className="relative flex-1">

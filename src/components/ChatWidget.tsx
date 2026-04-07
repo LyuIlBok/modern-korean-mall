@@ -1,19 +1,97 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MessageCircle, X, Send, Loader2, User, Sparkles, BellRing } from 'lucide-react';
 
+interface ChatMessage {
+  id: string;
+  user_id: string;
+  content: string;
+  is_admin: boolean;
+  is_read: boolean;
+  created_at: string;
+}
+
 export default function ChatWidget() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState<any[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const fetchMessages = useCallback(async (uid: string) => {
+    const { data } = await supabase
+      .from('support_messages')
+      .select('*')
+      .eq('user_id', uid)
+      .order('created_at', { ascending: true });
+    
+    if (data) {
+      setMessages(data as ChatMessage[]);
+      // 읽지 않은 관리자 메시지 개수 계산
+      const unread = (data as ChatMessage[]).filter(m => m.is_admin && !m.is_read).length;
+      setUnreadCount(unread);
+    }
+  }, []);
+
+  const markAsRead = async (messageId: string) => {
+    await supabase
+      .from('support_messages')
+      .update({ is_read: true })
+      .eq('id', messageId);
+  };
+
+  const subscribeToMessages = useCallback((uid: string) => {
+    const channel = supabase
+      .channel(`chat-${uid}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', 
+          schema: 'public', 
+          table: 'support_messages', 
+          filter: `user_id=eq.${uid}` 
+        },
+        (payload) => {
+          const { eventType, new: newMsg, old: oldMsg } = payload;
+          
+          if (eventType === 'INSERT') {
+            const msg = newMsg as ChatMessage;
+            setMessages((prev) => {
+              if (prev.find(m => m.id === msg.id)) return prev;
+              
+              // 관리자 메시지이고 창이 닫혀있으면 알림 카운트 증가
+              if (msg.is_admin && !isOpen) {
+                setUnreadCount(c => c + 1);
+              }
+              return [...prev, msg];
+            });
+          } 
+          else if (eventType === 'UPDATE') {
+            const msg = newMsg as ChatMessage;
+            // 관리자가 메시지를 수정했을 때 즉각 반영
+            setMessages((prev) => prev.map(m => 
+              m.id === msg.id ? { ...m, ...msg } : m
+            ));
+          } 
+          else if (eventType === 'DELETE') {
+            const msg = oldMsg as ChatMessage;
+            // 관리자가 메시지를 삭제했을 때 즉각 제거
+            setMessages((prev) => prev.filter(m => m.id !== msg.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const initChat = async () => {
@@ -33,10 +111,11 @@ export default function ChatWidget() {
 
       setChatUserId(userId);
       fetchMessages(userId);
-      subscribeToMessages(userId);
+      const unsubscribe = subscribeToMessages(userId);
+      return unsubscribe;
     };
     initChat();
-  }, []);
+  }, [fetchMessages, subscribeToMessages]);
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -59,72 +138,6 @@ export default function ChatWidget() {
       if (inputRef.current) inputRef.current.focus();
     }
   }, [isOpen]);
-
-  const fetchMessages = async (uid: string) => {
-    const { data } = await supabase
-      .from('support_messages')
-      .select('*')
-      .eq('user_id', uid)
-      .order('created_at', { ascending: true });
-    
-    if (data) {
-      setMessages(data);
-      // 읽지 않은 관리자 메시지 개수 계산
-      const unread = data.filter(m => m.is_admin && !m.is_read).length;
-      setUnreadCount(unread);
-    }
-  };
-
-  const markAsRead = async (messageId: string) => {
-    await supabase
-      .from('support_messages')
-      .update({ is_read: true })
-      .eq('id', messageId);
-  };
-
-  const subscribeToMessages = (uid: string) => {
-    const channel = supabase
-      .channel(`chat-${uid}`)
-      .on(
-        'postgres_changes',
-        { 
-          event: '*', 
-          schema: 'public', 
-          table: 'support_messages', 
-          filter: `user_id=eq.${uid}` 
-        },
-        (payload) => {
-          const { eventType, new: newMsg, old: oldMsg } = payload;
-          
-          if (eventType === 'INSERT') {
-            setMessages((prev) => {
-              if (prev.find(m => m.id === newMsg.id)) return prev;
-              
-              // 관리자 메시지이고 창이 닫혀있으면 알림 카운트 증가
-              if (newMsg.is_admin && !isOpen) {
-                setUnreadCount(c => c + 1);
-              }
-              return [...prev, newMsg];
-            });
-          } 
-          else if (eventType === 'UPDATE') {
-            // 관리자가 메시지를 수정했을 때 즉각 반영
-            setMessages((prev) => prev.map(m => 
-              m.id === newMsg.id ? { ...m, ...newMsg } : m
-            ));
-          } 
-          else if (eventType === 'DELETE') {
-            // 관리자가 메시지를 삭제했을 때 즉각 제거
-            setMessages((prev) => prev.filter(m => m.id !== oldMsg.id));
-          }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  };
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,7 +182,7 @@ export default function ChatWidget() {
                 </div>
                 <div>
                   <h3 className="font-serif text-xl leading-none tracking-tight">실시간 1:1 상담</h3>
-                  <p className="text-[10px] opacity-60 mt-2 uppercase tracking-[0.2em] font-bold">Nature's Essence Support</p>
+                  <p className="text-[10px] opacity-60 mt-2 uppercase tracking-[0.2em] font-bold">Nature&apos;s Essence Support</p>
                 </div>
               </div>
               <button 
@@ -189,11 +202,11 @@ export default function ChatWidget() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-charcoal font-medium">안녕하세요! 복이네 농장입니다.</p>
-                    <p className="text-[12px] text-muted leading-relaxed px-10 font-light">
+                    <div className="text-[12px] text-muted leading-relaxed px-10 font-light">
                       상품에 대해 궁금하신 점이나<br/>
                       배송 관련 문의를 남겨주시면<br/>
                       <span className="text-deep-sage font-semibold underline underline-offset-4 decoration-deep-sage/30">최대한 빠르게</span> 답변해 드릴게요.
-                    </p>
+                    </div>
                   </div>
                 </div>
               )}

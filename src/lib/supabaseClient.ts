@@ -1,8 +1,15 @@
 import { createClient } from '@supabase/supabase-js';
 
-// 이 정보는 유일복님께서 Supabase 프로젝트를 생성하신 뒤 받으실 API 키로 나중에 교체하게 됩니다.
-// 현재는 전 세계 배포를 위해 환경 변수(.env)로 관리하도록 세팅하겠습니다.
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://your-project-url.supabase.co';
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'your-anon-key';
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '';
+const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
+// 일반 클라이언트 (Client-side 및 public RLS 대응)
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+/**
+ * 관리자용 클라이언트 (Server-side 전용)
+ * - RLS를 우회하여 모든 데이터에 접근 가능하므로 보안에 각별히 유의해야 합니다.
+ * - 절대 브라우저(Client Component)에서 사용하지 마십시오.
+ */
+export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);

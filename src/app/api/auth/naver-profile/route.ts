@@ -2,6 +2,23 @@ import { NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
 
+interface NaverMeResponse {
+  resultcode: string;
+  message: string;
+  response?: {
+    id: string;
+    nickname?: string;
+    name?: string;
+    email: string;
+    gender?: string;
+    age?: string;
+    birthday?: string;
+    profile_image?: string;
+    birthyear?: string;
+    mobile?: string;
+  };
+}
+
 /**
  * [OIDC Standard Naver Profile Translator]
  * This API transforms Naver's custom profile response into standard OIDC claims.
@@ -29,7 +46,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ error: 'Failed to fetch from Naver' }, { status: naverResponse.status });
     }
 
-    const data = await naverResponse.json();
+    const data: NaverMeResponse = await naverResponse.json();
 
     // 2. Map to OIDC Standard Claims
     // Supabase requires standard claims like 'sub', 'email', 'name'
@@ -52,8 +69,9 @@ export async function GET(request: Request) {
       console.error('[Naver Response Error]:', data.message);
       return NextResponse.json({ error: data.message || 'Invalid Naver response' }, { status: 400 });
     }
-  } catch (err: any) {
-    console.error('[Naver Profile Translator Fatal Error]:', err.message);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[Naver Profile Translator Fatal Error]:', msg);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

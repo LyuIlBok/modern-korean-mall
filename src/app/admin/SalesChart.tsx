@@ -2,13 +2,24 @@
 
 import { useEffect, useState } from 'react';
 import { 
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
 import { Loader2, TrendingUp, DollarSign, Package } from 'lucide-react';
 
+interface ChartData {
+  date: string;
+  revenue: number;
+  count: number;
+}
+
+interface SummaryData {
+  totalRevenue: number;
+  totalCount: number;
+}
+
 export default function SalesChart() {
-  const [data, setData] = useState<any[]>([]);
-  const [summary, setSummary] = useState({ totalRevenue: 0, totalCount: 0 });
+  const [data, setData] = useState<ChartData[]>([]);
+  const [summary, setSummary] = useState<SummaryData>({ totalRevenue: 0, totalCount: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {

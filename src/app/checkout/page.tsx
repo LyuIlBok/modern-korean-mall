@@ -3,7 +3,8 @@
 import dynamic from 'next/dynamic';
 import { Loader2 } from 'lucide-react';
 
-// Hydration 문제를 완벽히 해결하기 위해 SSR을 비활성화하고 클라이언트에서만 렌더링
+export const viewport = { width: 'device-width', initialScale: 1 };
+
 const CheckoutClient = dynamic(() => import('./CheckoutClient'), {
   ssr: false,
   loading: () => (

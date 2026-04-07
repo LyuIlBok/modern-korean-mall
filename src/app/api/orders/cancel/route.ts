@@ -1,15 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin, supabase as supabasePublic } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
-  // 빌드 시 에러 방지를 위해 핸들러 내부에서 초기화
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ''
-  );
-
   try {
     const { orderId } = await req.json();
     const authHeader = req.headers.get('Authorization');
@@ -18,20 +12,12 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Order ID is required' }, { status: 400 });
     }
 
-    // 요청자의 세션을 기반으로 동작하는 Supabase 클라이언트
-    const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || '',
-      {
-        global: {
-          headers: {
-            Authorization: authHeader || '',
-          },
-        },
-      }
-    );
+    if (!authHeader) {
+      return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
+    }
 
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    // 요청자의 세션을 기반으로 동작하는 Supabase 클라이언트
+    const { data: { user }, error: authError } = await supabasePublic.auth.getUser(authHeader.replace('Bearer ', ''));
 
     if (authError || !user) {
       return NextResponse.json({ error: '로그인이 필요합니다.' }, { status: 401 });
@@ -69,8 +55,9 @@ export async function POST(req: Request) {
     if (updateError) throw updateError;
 
     return NextResponse.json({ success: true });
-  } catch (err: any) {
-    console.error('[Order Cancel Exception]:', err.message);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[Order Cancel Exception]:', msg);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }

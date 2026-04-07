@@ -46,10 +46,10 @@ export default function SignupPage() {
       if (error) throw error;
       
       setIsSuccess(true);
-      // 3초 후 로그인 페이지로 이동
       setTimeout(() => router.push('/login'), 3000);
-    } catch (err: any) {
-      setErrorMsg(err.message === 'User already registered' ? '이미 등록된 이메일 주소입니다.' : err.message);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      setErrorMsg(msg === 'User already registered' ? '이미 등록된 이메일 주소입니다.' : msg);
     } finally {
       setIsLoading(false);
     }

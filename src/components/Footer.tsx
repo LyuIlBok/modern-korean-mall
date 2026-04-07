@@ -2,6 +2,7 @@
 
 import { Mail, Phone, MapPin, Instagram, Youtube, Facebook, ShieldCheck } from 'lucide-react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
 
@@ -28,9 +29,9 @@ export default function Footer() {
               {t.common.footerDesc}
             </p>
             <div className="flex gap-4">
-              <a href="#" className="text-muted hover:text-charcoal transition-colors"><Instagram className="w-5 h-5" /></a>
-              <a href="#" className="text-muted hover:text-charcoal transition-colors"><Youtube className="w-5 h-5" /></a>
-              <a href="#" className="text-muted hover:text-charcoal transition-colors"><Facebook className="w-5 h-5" /></a>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Instagram className="w-5 h-5" /></Link>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Youtube className="w-5 h-5" /></Link>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Facebook className="w-5 h-5" /></Link>
             </div>
           </div>
 
@@ -38,10 +39,10 @@ export default function Footer() {
           <div>
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">Menu</h4>
             <ul className="space-y-4 text-xs text-muted tracking-wide">
-              <li><a href="/shop" className="hover:text-deep-sage transition-colors">{t.common.shop}</a></li>
-              <li><a href="/about" className="hover:text-deep-sage transition-colors">{t.common.about}</a></li>
-              <li><a href="/support/refund" className="hover:text-deep-sage transition-colors">{t.common.refundPolicy}</a></li>
-              <li><a href="/mypage" className="hover:text-deep-sage transition-colors">{t.common.mypage}</a></li>
+              <li><Link href="/shop" className="hover:text-deep-sage transition-colors">{t.common.shop}</Link></li>
+              <li><Link href="/about" className="hover:text-deep-sage transition-colors">{t.common.about}</Link></li>
+              <li><Link href="/support/refund" className="hover:text-deep-sage transition-colors">{t.common.refundPolicy}</Link></li>
+              <li><Link href="/mypage" className="hover:text-deep-sage transition-colors">{t.common.mypage}</Link></li>
             </ul>
           </div>
 
@@ -90,9 +91,9 @@ export default function Footer() {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border-light flex flex-col md:flex-row justify-between items-center gap-6">
           <div className="flex gap-6 text-[10px] text-muted uppercase tracking-widest">
-            <a href="#" className="hover:text-charcoal transition-colors font-medium text-deep-sage">{t.common.privacyPolicy}</a>
-            <a href="#" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</a>
-            <a href="/support/refund" className="hover:text-charcoal transition-colors font-bold text-terracotta underline">{t.common.refundPolicy}</a>
+            <Link href="#" className="hover:text-charcoal transition-colors font-medium text-deep-sage">{t.common.privacyPolicy}</Link>
+            <Link href="#" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</Link>
+            <Link href="/support/refund" className="hover:text-charcoal transition-colors font-bold text-terracotta underline">{t.common.refundPolicy}</Link>
           </div>
           <p className="text-[10px] text-muted font-light tracking-tighter">
             &copy; {currentYear} NATURE TEXTURE (복이네농장). All rights reserved.

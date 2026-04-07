@@ -1,22 +1,9 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
 export async function PATCH(request: Request) {
-  // 서버 사이드 전용 Supabase 클라이언트 (Service Role 권한 활용 - 보안 주의)
-  // 빌드 시 에러 방지를 위해 핸들러 내부에서 초기화
-  const supabaseAdmin = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL || '',
-    process.env.SUPABASE_SERVICE_ROLE_KEY || '',
-    {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false
-      }
-    }
-  );
-
   try {
     const body = await request.json();
     const { userId, targetTier, targetPoints, adminToken } = body;
@@ -47,8 +34,9 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true, message: '회원 정보가 안전하게 업데이트되었습니다.' });
 
-  } catch (err: any) {
-    console.error('[Admin API Error]:', err.message);
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Unknown error';
+    console.error('[Admin API Error]:', msg);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

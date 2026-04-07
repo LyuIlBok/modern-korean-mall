@@ -3,18 +3,34 @@ import Link from 'next/link';
 import { ArrowRight, Leaf, Sparkles, TrendingUp, ShieldCheck, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard from '@/components/ProductCard';
-import { translations } from '@/lib/translations';
+import { Category } from '@/data/mockData';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
+
+interface Review {
+  rating: number;
+}
+
+interface ProductWithReviews {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  imageUrl: string;
+  category: Category;
+  stock: number;
+  shipping_fee: number;
+  is_sold_out: boolean;
+  created_at: string;
+  reviews?: Review[];
+}
 
 /**
  * [복이네농장 공식 메인 페이지]
  * - 모든 사용자에게 버튼이 항상 보이도록 수정됨
  */
 export default async function Home() {
-  const t = translations.ko;
-
   // 1. Supabase에서 모든 상품 데이터 불러오기
   const { data: products, error } = await supabase
     .from('products')
@@ -26,8 +42,8 @@ export default async function Home() {
   }
 
   // 2. 상품 데이터 가공 (평점 평균 등)
-  const displayProducts = products?.map((p: any) => {
-    const ratings = p.reviews?.map((r: any) => r.rating) || [];
+  const displayProducts = (products as ProductWithReviews[] | null)?.map((p) => {
+    const ratings = p.reviews?.map((r) => r.rating) || [];
     const avgRating = ratings.length > 0 
       ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
       : 0;
@@ -62,7 +78,6 @@ export default async function Home() {
             우리는 땅의 정직함을 믿으며, 자연 본연의 맛을 식탁까지 전합니다.
           </p>
           
-          {/* [수정] 로그인 여부와 관계없이 무조건 렌더링되는 버튼 영역 */}
           <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-6">
             <Link href="/shop" className="group inline-flex items-center gap-4 px-12 py-5 bg-deep-sage text-white rounded-sm hover:bg-charcoal transition-all duration-700 font-serif text-xl shadow-2xl hover:scale-105">
               추천 농산물 보기 <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform duration-500" />
@@ -142,7 +157,7 @@ export default async function Home() {
         
         <div className="max-w-5xl mx-auto px-4 text-center space-y-16 relative z-10">
           <h2 className="font-serif text-5xl md:text-7xl tracking-tighter leading-[1.2]">
-            "우리는 땅의 정직함을<br/>식탁으로 배달합니다"
+            &quot;우리는 땅의 정직함을<br/>식탁으로 배달합니다&quot;
           </h2>
           <div className="w-px h-24 bg-hanji-white/20 mx-auto" />
           <p className="text-xl md:text-2xl font-light text-hanji-white/70 leading-relaxed max-w-4xl mx-auto font-serif italic">

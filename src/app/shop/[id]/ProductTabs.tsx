@@ -1,26 +1,54 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import { Product } from '@/data/mockData';
-import { Star, MessageSquare, Info, Loader2, User, ImageIcon, X, Edit3, Trash2, Check, ChevronDown, Filter, Camera, ArrowRight } from 'lucide-react';
+import { Star, MessageSquare, Info, Loader2, User, X, Edit3, Trash2, Check, Filter, Camera, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
+import { User as SupabaseUser } from '@supabase/supabase-js';
+
+interface Review {
+  id: string;
+  product_id: string;
+  user_id: string;
+  user_name: string;
+  rating: number;
+  content: string;
+  photo_url: string | null;
+  is_verified: boolean;
+  created_at: string;
+}
 
 export default function ProductTabs({ product }: { product: Product }) {
   const [activeTab, setActiveTab] = useState<'detail' | 'review' | 'qa'>('detail');
-  const [reviews, setReviews] = useState<any[]>([]);
+  const [reviews, setReviews] = useState<Review[]>([]);
   const [isReviewLoading, setIsReviewLoading] = useState(true);
   const [reviewText, setReviewText] = useState('');
   const [rating, setRating] = useState(5);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<SupabaseUser | null>(null);
   const [sortBy, setSortBy] = useState<'latest' | 'rating'>('latest');
 
-  // Photo Review State
   const [reviewFile, setReviewFile] = useState<File | null>(null);
   const [reviewPreview, setReviewPreview] = useState<string | null>(null);
   const [editingReviewId, setEditingReviewId] = useState<string | null>(null);
+
+  const fetchReviews = useCallback(async () => {
+    setIsReviewLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('product_id', product.id)
+        .order('created_at', { ascending: false });
+      if (!error) setReviews((data as Review[]) || []);
+    } catch (err) {
+      console.error('Review load failed:', err);
+    } finally {
+      setIsReviewLoading(false);
+    }
+  }, [product.id]);
 
   useEffect(() => {
     const checkUser = async () => {
@@ -29,28 +57,11 @@ export default function ProductTabs({ product }: { product: Product }) {
     };
     checkUser();
     fetchReviews();
-  }, [product.id]);
+  }, [fetchReviews]);
 
-  const fetchReviews = async () => {
-    setIsReviewLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('created_at', { ascending: false });
-      if (!error) setReviews(data || []);
-    } catch (err) {
-      console.error('Review load failed:', err);
-    } finally {
-      setIsReviewLoading(false);
-    }
-  };
-
-  // Review Stats Calculation (Naver Style)
   const stats = useMemo(() => {
     const total = reviews.length;
-    if (total === 0) return { avg: 0, counts: [0, 0, 0, 0, 0], photos: [] };
+    if (total === 0) return { avg: '0.0', counts: [0, 0, 0, 0, 0], photos: [], total: 0 };
     
     const sum = reviews.reduce((acc, curr) => acc + curr.rating, 0);
     const avg = (sum / total).toFixed(1);
@@ -59,7 +70,7 @@ export default function ProductTabs({ product }: { product: Product }) {
       reviews.filter(r => r.rating === s).length
     );
 
-    const photos = reviews.filter(r => r.photo_url).map(r => r.photo_url).slice(0, 8);
+    const photos = reviews.filter(r => r.photo_url).map(r => r.photo_url as string).slice(0, 8);
     
     return { avg, counts, total, photos };
   }, [reviews]);
@@ -93,18 +104,26 @@ export default function ProductTabs({ product }: { product: Product }) {
           const { data: { publicUrl } } = supabase.storage.from('review-images').getPublicUrl(filePath);
           photoUrl = publicUrl;
         }
-        await supabase.from('reviews').insert([{ product_id: product.id, user_id: user.id, user_name: user.user_metadata?.full_name || user.email.split('@')[0], rating, content: reviewText, photo_url: photoUrl, is_verified: true }]);
+        await supabase.from('reviews').insert([{ 
+          product_id: product.id, 
+          user_id: user.id, 
+          user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '익명', 
+          rating, 
+          content: reviewText, 
+          photo_url: photoUrl, 
+          is_verified: true 
+        }]);
       }
       fetchReviews();
       setReviewText(''); setRating(5); setReviewFile(null); setReviewPreview(null);
-    } catch (err: any) {
-      alert(`처리 실패: ${err.message}`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      alert(`처리 실패: ${msg}`);
     } finally { setIsSubmitting(false); }
   };
 
   return (
     <div className="border-t border-border-light pt-16">
-      {/* Tabs Header */}
       <div className="flex justify-center gap-8 md:gap-16 border-b border-border-light mb-16 px-4">
         {[
           { id: 'detail', label: '상세 정보', icon: Info },
@@ -113,7 +132,7 @@ export default function ProductTabs({ product }: { product: Product }) {
         ].map((tab) => (
           <button
             key={tab.id}
-            onClick={() => setActiveTab(tab.id as any)}
+            onClick={() => setActiveTab(tab.id as 'detail' | 'review' | 'qa')}
             className={`pb-6 px-2 font-serif text-lg md:text-2xl flex items-center gap-3 transition-all relative ${activeTab === tab.id ? 'text-charcoal' : 'text-muted hover:text-charcoal'}`}
           >
             <tab.icon className={`w-4 h-4 md:w-5 md:h-5 ${activeTab === tab.id ? (tab.id === 'review' ? 'text-terracotta' : 'text-deep-sage') : 'text-muted'}`} />
@@ -132,7 +151,7 @@ export default function ProductTabs({ product }: { product: Product }) {
             <div className="max-w-2xl mx-auto text-center space-y-8">
               <span className="text-deep-sage text-xs font-bold tracking-[0.4em] uppercase">The Sincerity of Nature</span>
               <h3 className="font-serif text-4xl md:text-5xl text-charcoal tracking-tight leading-tight">자연의 결이 약속하는<br/>가장 순수한 결실</h3>
-              <p className="text-xl text-charcoal/60 leading-relaxed font-light italic">"우리는 꾸밈없는 자연의 산물을 전하기 위해<br/>오늘도 정직한 땀방울을 흘립니다."</p>
+              <p className="text-xl text-charcoal/60 leading-relaxed font-light italic">&quot;우리는 꾸밈없는 자연의 산물을 전하기 위해<br/>오늘도 정직한 땀방울을 흘립니다.&quot;</p>
               <div className="pt-8 flex justify-center gap-12">
                 <div className="text-center"><p className="text-3xl font-serif text-charcoal">100%</p><p className="text-[10px] text-muted uppercase mt-2">Organic</p></div>
                 <div className="w-px h-12 bg-border-light"></div>
@@ -144,7 +163,6 @@ export default function ProductTabs({ product }: { product: Product }) {
 
         {activeTab === 'review' && (
           <div className="space-y-16 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Review Dashboard (Naver Style) */}
             <div className="bg-white border border-border-light rounded-sm p-8 md:p-12 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-12 items-center">
               <div className="text-center space-y-4">
                 <p className="text-sm text-muted font-medium uppercase tracking-widest">사용자 총 평점</p>
@@ -178,7 +196,6 @@ export default function ProductTabs({ product }: { product: Product }) {
               </div>
             </div>
 
-            {/* Sort & Filter */}
             <div className="flex justify-between items-center border-b border-border-light pb-6">
               <div className="flex gap-6 text-sm">
                 <button onClick={() => setSortBy('latest')} className={`font-medium transition-colors ${sortBy === 'latest' ? 'text-charcoal' : 'text-muted'}`}>최신순</button>
@@ -187,7 +204,6 @@ export default function ProductTabs({ product }: { product: Product }) {
               <button className="flex items-center gap-2 text-xs text-muted hover:text-charcoal"><Filter className="w-3.5 h-3.5" /> 필터</button>
             </div>
 
-            {/* Review Form */}
             {user && (
               <form onSubmit={handleReviewSubmit} className="bg-hanji-white/50 p-8 border border-border-light rounded-sm group focus-within:bg-white transition-all">
                 <div className="flex justify-between items-center mb-6">
@@ -228,7 +244,6 @@ export default function ProductTabs({ product }: { product: Product }) {
               </form>
             )}
 
-            {/* Review List */}
             <div className="space-y-12">
               {isReviewLoading ? (
                 <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin text-deep-sage mx-auto" /></div>

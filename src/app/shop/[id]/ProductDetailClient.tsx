@@ -12,16 +12,17 @@ import { useCartStore } from '@/store/useCartStore';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
+import { Product } from '@/data/mockData';
 
 export default function ProductDetailClient({ 
   product, 
   relatedProducts 
 }: { 
-  product: any, 
-  relatedProducts: any[] 
+  product: Product, 
+  relatedProducts: Product[] 
 }) {
   const router = useRouter();
-  const { language, t } = useLanguageStore();
+  const { t } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
   const { addItem, toggleCart } = useCartStore();
   const hasMounted = useHasMounted();
@@ -142,7 +143,7 @@ export default function ProductDetailClient({
                       <span className="bg-terracotta text-white px-2 py-1 text-xs font-bold rounded-sm">{product.discount_rate}% OFF</span>
                       <p className="text-muted line-through decoration-muted/50 text-xl font-light">₩{Number(product.price).toLocaleString()}</p>
                     </div>
-                    <p className="text-4xl font-serif text-terracotta font-extrabold">₩{Math.floor(product.price * (1 - product.discount_rate / 100)).toLocaleString()}</p>
+                    <p className="text-4xl font-serif text-terracotta font-extrabold">₩{Math.floor(product.price * (1 - (product.discount_rate || 0) / 100)).toLocaleString()}</p>
                   </div>
                 ) : (
                   <p className="text-4xl font-serif text-charcoal">₩{Number(product.price).toLocaleString()}</p>
@@ -220,7 +221,9 @@ export default function ProductDetailClient({
             {detailImages.length > 0 ? (
               detailImages.map((img: string, idx: number) => (
                 <div key={idx} className="relative w-full overflow-hidden">
-                  <img src={img} alt={`Detail ${idx}`} className="w-full h-auto block" />
+                  <div className="relative w-full h-[1000px]">
+                    <Image src={img} alt={`Detail ${idx}`} fill className="object-contain" />
+                  </div>
                 </div>
               ))
             ) : (
@@ -236,12 +239,12 @@ export default function ProductDetailClient({
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div>
               <h2 className="font-serif text-4xl text-charcoal">이런 산물은 어떠세요?</h2>
-              <p className="text-muted mt-2 font-light italic">Nature Texture's premium selection.</p>
+              <p className="text-muted mt-2 font-light italic">Nature Texture&apos;s premium selection.</p>
             </div>
             <Link href="/shop" className="text-deep-sage hover:text-charcoal transition-all border-b border-current pb-1 text-xs uppercase tracking-[0.3em] font-bold">Explore All</Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {relatedProducts.map((p: any) => <ProductCard key={p.id} product={p} />)}
+            {relatedProducts.map((p) => <ProductCard key={p.id} product={p} />)}
           </div>
         </div>
       </div>

@@ -5,79 +5,133 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
-  ShoppingCart, Truck, CheckCircle, Image as ImageIcon,
-  MessageSquare, User, Users, Trash2, Edit3, X, TrendingUp, Bell, Check, ArrowRight, Camera, Search, Filter, AlertTriangle, MoreVertical, ExternalLink,
-  DollarSign, Save
+  ShoppingCart, Truck, CheckCircle,
+  MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
+  DollarSign, Save, CreditCard, Wallet
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
 import SalesChart from './SalesChart';
 
+export const viewport = { width: 'device-width', initialScale: 1 };
+
 type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock';
+
+interface AdminProduct {
+  id: string;
+  name: string;
+  price: number;
+  stock: number;
+  shipping_fee: number;
+  category: string;
+  description: string;
+  imageUrl: string;
+  images: string[];
+  detail_content_images: string[];
+  reward_points: number;
+  discount_rate: number;
+  is_sold_out: boolean;
+  created_at: string;
+  specs?: {
+    origin?: string;
+    producer?: string;
+  };
+}
+
+interface AdminOrderItem {
+  quantity: number;
+  price: number;
+  products: {
+    name: string;
+  } | null;
+}
+
+interface AdminOrder {
+  id: string;
+  created_at: string;
+  customer_name: string;
+  customer_phone: string;
+  address: string;
+  total_price: number;
+  status: string;
+  payment_method: string;
+  memo?: string;
+  tracking_number?: string;
+  order_items: AdminOrderItem[];
+}
+
+interface AdminRestockAlert {
+  id: string;
+  created_at: string;
+  product_id: string;
+  user_id: string;
+  products: {
+    name: string;
+    imageUrl: string;
+    stock: number;
+  } | null;
+  profiles: {
+    email: string;
+    full_name: string;
+  } | null;
+}
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
-  const [products, setProducts] = useState<any[]>([]);
-  const [orders, setOrders] = useState<any[]>([]);
-  const [restockAlerts, setRestockAlerts] = useState<any[]>([]);
+  const [products, setProducts] = useState<AdminProduct[]>([]);
+  const [orders, setOrders] = useState<AdminOrder[]>([]);
+  const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
   const router = useRouter();
 
-  // Search & Filter State 복구
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('전체');
 
-  // Editing state
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
 
-  // New product form state
+  // New Product States
   const [newName, setNewName] = useState('');
   const [newPrice, setNewPrice] = useState('');
   const [newStock, setNewStock] = useState('100');
   const [newShippingFee, setNewShippingFee] = useState('0');
   const [newCategory, setNewCategory] = useState('농산물');
   const [newDesc, setNewDesc] = useState('');
-  const [newRewardPoints, setNewRewardPoints] = useState('0'); // 추가
-  const [newDiscountRate, setNewDiscountRate] = useState('0'); // 추가
+  const [newRewardPoints, setNewRewardPoints] = useState('0');
+  const [newDiscountRate, setNewDiscountRate] = useState('0');
+  const [newOrigin, setNewOrigin] = useState('경기도 연천군');
+  const [newProducer, setNewProducer] = useState('농업회사법인 복이네농장(주)');
   
-  // 1. 다중 이미지 State 추가
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
-  
   const [galleryFiles, setGalleryFiles] = useState<File[]>([]);
   const [galleryPreviews, setGalleryPreviews] = useState<string[]>([]);
-  
   const [detailFiles, setDetailFiles] = useState<File[]>([]);
   const [detailPreviews, setDetailPreviews] = useState<string[]>([]);
 
-  // fetchData 함수 복구
   const fetchData = useCallback(async () => {
     try {
-      setIsCheckingAuth(true);
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
       if (sessionError || !session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
-        console.error('Access denied or session error');
         router.replace('/');
         return;
       }
 
       setIsAdmin(true);
       
-      // 데이터 병렬 페칭
       const [productsRes, ordersRes, alertsRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('orders').select('*, order_items(*, products(name))').order('created_at', { ascending: false }),
-        supabase.from('restock_alerts').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
+        supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false })
       ]);
 
-      if (productsRes.data) setProducts(productsRes.data);
-      if (ordersRes.data) setOrders(ordersRes.data);
-      if (alertsRes.data) setRestockAlerts(alertsRes.data);
+      if (productsRes.data) setProducts(productsRes.data as AdminProduct[]);
+      if (ordersRes.data) setOrders(ordersRes.data as AdminOrder[]);
+      if (alertsRes.data) setRestockAlerts(alertsRes.data as AdminRestockAlert[]);
       
     } catch (err) { 
       console.error('Admin data fetch failed:', err);
@@ -86,12 +140,42 @@ export default function AdminDashboard() {
     }
   }, [router]);
 
-  // 초기 마운트 시 데이터 로드
+  // Realtime Subscriptions
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const ordersChannel = supabase
+      .channel('admin-orders-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, (payload) => {
+        if (payload.eventType === 'INSERT') {
+          fetchData();
+        } else if (payload.eventType === 'UPDATE') {
+          const newOrder = payload.new as AdminOrder;
+          setOrders(prev => prev.map(o => o.id === newOrder.id ? { ...o, ...newOrder } : o));
+        }
+      })
+      .subscribe();
+
+    const productsChannel = supabase
+      .channel('admin-products-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        if (payload.eventType === 'UPDATE') {
+          const newProduct = payload.new as AdminProduct;
+          setProducts(prev => prev.map(p => p.id === newProduct.id ? { ...p, ...newProduct } : p));
+        }
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(ordersChannel);
+      supabase.removeChannel(productsChannel);
+    };
+  }, [isAdmin, fetchData]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
 
-  // filteredProducts 필터링 로직 복구
   const filteredProducts = useMemo(() => {
     return products.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase());
@@ -100,7 +184,6 @@ export default function AdminDashboard() {
     });
   }, [products, searchTerm, categoryFilter]);
 
-  // 2. 업로드 헬퍼 함수 (병렬 업로드 및 URL 반환)
   const uploadFiles = async (files: File[], folder: string) => {
     if (files.length === 0) return [];
     
@@ -160,32 +243,22 @@ export default function AdminDashboard() {
     try {
       let customImageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e';
 
-      // 1. 대표 이미지 업로드 (단일)
       if (mainImage) {
         const fileExt = mainImage.name.split('.').pop();
         const fileName = `main_${Date.now()}.${fileExt}`;
         const filePath = `main/${fileName}`;
-        
-        const { error: uploadError } = await supabase.storage
-          .from('product-images')
-          .upload(filePath, mainImage);
-        
+        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, mainImage);
         if (uploadError) throw uploadError;
-        
-        const { data: { publicUrl } } = supabase.storage
-          .from('product-images')
-          .getPublicUrl(filePath);
-          
+        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filePath);
         customImageUrl = publicUrl;
       }
 
-      // 2. 갤러리 및 상세 이미지 병렬 업로드
       const [galleryUrls, detailUrls] = await Promise.all([
         uploadFiles(galleryFiles, 'gallery'),
         uploadFiles(detailFiles, 'details')
       ]);
 
-      const { data, error } = await supabase.from('products').insert([{
+      const { error } = await supabase.from('products').insert([{
         name: newName, 
         price: Number(newPrice || 0), 
         stock: Number(newStock || 0), 
@@ -198,7 +271,7 @@ export default function AdminDashboard() {
         is_sold_out: Number(newStock || 0) <= 0,
         reward_points: Number(newRewardPoints || 0),
         discount_rate: Number(newDiscountRate || 0),
-        specs: { origin: '연천군', producer: '복이네농장' }
+        specs: { origin: newOrigin, producer: newProducer }
       }]).select();
 
       if (error) throw error;
@@ -206,8 +279,9 @@ export default function AdminDashboard() {
       alert('상품이 등록되었습니다!');
       setIsAdding(false);
       fetchData(); 
-    } catch (error: any) { 
-      alert(error.message); 
+    } catch (error: unknown) { 
+      const msg = error instanceof Error ? error.message : 'Unknown error';
+      alert(msg); 
     } finally { 
       setIsLoading(false); 
     }
@@ -219,14 +293,12 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      // 1. 새 파일 업로드 실행
       const [newMainUrl, newGalleryUrls, newDetailUrls] = await Promise.all([
         mainImage ? uploadFiles([mainImage], 'main') : Promise.resolve([]),
         uploadFiles(galleryFiles, 'gallery'),
         uploadFiles(detailFiles, 'details')
       ]);
 
-      // 2. 최종 URL 리스트 구성 (기존 유지된 URL + 새로 업로드된 URL)
       const finalMainUrl = newMainUrl.length > 0 ? newMainUrl[0] : editingProduct.imageUrl;
       const finalGallery = [...(editingProduct.images || []), ...newGalleryUrls];
       const finalDetails = [...(editingProduct.detail_content_images || []), ...newDetailUrls];
@@ -243,42 +315,41 @@ export default function AdminDashboard() {
         detail_content_images: finalDetails,
         reward_points: Number(editingProduct.reward_points || 0),
         discount_rate: Number(editingProduct.discount_rate || 0),
-        is_sold_out: Number(editingProduct.stock || 0) <= 0
+        is_sold_out: Number(editingProduct.stock || 0) <= 0,
+        specs: editingProduct.specs
       }).eq('id', editingProduct.id);
 
       if (error) throw error;
       
       alert('상품 정보가 수정되었습니다.');
       setEditingProduct(null);
-      // 스테이트 초기화
       setMainImage(null); setMainPreview(null);
       setGalleryFiles([]); setGalleryPreviews([]);
       setDetailFiles([]); setDetailPreviews([]);
       fetchData();
-    } catch (err: any) { 
-      alert(err.message); 
+    } catch (err: unknown) { 
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      alert(msg); 
     } finally { 
       setIsLoading(false); 
     }
   };
 
-  // 기존 이미지 삭제 처리 (수정 모드용)
   const removeExistingImage = (idx: number, type: 'gallery' | 'detail') => {
     if (!editingProduct) return;
     if (type === 'gallery') {
-      const newImages = editingProduct.images.filter((_: any, i: number) => i !== idx);
+      const newImages = editingProduct.images.filter((_, i) => i !== idx);
       setEditingProduct({ ...editingProduct, images: newImages });
     } else {
-      const newDetails = editingProduct.detail_content_images.filter((_: any, i: number) => i !== idx);
+      const newDetails = editingProduct.detail_content_images.filter((_, i) => i !== idx);
       setEditingProduct({ ...editingProduct, detail_content_images: newDetails });
     }
   };
 
-  const handleDeleteProduct = async (product: any) => {
-    if (!confirm(`'${product.name}' 상품을 정말로 삭제하시겠습니까?\n관련 이미지 파일도 함께 삭제됩니다.`)) return;
+  const handleDeleteProduct = async (product: AdminProduct) => {
+    if (!confirm(`'${product.name}' 상품을 정말로 삭제하시겠습니까?`)) return;
     
     try {
-      // 1. Storage에서 이미지 삭제 (URL에서 파일 경로 추출)
       if (product.imageUrl && product.imageUrl.includes('product-images')) {
         const urlParts = product.imageUrl.split('product-images/');
         if (urlParts.length > 1) {
@@ -286,15 +357,13 @@ export default function AdminDashboard() {
           await supabase.storage.from('product-images').remove([filePath]);
         }
       }
-
-      // 2. Database에서 상품 삭제
       const { error } = await supabase.from('products').delete().eq('id', product.id);
       if (error) throw error;
-
       setProducts(products.filter(p => p.id !== product.id));
-      alert('상품과 이미지가 모두 삭제되었습니다.');
-    } catch (err: any) {
-      alert(`삭제 실패: ${err.message}`);
+      alert('상품이 삭제되었습니다.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      alert(`삭제 실패: ${msg}`);
     }
   };
 
@@ -302,7 +371,7 @@ export default function AdminDashboard() {
   if (!isAdmin) return null;
 
   const totalSales = orders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
-  const pendingOrders = orders.filter(o => o.status === '결제완료').length;
+  const pendingOrdersCount = orders.filter(o => o.status === '결제완료').length;
 
   return (
     <div className="flex-1 flex min-h-screen bg-hanji-white">
@@ -314,16 +383,16 @@ export default function AdminDashboard() {
         </div>
         <nav className="space-y-4 flex-1">
           {[
-            { id: 'dashboard', label: '운영 현황', icon: TrendingUp, path: '/admin' },
-            { id: 'products', label: '상품 관리', icon: Package, path: '/admin?tab=products' },
-            { id: 'orders', label: '주문 관리', icon: ShoppingCart, path: '/admin?tab=orders' },
+            { id: 'dashboard', label: '운영 현황', icon: TrendingUp },
+            { id: 'products', label: '상품 관리', icon: Package },
+            { id: 'orders', label: '주문 관리', icon: ShoppingCart },
+            { id: 'restock', label: '재입고 알림', icon: Bell },
             { id: 'chat', label: '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
             { id: 'members', label: '회원 관리', icon: Users, path: '/admin/members' },
-            { id: 'restock', label: '재입고 알림', icon: Bell, path: '/admin?tab=restock' },
           ].map((item) => (
             <button 
               key={item.id} 
-              onClick={() => item.path.includes('?') || item.path === '/admin' ? setActiveTab(item.id as ActiveTab) : router.push(item.path)} 
+              onClick={() => (item as any).path ? router.push((item as any).path) : setActiveTab(item.id as ActiveTab)} 
               className={`flex items-center gap-3 w-full p-3 rounded-sm transition-all text-sm ${activeTab === item.id ? 'bg-deep-sage text-white font-bold shadow-md' : 'text-muted hover:bg-hanji-white'}`}
             >
               <item.icon className="w-4 h-4" /> {item.label}
@@ -343,14 +412,11 @@ export default function AdminDashboard() {
                   <p className="text-muted text-sm font-light">복이네농장의 실시간 비즈니스 성과를 분석합니다.</p>
                 </div>
               </div>
-
-              {/* 실시간 통계 차트 및 요약 카드 */}
               <SalesChart />
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales (All Time)</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Orders</p><h3 className="text-3xl font-serif text-charcoal">{orders.length}건</h3></div><ShoppingCart className="w-8 h-8 text-deep-sage opacity-20" /></div>
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Ship</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrders}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Ship</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrdersCount}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
               </div>
             </motion.div>
           )}
@@ -365,7 +431,6 @@ export default function AdminDashboard() {
                 <button onClick={() => setIsAdding(!isAdding)} className="bg-charcoal text-white px-8 py-3.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all shadow-lg font-medium">{isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {isAdding ? '닫기' : '새 상품 등록하기'}</button>
               </div>
 
-              {/* Advanced Filter Bar */}
               <div className="bg-white p-6 rounded-sm border border-border-light shadow-sm flex flex-col md:flex-row gap-6">
                 <div className="flex-1 relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
@@ -393,17 +458,19 @@ export default function AdminDashboard() {
                           <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label><input value={newRewardPoints} onChange={(e) => setNewRewardPoints(e.target.value)} type="number" placeholder="지급 적립금" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
                           <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label><input value={newDiscountRate} onChange={(e) => setNewDiscountRate(e.target.value)} type="number" placeholder="할인율" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
                         </div>
+                        <div className="grid grid-cols-2 gap-8">
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Origin</label><input value={newOrigin} onChange={(e) => setNewOrigin(e.target.value)} placeholder="원산지" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Producer</label><input value={newProducer} onChange={(e) => setNewProducer(e.target.value)} placeholder="생산자" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
+                        </div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                       </div>
                       <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품에 대한 상세한 설명을 적어주세요." className="w-full h-full min-h-[200px] bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
                     </div>
 
-                    {/* Image Upload Sections */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
-                      {/* Main Image */}
                       <div className="space-y-4">
-                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
+                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Main Image</label>
                         <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
                           {mainPreview ? (
                             <Image src={mainPreview} alt="Main" fill className="object-cover" />
@@ -412,40 +479,6 @@ export default function AdminDashboard() {
                           )}
                           <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'main')} className="absolute inset-0 opacity-0 cursor-pointer" />
                         </div>
-                      </div>
-
-                      {/* Gallery Images */}
-                      <div className="space-y-4 md:col-span-2">
-                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images (Multiple)</label>
-                        <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-                          {galleryPreviews.map((src, idx) => (
-                            <div key={idx} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                              <Image src={src} alt="Gallery" fill className="object-cover" />
-                              <button type="button" onClick={() => removeFile(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-charcoal text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-3 h-3" /></button>
-                            </div>
-                          ))}
-                          <label className="aspect-square bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
-                            <Plus className="w-6 h-6 text-muted/30" /><span className="text-[8px] font-bold text-muted/40 mt-1">ADD</span>
-                            <input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'gallery')} className="hidden" />
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Detail Images */}
-                    <div className="space-y-4 border-t border-border-light pt-10">
-                      <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Detail Page Images (Professional Content)</label>
-                      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {detailPreviews.map((src, idx) => (
-                          <div key={idx} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                            <Image src={src} alt="Detail" fill className="object-cover" />
-                            <button type="button" onClick={() => removeFile(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-charcoal text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity"><X className="w-4 h-4" /></button>
-                          </div>
-                        ))}
-                        <label className="aspect-[2/3] bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
-                          <Camera className="w-8 h-8 text-muted/30" /><span className="text-[9px] font-bold text-muted/40 mt-2">ADD CONTENT</span>
-                          <input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'detail')} className="hidden" />
-                        </label>
                       </div>
                     </div>
 
@@ -473,7 +506,6 @@ export default function AdminDashboard() {
                     ))}
                   </tbody>
                 </table>
-                {filteredProducts.length === 0 && <div className="py-20 text-center bg-white"><p className="text-muted italic font-light">검색 결과와 일치하는 상품이 없습니다.</p></div>}
               </div>
             </motion.div>
           )}
@@ -482,164 +514,107 @@ export default function AdminDashboard() {
             <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <div className="space-y-4">
                 <h1 className="font-serif text-4xl">주문 관리</h1>
-                <p className="text-muted text-sm font-light">전체 주문 {orders.length}건을 확인하고 배송 상태를 관리합니다.</p>
+                <p className="text-muted text-sm font-light">전체 주문 {orders.length}건을 관리합니다.</p>
               </div>
-
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
-                    <tr>
-                      <th className="px-8 py-6">주문 일시 / ID</th>
-                      <th className="px-8 py-6">주문 상품 정보</th>
-                      <th className="px-8 py-6">주문자 / 연락처</th>
-                      <th className="px-8 py-6 text-right">총 금액</th>
-                      <th className="px-8 py-6 text-center">상태 / 운송장</th>
-                    </tr>
+                    <tr><th className="px-8 py-6">주문 일시 / ID</th><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">결제 수단</th><th className="px-8 py-6 text-right">총 금액</th><th className="px-8 py-6 text-center">상태</th></tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {orders.map((o) => (
                       <tr key={o.id} className="hover:bg-hanji-white/30 transition-colors">
-                        <td className="px-8 py-6">
-                          <div className="space-y-1">
-                            <p className="text-sm text-charcoal">{new Date(o.created_at).toLocaleString('ko-KR')}</p>
-                            <p className="text-[10px] text-muted font-mono">{o.id.slice(0,8).toUpperCase()}</p>
+                        <td className="px-8 py-6"><div className="space-y-1"><p className="text-sm text-charcoal">{new Date(o.created_at).toLocaleString()}</p><p className="text-[10px] text-muted font-mono">{o.id.slice(0,8).toUpperCase()}</p></div></td>
+                        <td className="px-8 py-6"><div className="space-y-1">{o.order_items?.map((item, idx) => (<p key={idx} className="text-xs text-charcoal">· {item.products?.name} ({item.quantity}개)</p>))}</div></td>
+                        <td className="px-8 py-6 text-xs text-muted">
+                          <div className="flex items-center gap-2">
+                            {o.payment_method === 'card' ? <><CreditCard className="w-3.5 h-3.5" /> 카드결제</> : <><Wallet className="w-3.5 h-3.5" /> 무통장</>}
                           </div>
                         </td>
+                        <td className="px-8 py-6 text-right font-medium">₩{Number(o.total_price).toLocaleString()}</td>
                         <td className="px-8 py-6">
-                          <div className="space-y-2">
-                            {o.order_items?.map((item: any, idx: number) => (
-                              <div key={idx} className="flex justify-between items-center gap-4 text-xs">
-                                <span className="text-charcoal font-medium">· {item.products?.name || '삭제된 상품'}</span>
-                                <span className="text-muted whitespace-nowrap">{item.quantity}개</span>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="space-y-1">
-                            <p className="font-serif text-lg text-charcoal">{o.customer_name}</p>
-                            <p className="text-[11px] text-muted">{o.customer_phone}</p>
-                            <p className="text-[10px] text-muted truncate max-w-[150px]">{o.address}</p>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6 text-right font-medium text-charcoal">
-                          ₩{Number(o.total_price).toLocaleString()}
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex flex-col items-center gap-2">
-                            <select 
-                              value={o.status} 
-                              onChange={async (e) => {
-                                const newStatus = e.target.value;
-                                const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', o.id);
-                                if (!error) {
-                                  setOrders(orders.map(item => item.id === o.id ? { ...item, status: newStatus } : item));
-                                }
-                              }}
-                              className={`text-[11px] px-3 py-1.5 rounded-sm border focus:outline-none transition-all ${
-                                o.status === '결제완료' ? 'border-deep-sage text-deep-sage bg-deep-sage/5' :
-                                o.status === '배송준비중' ? 'border-amber-500 text-amber-500 bg-amber-500/5' :
-                                o.status === '배송중' ? 'border-blue-500 text-blue-500 bg-blue-500/5' :
-                                o.status === '배송완료' ? 'border-charcoal text-charcoal bg-charcoal/5' :
-                                'border-charcoal/20 text-charcoal/40 bg-charcoal/5'
-                              }`}
-                            >
-                              <option value="결제완료">결제완료</option>
-                              <option value="배송준비중">배송준비중</option>
-                              <option value="배송중">배송중</option>
-                              <option value="배송완료">배송완료</option>
-                              <option value="취소됨">취소됨</option>
-                            </select>
-                            
-                            <div className="flex gap-1">
-                              <input 
-                                type="text" 
-                                placeholder="운송장 입력" 
-                                defaultValue={o.tracking_number}
-                                onBlur={async (e) => {
-                                  const val = e.target.value;
-                                  if (val !== o.tracking_number) {
-                                    const { error } = await supabase.from('orders').update({ tracking_number: val }).eq('id', o.id);
-                                    if (!error) alert('운송장 번호가 저장되었습니다.');
-                                  }
-                                }}
-                                className="text-[10px] w-24 border border-border-light px-2 py-1 focus:outline-none focus:border-deep-sage rounded-sm"
-                              />
-                            </div>
-                          </div>
+                          <select value={o.status} onChange={async (e) => {
+                            const newStatus = e.target.value;
+                            const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', o.id);
+                            if (!error) setOrders(prev => prev.map(item => item.id === o.id ? { ...item, status: newStatus } : item));
+                          }} className="text-[11px] border border-border-light px-2 py-1 rounded-sm focus:outline-none">
+                            <option value="결제완료">결제완료</option><option value="배송준비중">배송준비중</option><option value="배송중">배송중</option><option value="배송완료">배송완료</option><option value="취소됨">취소됨</option>
+                          </select>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
-                {orders.length === 0 && (
-                  <div className="py-24 text-center bg-white">
-                    <p className="text-muted italic font-light">주문 내역이 아직 없습니다.</p>
-                  </div>
-                )}
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'restock' && (
+            <motion.div key="restock" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+              <div className="space-y-4">
+                <h1 className="font-serif text-4xl">재입고 알림 신청</h1>
+                <p className="text-muted text-sm font-light">품절 상품에 대한 {restockAlerts.length}건의 알림 요청이 있습니다.</p>
+              </div>
+              <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
+                    <tr><th className="px-8 py-6">신청 일시</th><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">신청자 정보</th><th className="px-8 py-6 text-center">현재 재고</th></tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-light">
+                    {restockAlerts.map((a) => (
+                      <tr key={a.id} className="hover:bg-hanji-white/30 transition-colors">
+                        <td className="px-8 py-6 text-xs text-muted">{new Date(a.created_at).toLocaleString()}</td>
+                        <td className="px-8 py-6"><div className="flex items-center gap-4"><div className="relative w-10 h-12 rounded-sm overflow-hidden bg-hanji-white"><Image src={a.products?.imageUrl || ''} alt="" fill className="object-cover" /></div><p className="text-sm font-medium">{a.products?.name}</p></div></td>
+                        <td className="px-8 py-6"><p className="text-sm text-charcoal">{a.profiles?.full_name}</p><p className="text-[10px] text-muted">{a.profiles?.email}</p></td>
+                        <td className="px-8 py-6 text-center"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${a.products?.stock && a.products.stock > 0 ? 'bg-green-50 text-green-600' : 'bg-terracotta/10 text-terracotta'}`}>{a.products?.stock || 0}개</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
       </main>
 
-      {/* Advanced Edit Modal */}
       <AnimatePresence>
         {editingProduct && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setEditingProduct(null); setMainPreview(null); setGalleryPreviews([]); setDetailPreviews([]); }} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingProduct(null)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-4xl rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
               <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
               <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
                 <h2 className="font-serif text-3xl">상품 정보 수정</h2>
-                <button onClick={() => { setEditingProduct(null); setMainPreview(null); setGalleryPreviews([]); setDetailPreviews([]); }} className="p-2 hover:bg-hanji-white rounded-full transition-colors"><X className="w-7 h-7" /></button>
+                <button onClick={() => setEditingProduct(null)} className="p-2 hover:bg-hanji-white rounded-full transition-colors"><X className="w-7 h-7" /></button>
               </div>
-              
               <form onSubmit={handleUpdateProduct} className="space-y-12">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
                   <div className="space-y-8">
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage text-lg font-serif bg-transparent" /></div>
                     <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label><input required type="number" value={editingProduct.shipping_fee || 0} onChange={(e) => setEditingProduct({...editingProduct, shipping_fee: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label><input required type="number" value={editingProduct.shipping_fee || 0} onChange={(e) => setEditingProduct({...editingProduct, shipping_fee: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     </div>
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label><input type="number" value={editingProduct.reward_points || 0} onChange={(e) => setEditingProduct({...editingProduct, reward_points: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" /></div>
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label><input type="number" value={editingProduct.discount_rate || 0} onChange={(e) => setEditingProduct({...editingProduct, discount_rate: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" /></div>
-                    </div>
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
+                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                   </div>
                   <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required rows={6} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-full bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
                 </div>
-
-                {/* Edit Image Upload Sections */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
                   <div className="space-y-4">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Main Image</label>
                     <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
                       <Image src={mainPreview || editingProduct.imageUrl} alt="Main" fill className="object-cover" />
-                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-[10px] font-bold">새 이미지 선택</div>
                       <input type="file" accept="image/*" onChange={(e) => handleImageChange(e, 'main')} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
                   </div>
-
                   <div className="space-y-4 md:col-span-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images</label>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-4">
-                      {/* Existing Gallery Images */}
-                      {editingProduct.images?.map((url: string, idx: number) => (
-                        <div key={`old-${idx}`} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                          <Image src={url} alt="Gallery" fill className="object-cover" />
-                          <button type="button" onClick={() => removeExistingImage(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-terracotta text-white rounded-full transition-all group-hover:scale-110 shadow-lg"><X className="w-3 h-3" /></button>
-                        </div>
-                      ))}
-                      {/* New Gallery Previews */}
-                      {galleryPreviews.map((src, idx) => (
-                        <div key={`new-${idx}`} className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border-2 border-deep-sage/30 group">
-                          <Image src={src} alt="New Gallery" fill className="object-cover" />
-                          <button type="button" onClick={() => removeFile(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-charcoal text-white rounded-full"><X className="w-3 h-3" /></button>
-                          <div className="absolute bottom-0 left-0 right-0 bg-deep-sage text-[8px] text-white text-center py-0.5">NEW</div>
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Gallery Images</label>
+                    <div className="grid grid-cols-4 gap-4">
+                      {editingProduct.images?.map((url, idx) => (
+                        <div key={idx} className="relative aspect-square rounded-sm overflow-hidden border border-border-light group">
+                          <Image src={url} alt="" fill className="object-cover" />
+                          <button type="button" onClick={() => removeExistingImage(idx, 'gallery')} className="absolute top-1 right-1 p-1 bg-terracotta text-white rounded-full"><X className="w-3 h-3" /></button>
                         </div>
                       ))}
                       <label className="aspect-square bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
@@ -648,31 +623,6 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </div>
-
-                <div className="space-y-4 border-t border-border-light pt-10">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Detail Content Images</label>
-                  <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {/* Existing Detail Images */}
-                    {editingProduct.detail_content_images?.map((url: string, idx: number) => (
-                      <div key={`old-det-${idx}`} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                        <Image src={url} alt="Detail" fill className="object-cover" />
-                        <button type="button" onClick={() => removeExistingImage(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-terracotta text-white rounded-full transition-all group-hover:scale-110 shadow-lg"><X className="w-4 h-4" /></button>
-                      </div>
-                    ))}
-                    {/* New Detail Previews */}
-                    {detailPreviews.map((src, idx) => (
-                      <div key={`new-det-${idx}`} className="relative aspect-[2/3] bg-hanji-white rounded-sm overflow-hidden border-2 border-deep-sage/30 group">
-                        <Image src={src} alt="New Detail" fill className="object-cover" />
-                        <button type="button" onClick={() => removeFile(idx, 'detail')} className="absolute top-2 right-2 p-1.5 bg-charcoal text-white rounded-full"><X className="w-4 h-4" /></button>
-                        <div className="absolute bottom-0 left-0 right-0 bg-deep-sage text-[8px] text-white text-center py-1">NEW</div>
-                      </div>
-                    ))}
-                    <label className="aspect-[2/3] bg-hanji-white border border-dashed border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors">
-                      <Camera className="w-8 h-8 text-muted/30" /><input type="file" multiple accept="image/*" onChange={(e) => handleImageChange(e, 'detail')} className="hidden" />
-                    </label>
-                  </div>
-                </div>
-
                 <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl">
                   {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Save className="w-8 h-8" />} 수정 내용 저장하기
                 </button>
