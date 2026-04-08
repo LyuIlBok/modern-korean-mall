@@ -19,6 +19,7 @@ interface Profile {
   tier: string;
   points: number;
   is_admin: boolean;
+  phone?: string | null;
   created_at?: string;
 }
 
