@@ -2,7 +2,8 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 /**
- * [Next.js 16 Proxy / Middleware]
+ * [Next.js 16 Proxy]
+ * - 기존의 middleware를 대체하는 Next.js 16 최신 규격입니다.
  * - 모든 요청에 대해 Supabase 세션을 갱신합니다.
  * - 보호된 경로(/admin, /checkout, /mypage)에 대한 접근 제어를 수행합니다.
  */
@@ -50,6 +51,11 @@ export async function proxy(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser();
   const { pathname } = request.nextUrl;
 
+  // 로그인 페이지 자체에 대한 리다이렉트 루프 방지
+  if (pathname === '/login') {
+    return response;
+  }
+
   // 1. 관리자 경로 보호 (/admin)
   if (pathname.startsWith('/admin')) {
     if (!user) {
@@ -66,7 +72,7 @@ export async function proxy(request: NextRequest) {
       .single();
 
     if (!profile?.is_admin) {
-      console.warn(`[Security Alert] Non-admin access attempt by ${user.email}`);
+      console.warn(`[Security Alert] Non-admin access attempt to /admin by ${user.email}`);
       return NextResponse.redirect(new URL('/', request.url));
     }
   }
@@ -86,6 +92,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

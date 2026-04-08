@@ -1,29 +1,33 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { Provider } from '@supabase/supabase-js';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectedFrom = searchParams.get('redirectedFrom');
 
   useEffect(() => {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
-      if (data.session) router.push('/');
+      if (data.session) {
+        router.push(redirectedFrom || '/');
+      }
     };
     checkUser();
-  }, [router]);
+  }, [router, redirectedFrom]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +42,7 @@ export default function LoginPage() {
       });
 
       if (error) throw error;
-      router.push('/');
+      router.push(redirectedFrom || '/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setErrorMsg(msg === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : msg);
@@ -57,7 +61,7 @@ export default function LoginPage() {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: (provider === 'naver' ? 'custom:naver' : provider) as Provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=/`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom || '/')}`,
           queryParams: {
             prompt: 'select_account',
           },
@@ -67,6 +71,7 @@ export default function LoginPage() {
       if (error) {
         console.error(`[OAuth Error] ${provider}:`, error.message);
         alert(`로그인 실패 (${provider}): ${error.message}`);
+        setSocialLoading(socialLoading);
         setSocialLoading(null);
         return;
       }
@@ -210,5 +215,17 @@ export default function LoginPage() {
         </div>
       </motion.div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex-1 flex items-center justify-center bg-hanji-white py-20 min-h-screen">
+        <Loader2 className="w-10 h-10 animate-spin text-deep-sage" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }
