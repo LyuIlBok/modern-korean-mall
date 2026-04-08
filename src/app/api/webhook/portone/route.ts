@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabaseClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,8 +29,6 @@ export async function POST(req: Request) {
 
     if (status === 'paid' || status === 'PAID') {
       console.log(`Processing paid status for ${finalId}`);
-      // 실제 비즈니스 로직은 통합 웹훅(/api/webhook)에서 처리하므로 여기선 수신 확인만 수행하거나
-      // 통합 로직으로 포워딩 가능
     }
 
     return NextResponse.json({ received: true }, { status: 200 });

@@ -9,8 +9,7 @@ import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import Link from 'next/link';
 import Script from 'next/script';
-import * as PortOne from '@portone/browser-sdk/v2';
-import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Plus } from 'lucide-react';
+import { ChevronLeft, Truck, CreditCard, ShieldCheck, Loader2, Plus, ShoppingBag } from 'lucide-react';
 import { Session } from '@supabase/supabase-js';
 
 // --- Interfaces ---
@@ -56,7 +55,7 @@ interface DaumPostcodeData {
   address: string;
 }
 
-export default function CheckoutClient() {
+export default function CheckoutInternal() {
   const { items, clearCart } = useCartStore();
   const { language } = useLanguageStore();
   const hasMounted = useHasMounted();
@@ -181,12 +180,6 @@ export default function CheckoutClient() {
 
     const c = coupon as Coupon;
 
-    // 유효기간 체크
-    if (c.valid_until && new Date(c.valid_until) < new Date()) {
-      alert(language === 'ko' ? '만료된 쿠폰입니다.' : 'Expired coupon.');
-      return;
-    }
-
     // 최소 주문 금액 체크
     if (subtotal < (c.min_order_amount || 0)) {
       alert(language === 'ko' 
@@ -278,7 +271,9 @@ export default function CheckoutClient() {
           ? `${currentItems[0].name} 외 ${currentItems.length - 1}건`
           : currentItems[0].name;
 
-        // PortOne SDK 호출
+        // PortOne SDK V2 동적 임포트 (Prerendering 에러 방지)
+        const PortOne = await import('@portone/browser-sdk/v2');
+
         const paymentResponse = await PortOne.requestPayment({
           storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || '',
           channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || '',
@@ -360,7 +355,7 @@ export default function CheckoutClient() {
             
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                <Truck className="w-6 h-6 text-deep-sage" /> {language === 'ko' ? '배송지 정보' : 'Shipping Info'}
+                <Truck className="w-6 h-6 text-deep-sage" /> 배송지 정보
               </h2>
               
               {/* 1. 회원용 UI: 카드 선택형 */}
@@ -375,7 +370,7 @@ export default function CheckoutClient() {
                     >
                       <div className="flex justify-between items-start mb-3">
                         <span className="text-[10px] uppercase tracking-widest font-bold px-2 py-0.5 bg-deep-sage text-white rounded-full">
-                          {addr.address_name || (language === 'ko' ? '기본' : 'Default')}
+                          {addr.address_name || '기본'}
                         </span>
                         {selectedAddressId === addr.id && <ShieldCheck className="w-4 h-4 text-charcoal" />}
                       </div>
@@ -395,7 +390,7 @@ export default function CheckoutClient() {
                     <div className="w-10 h-10 rounded-full bg-hanji-white flex items-center justify-center group-hover:scale-110 transition-transform">
                       <Plus className="w-5 h-5 text-muted" />
                     </div>
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '+ 새 배송지 직접 입력' : '+ Enter New Address'}</span>
+                    <span className="text-[10px] uppercase tracking-widest font-bold text-muted">+ 새 배송지 직접 입력</span>
                   </button>
                 </div>
               )}
@@ -403,47 +398,47 @@ export default function CheckoutClient() {
               {/* 2. 직접 입력 폼 */}
               {(selectedAddressId === 'new' || !session) && (
                 <div className={`space-y-6 ${session ? 'pt-8 border-t border-border-light animate-in fade-in slide-in-from-top-4 duration-500' : ''}`}>
-                  {!session && <p className="text-[10px] uppercase tracking-widest font-bold text-deep-sage mb-4 italic">* {language === 'ko' ? '비회원 주문을 위해 배송 정보를 입력해 주세요.' : 'Please enter shipping info for guest checkout.'}</p>}
+                  {!session && <p className="text-[10px] uppercase tracking-widest font-bold text-deep-sage mb-4 italic">* 비회원 주문을 위해 배송 정보를 입력해 주세요.</p>}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '수령인' : 'Recipient'}</label>
-                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder={language === 'ko' ? '성함' : 'Name'} />
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">수령인</label>
+                      <input required value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="성함" />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '연락처' : 'Phone'}</label>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">연락처</label>
                       <input required value={formData.phone} onChange={(e) => setFormData({...formData, phone: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="010-0000-0000" />
                     </div>
                   </div>
                   <div className="space-y-4 pt-4">
                     <div className="flex gap-4 items-end">
                       <div className="flex-1 space-y-2">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '우편번호' : 'Zip Code'}</label>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">우편번호</label>
                         <input required readOnly value={formData.postcode} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="00000" />
                       </div>
                       <button type="button" onClick={handleAddressSearch} className="px-6 py-2.5 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all">
-                        {language === 'ko' ? '주소 찾기' : 'Search'}
+                        주소 찾기
                       </button>
                     </div>
-                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder={language === 'ko' ? '기본 주소' : 'Base Address'} />
-                    <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" placeholder={language === 'ko' ? '상세 주소' : 'Detail Address'} />
+                    <input required readOnly value={formData.address} className="w-full border-b border-border-light py-2 focus:outline-none bg-hanji-white/30" placeholder="기본 주소" />
+                    <input required value={formData.detailAddress} onChange={(e) => setFormData({...formData, detailAddress: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage" placeholder="상세 주소" />
                   </div>
                 </div>
               )}
 
               <div className="space-y-2 pt-8 border-t border-border-light/50 mt-8">
-                <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '배송 메모' : 'Memo'}</label>
-                <input value={formData.memo} onChange={(e) => setFormData({...formData, memo: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder={language === 'ko' ? '요청 사항을 입력해 주세요' : 'Special requests'} />
+                <label className="text-[10px] uppercase tracking-widest font-bold text-muted">배송 메모</label>
+                <input value={formData.memo} onChange={(e) => setFormData({...formData, memo: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage bg-transparent" placeholder="요청 사항을 입력해 주세요" />
               </div>
             </section>
 
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
               <h2 className="font-serif text-2xl mb-8 flex items-center gap-3">
-                <CreditCard className="w-6 h-6 text-deep-sage" /> {language === 'ko' ? '결제 수단 선택' : 'Payment Method'}
+                <CreditCard className="w-6 h-6 text-deep-sage" /> 결제 수단 선택
               </h2>
               <div className="grid grid-cols-2 gap-4">
                 {[
-                  { id: 'card', label: language === 'ko' ? '신용카드' : 'Credit Card' },
-                  { id: 'transfer', label: language === 'ko' ? '무통장 입금' : 'Bank Transfer' },
+                  { id: 'card', label: '신용카드' },
+                  { id: 'transfer', label: '무통장 입금' },
                 ].map((method) => (
                   <button
                     key={method.id}
@@ -460,7 +455,7 @@ export default function CheckoutClient() {
 
           <div className="lg:col-span-5 lg:sticky lg:top-32 space-y-8">
             <section className="bg-white border border-border-light p-10 rounded-sm shadow-sm">
-              <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">{language === 'ko' ? '주문 요약' : 'Order Summary'}</h2>
+              <h2 className="font-serif text-xl mb-8 border-b border-border-light pb-4">주문 요약</h2>
               <div className="space-y-6 max-h-[40vh] overflow-y-auto pr-4 mb-8 custom-scrollbar">
                 {items.map((item) => (
                   <div key={item.id} className="flex gap-4">
@@ -469,7 +464,7 @@ export default function CheckoutClient() {
                     </div>
                     <div className="flex-1 flex flex-col justify-center">
                       <p className="font-serif text-sm text-charcoal line-clamp-1">{item.name}</p>
-                      <p className="text-xs text-muted mt-1">{item.quantity}{language === 'ko' ? '개' : 'ea'} / ₩{(item.price * item.quantity).toLocaleString()}</p>
+                      <p className="text-xs text-muted mt-1">{item.quantity}개 / ₩{(item.price * item.quantity).toLocaleString()}</p>
                     </div>
                   </div>
                 ))}
@@ -479,7 +474,7 @@ export default function CheckoutClient() {
                 {session && (
                   <div className="space-y-6 pb-6 border-b border-border-light/50">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '쿠폰 적용' : 'Coupons'}</label>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">쿠폰 적용</label>
                       <select 
                         onChange={(e) => {
                           const coupon = coupons.find(c => c.id === e.target.value);
@@ -487,7 +482,7 @@ export default function CheckoutClient() {
                         }}
                         className="w-full bg-hanji-white/30 border border-border-light px-4 py-3 rounded-sm text-sm focus:border-deep-sage outline-none"
                       >
-                        <option value="">{language === 'ko' ? '적용 가능한 쿠폰을 선택하세요' : 'Select a coupon'}</option>
+                        <option value="">적용 가능한 쿠폰을 선택하세요</option>
                         {coupons.map((c) => (
                           <option key={c.id} value={c.id}>
                             {c.coupons.name} ({c.coupons.discount_type === 'rate' || c.coupons.discount_type === 'percent' ? `${c.coupons.discount_value}%` : `${c.coupons.discount_value.toLocaleString()}원`} 할인)
@@ -498,8 +493,8 @@ export default function CheckoutClient() {
 
                     <div className="space-y-2">
                       <div className="flex justify-between items-center">
-                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '적립금 사용' : 'Points'}</label>
-                        <span className="text-[10px] text-deep-sage font-medium">{language === 'ko' ? '보유' : 'Owned'}: ₩{userPoints.toLocaleString()}</span>
+                        <label className="text-[10px] uppercase tracking-widest font-bold text-muted">적립금 사용</label>
+                        <span className="text-[10px] text-deep-sage font-medium">보유: ₩{userPoints.toLocaleString()}</span>
                       </div>
                       <div className="flex gap-3">
                         <input 
@@ -517,56 +512,56 @@ export default function CheckoutClient() {
                           onClick={() => setUsePoints(userPoints)}
                           className="px-4 py-2 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all"
                         >
-                          {language === 'ko' ? '전액 사용' : 'Use All'}
+                          전액 사용
                         </button>
                       </div>
                     </div>
 
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">{language === 'ko' ? '프로모션 코드' : 'Promo Code'}</label>
+                      <label className="text-[10px] uppercase tracking-widest font-bold text-muted">프로모션 코드</label>
                       <div className="flex gap-3">
                         <input 
                           type="text"
                           value={promoCode}
                           onChange={(e) => setPromoCode(e.target.value)}
                           className="flex-1 bg-hanji-white/30 border border-border-light px-4 py-2.5 rounded-sm text-sm focus:border-deep-sage outline-none uppercase"
-                          placeholder={language === 'ko' ? '코드 입력' : 'Enter code'}
+                          placeholder="코드 입력"
                         />
                         <button 
                           type="button"
                           onClick={handleApplyPromoCode}
                           className="px-4 py-2 bg-charcoal text-white text-[10px] uppercase tracking-widest font-bold rounded-sm hover:bg-deep-sage transition-all"
                         >
-                          {language === 'ko' ? '적용' : 'Apply'}
+                          적용
                         </button>
                       </div>
-                      {appliedCoupon && <p className="text-[10px] text-deep-sage font-bold">✓ {appliedCoupon.name} {language === 'ko' ? '적용됨' : 'Applied'}</p>}
+                      {appliedCoupon && <p className="text-[10px] text-deep-sage font-bold">✓ {appliedCoupon.name} 적용됨</p>}
                     </div>
                   </div>
                 )}
 
                 <div className="flex justify-between text-sm text-muted">
-                  <span>{language === 'ko' ? '총 상품 금액' : 'Subtotal'}</span>
+                  <span>총 상품 금액</span>
                   <span>₩{subtotal.toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm text-muted">
-                  <span>{language === 'ko' ? '배송비' : 'Shipping'}</span>
-                  <span>{shippingFee === 0 ? (language === 'ko' ? '무료' : 'FREE') : `₩${shippingFee.toLocaleString()}`}</span>
+                  <span>배송비</span>
+                  <span>{shippingFee === 0 ? '무료' : `₩${shippingFee.toLocaleString()}`}</span>
                 </div>
                 {usePoints > 0 && (
                   <div className="flex justify-between text-sm text-terracotta">
-                    <span>{language === 'ko' ? '적립금 할인' : 'Points Discount'}</span>
+                    <span>적립금 할인</span>
                     <span>- ₩{usePoints.toLocaleString()}</span>
                   </div>
                 )}
                 {(couponDiscount > 0 || promoDiscount > 0) && (
                   <div className="flex justify-between text-sm text-terracotta">
-                    <span>{language === 'ko' ? '쿠폰/코드 할인' : 'Coupon/Promo Discount'}</span>
+                    <span>쿠폰/코드 할인</span>
                     <span>- ₩{(couponDiscount + promoDiscount).toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-xl font-serif text-charcoal pt-4 border-t border-border-light">
-                  <span>{language === 'ko' ? '최종 결제 금액' : 'Total'}</span>
+                  <span>최종 결제 금액</span>
                   <span className="text-2xl">₩{finalTotal.toLocaleString()}</span>
                 </div>
               </div>
@@ -582,7 +577,7 @@ export default function CheckoutClient() {
                     <span className="text-sm font-sans uppercase tracking-widest">Processing...</span>
                   </>
                 ) : (
-                  <>₩{finalTotal.toLocaleString()} {language === 'ko' ? '결제하기' : 'Pay Now'}</>
+                  <>₩{finalTotal.toLocaleString()} 결제하기</>
                 )}
               </button>
             </section>

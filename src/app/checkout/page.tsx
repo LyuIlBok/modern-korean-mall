@@ -1,19 +1,22 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-import { Loader2 } from 'lucide-react';
 
-export const viewport = { width: 'device-width', initialScale: 1 };
-
-const CheckoutClient = dynamic(() => import('./CheckoutClient'), {
+/**
+ * [Checkout Page Entry]
+ */
+const CheckoutInternal = dynamic(() => import('./CheckoutInternal'), {
   ssr: false,
   loading: () => (
-    <div className="bg-hanji-white min-h-screen flex items-center justify-center">
-      <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+    <div className="bg-hanji-white min-h-screen flex flex-col items-center justify-center">
+      <div className="w-10 h-10 border-4 border-deep-sage border-t-transparent rounded-full animate-spin mb-4" />
+      <p className="text-[10px] uppercase tracking-[0.3em] font-bold text-muted animate-pulse">
+        Initializing Checkout...
+      </p>
     </div>
   )
 });
 
 export default function CheckoutPage() {
-  return <CheckoutClient />;
+  return <CheckoutInternal />;
 }

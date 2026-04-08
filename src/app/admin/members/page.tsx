@@ -125,7 +125,6 @@ export default function AdminMembersPage() {
     } catch (error: unknown) {
       const msg = error instanceof Error ? error.message : 'Unknown error';
       alert(msg);
-      console.error(error);
     } finally {
       setActionLoading(false);
     }

@@ -32,19 +32,19 @@ export default function ChatWidget() {
       .order('created_at', { ascending: true });
     
     if (data) {
-      setMessages(data as ChatMessage[]);
-      // 읽지 않은 관리자 메시지 개수 계산
-      const unread = (data as ChatMessage[]).filter(m => m.is_admin && !m.is_read).length;
+      const msgs = data as ChatMessage[];
+      setMessages(msgs);
+      const unread = msgs.filter(m => m.is_admin && !m.is_read).length;
       setUnreadCount(unread);
     }
   }, []);
 
-  const markAsRead = async (messageId: string) => {
+  const markAsRead = useCallback(async (messageId: string) => {
     await supabase
       .from('support_messages')
       .update({ is_read: true })
       .eq('id', messageId);
-  };
+  }, []);
 
   const subscribeToMessages = useCallback((uid: string) => {
     const channel = supabase
@@ -64,24 +64,21 @@ export default function ChatWidget() {
             const msg = newMsg as ChatMessage;
             setMessages((prev) => {
               if (prev.find(m => m.id === msg.id)) return prev;
-              
-              // 관리자 메시지이고 창이 닫혀있으면 알림 카운트 증가
-              if (msg.is_admin && !isOpen) {
-                setUnreadCount(c => c + 1);
-              }
               return [...prev, msg];
             });
+            // 관리자 메시지이면 알림 카운트 증가
+            if (msg.is_admin) {
+              setUnreadCount(c => c + 1);
+            }
           } 
           else if (eventType === 'UPDATE') {
             const msg = newMsg as ChatMessage;
-            // 관리자가 메시지를 수정했을 때 즉각 반영
             setMessages((prev) => prev.map(m => 
               m.id === msg.id ? { ...m, ...msg } : m
             ));
           } 
           else if (eventType === 'DELETE') {
             const msg = oldMsg as ChatMessage;
-            // 관리자가 메시지를 삭제했을 때 즉각 제거
             setMessages((prev) => prev.filter(m => m.id !== msg.id));
           }
         }
@@ -91,7 +88,7 @@ export default function ChatWidget() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [isOpen]);
+  }, []);
 
   useEffect(() => {
     const initChat = async () => {
@@ -122,20 +119,28 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
     
-    // 창이 열려있을 때 관리자 메시지가 오면 즉시 읽음 처리
+    // 창이 열려있을 때 마지막 메시지가 관리자 메시지이고 읽지 않았으면 읽음 처리
     if (isOpen && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.is_admin && !lastMsg.is_read) {
-        markAsRead(lastMsg.id);
+        // 비동기 처리를 위해 setTimeout으로 분리하여 동기적 setState 경고 해결
+        const timer = setTimeout(() => {
+          markAsRead(lastMsg.id);
+          setUnreadCount(0);
+        }, 0);
+        return () => clearTimeout(timer);
       }
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, markAsRead]);
 
-  // 창이 열릴 때 알림 초기화 및 마지막 메시지 읽음 처리
+  // 창이 열릴 때 알림 초기화
   useEffect(() => {
     if (isOpen) {
-      setUnreadCount(0);
-      if (inputRef.current) inputRef.current.focus();
+      const timer = setTimeout(() => {
+        setUnreadCount(0);
+        if (inputRef.current) inputRef.current.focus();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [isOpen]);
 
