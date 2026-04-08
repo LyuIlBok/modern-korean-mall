@@ -8,7 +8,7 @@ import {
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
-  DollarSign, Save, CreditCard, Wallet
+  DollarSign, Save, CreditCard, Wallet, Image as ImageIcon
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -90,7 +90,7 @@ interface AdminRestockAlert {
 interface SidebarItem {
   id: ActiveTab | 'chat' | 'members';
   label: string;
-  icon: typeof Package | typeof LayoutDashboard | typeof LogOut | typeof ShoppingCart | typeof Bell | typeof MessageSquare | typeof Users | typeof TrendingUp;
+  icon: any;
   path?: string;
 }
 
@@ -204,25 +204,38 @@ export default function AdminDashboard() {
     setMainPreview(URL.createObjectURL(files[0]));
   };
 
+  const uploadFile = async (file: File, folder: string) => {
+    const fileExt = file.name.split('.').pop();
+    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+    const filePath = `${folder}/${fileName}`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('product-images')
+      .upload(filePath, file);
+
+    if (uploadError) throw uploadError;
+
+    const { data: { publicUrl } } = supabase.storage
+      .from('product-images')
+      .getPublicUrl(filePath);
+
+    return publicUrl;
+  };
+
   const handleAddProduct = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName || !newPrice || !newDesc) return alert('필수 정보를 입력해 주세요.');
 
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       let customImageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e';
 
       if (mainImage) {
-        const fileExt = mainImage.name.split('.').pop();
-        const fileName = `main_${Date.now()}.${fileExt}`;
-        const filePath = `main/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, mainImage);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filePath);
-        customImageUrl = publicUrl;
+        customImageUrl = await uploadFile(mainImage, 'main');
       }
 
-      const { error } = await supabase.from('products').insert([{
+      const productPayload = {
         name: newName, 
         price: Number(newPrice || 0), 
         stock: Number(newStock || 0), 
@@ -234,12 +247,25 @@ export default function AdminDashboard() {
         reward_points: Number(newRewardPoints || 0),
         discount_rate: Number(newDiscountRate || 0),
         specs: { origin: newOrigin, producer: newProducer }
-      }]).select();
+      };
 
-      if (error) throw error;
+      const res = await fetch('/api/admin/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productData: productPayload, adminToken: session?.user?.id })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
       
       alert('상품이 등록되었습니다!');
       setIsAdding(false);
+      
+      // Reset form
+      setNewName(''); setNewPrice(''); setNewStock('100'); setNewShippingFee('0');
+      setNewDesc(''); setNewRewardPoints('0'); setNewDiscountRate('0');
+      setMainImage(null); setMainPreview(null);
+
       fetchData(); 
     } catch (error: unknown) { 
       const msg = error instanceof Error ? error.message : 'Unknown error';
@@ -255,18 +281,14 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       let finalMainUrl = editingProduct.imageUrl;
+      
       if (mainImage) {
-        const fileExt = mainImage.name.split('.').pop();
-        const fileName = `main_${Date.now()}.${fileExt}`;
-        const filePath = `main/${fileName}`;
-        const { error: uploadError } = await supabase.storage.from('product-images').upload(filePath, mainImage);
-        if (uploadError) throw uploadError;
-        const { data: { publicUrl } } = supabase.storage.from('product-images').getPublicUrl(filePath);
-        finalMainUrl = publicUrl;
+        finalMainUrl = await uploadFile(mainImage, 'main');
       }
 
-      const { error } = await supabase.from('products').update({
+      const productPayload = {
         name: editingProduct.name, 
         price: Number(editingProduct.price || 0), 
         stock: Number(editingProduct.stock || 0), 
@@ -278,9 +300,16 @@ export default function AdminDashboard() {
         discount_rate: Number(editingProduct.discount_rate || 0),
         is_sold_out: Number(editingProduct.stock || 0) <= 0,
         specs: editingProduct.specs
-      }).eq('id', editingProduct.id);
+      };
 
-      if (error) throw error;
+      const res = await fetch('/api/admin/products', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ productId: editingProduct.id, productData: productPayload, adminToken: session?.user?.id })
+      });
+
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error);
       
       alert('상품 정보가 수정되었습니다.');
       setEditingProduct(null);
@@ -296,7 +325,7 @@ export default function AdminDashboard() {
 
   const removeExistingImage = (idx: number) => {
     if (!editingProduct) return;
-    const newImages = editingProduct.images.filter((_, i) => i !== idx);
+    const newImages = (editingProduct.images || []).filter((_, i) => i !== idx);
     setEditingProduct({ ...editingProduct, images: newImages });
   };
 
@@ -426,7 +455,7 @@ export default function AdminDashboard() {
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
                       <div className="space-y-4">
-                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Main Image</label>
+                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
                         <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
                           {mainPreview ? (
                             <Image src={mainPreview} alt="Main" fill className="object-cover" />
@@ -448,14 +477,19 @@ export default function AdminDashboard() {
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
-                    <tr><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">카테고리</th><th className="px-8 py-6 text-right">판매가</th><th className="px-8 py-6 text-right">재고</th><th className="px-8 py-6 text-center">관리</th></tr>
+                    <tr><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">카테고리</th><th className="px-8 py-6 text-right">판매가 / 배송비</th><th className="px-8 py-6 text-right">재고</th><th className="px-8 py-6 text-center">관리</th></tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {filteredProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-hanji-white/30 transition-colors group">
                         <td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-14 h-16 rounded-sm overflow-hidden border border-border-light bg-hanji-white"><Image src={p.imageUrl} alt={p.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" /></div><div className="space-y-1"><p className="font-serif text-lg text-charcoal">{p.name}</p><p className="text-[10px] text-muted font-mono">{p.id.slice(0,8).toUpperCase()}</p></div></div></td>
                         <td className="px-8 py-6 text-xs font-bold text-deep-sage uppercase tracking-wider">{p.category}</td>
-                        <td className="px-8 py-6 text-right font-medium text-charcoal">{Number(p.price).toLocaleString()}원</td>
+                        <td className="px-8 py-6 text-right">
+                          <div className="space-y-1">
+                            <p className="font-medium text-charcoal">{Number(p.price).toLocaleString()}원</p>
+                            <p className="text-[10px] text-muted">배송비: {Number(p.shipping_fee).toLocaleString()}원</p>
+                          </div>
+                        </td>
                         <td className="px-8 py-6 text-right"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${p.stock <= 0 ? 'bg-terracotta/10 text-terracotta' : p.stock <= 5 ? 'bg-orange-50 text-orange-600' : 'bg-charcoal/5 text-charcoal/60'}`}>{p.stock <= 0 ? '품절' : `${p.stock}개`}</span></td>
                         <td className="px-8 py-6 text-center"><div className="flex justify-center gap-3"><button onClick={() => setEditingProduct(p)} className="p-2 hover:bg-deep-sage/10 rounded-full transition-all text-muted hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button><button onClick={() => handleDeleteProduct(p)} className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"><Trash2 className="w-4 h-4" /></button></div></td>
                       </tr>
@@ -558,14 +592,14 @@ export default function AdminDashboard() {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
                   <div className="space-y-4">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Main Image</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
                     <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
                       <Image src={mainPreview || editingProduct.imageUrl} alt="Main" fill className="object-cover" />
                       <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
                   </div>
                   <div className="space-y-4 md:col-span-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">Gallery Images</label>
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images</label>
                     <div className="grid grid-cols-4 gap-4">
                       {editingProduct.images?.map((url, idx) => (
                         <div key={idx} className="relative aspect-square rounded-sm overflow-hidden border border-border-light group">
