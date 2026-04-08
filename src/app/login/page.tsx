@@ -23,6 +23,7 @@ function LoginContent() {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
+        router.refresh(); // 서버 데이터 동기화
         router.push(redirectedFrom || '/');
       }
     };
@@ -42,6 +43,8 @@ function LoginContent() {
       });
 
       if (error) throw error;
+      
+      router.refresh(); // 중요: 쿠키 기반 세션 동기화를 위해 서버 컴포넌트 리프레시
       router.push(redirectedFrom || '/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -71,7 +74,6 @@ function LoginContent() {
       if (error) {
         console.error(`[OAuth Error] ${provider}:`, error.message);
         alert(`로그인 실패 (${provider}): ${error.message}`);
-        setSocialLoading(socialLoading);
         setSocialLoading(null);
         return;
       }
