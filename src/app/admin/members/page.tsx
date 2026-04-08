@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Search, ChevronDown, ChevronUp, Loader2, 
   ArrowLeft, Edit, Plus, Minus, DollarSign, Crown, ShieldCheck, X,
-  ShoppingBag, Clock
+  ShoppingBag, Clock, AlertCircle
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 
@@ -32,6 +32,7 @@ interface Order {
 export default function AdminMembersPage() {
   const [members, setMembers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null);
@@ -48,20 +49,25 @@ export default function AdminMembersPage() {
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) throw new Error('Session not found');
+      if (!session) {
+        setError('인증 세션이 유효하지 않습니다. 다시 로그인해주세요.');
+        return;
+      }
 
       const response = await fetch(`/api/admin/members?adminToken=${session.user.id}`);
       const result = await response.json();
 
-      if (result.success) {
+      if (response.ok && result.success) {
         setMembers(result.data as Profile[]);
       } else {
-        throw new Error(result.error || 'Failed to fetch members');
+        setError(result.error || '회원 정보를 가져오는 데 실패했습니다.');
       }
-    } catch (error) {
-      console.error('Error fetching members:', error);
+    } catch (err: any) {
+      console.error('Error fetching members:', err);
+      setError('네트워크 오류 또는 서버 응답 오류가 발생했습니다.');
     } finally {
       setLoading(false);
     }
@@ -81,15 +87,21 @@ export default function AdminMembersPage() {
 
   const fetchMemberOrders = async (userId: string) => {
     setOrdersLoading(true);
-    const { data } = await supabase
-      .from('orders')
-      .select('id, total_price, status, created_at')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(5);
-    
-    setMemberOrders((data as Order[]) || []);
-    setOrdersLoading(false);
+    try {
+      const { data, error: orderError } = await supabase
+        .from('orders')
+        .select('id, total_price, status, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(5);
+      
+      if (orderError) throw orderError;
+      setMemberOrders((data as Order[]) || []);
+    } catch (err) {
+      console.error('Failed to fetch orders:', err);
+    } finally {
+      setOrdersLoading(false);
+    }
   };
 
   const filteredAndSortedMembers = members
@@ -153,9 +165,8 @@ export default function AdminMembersPage() {
       ));
       alert(result.message || '회원 정보가 성공적으로 수정되었습니다.');
       setIsModalOpen(false);
-    } catch (error: unknown) {
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      alert(msg);
+    } catch (err: any) {
+      alert(err.message || '수정 중 오류가 발생했습니다.');
     } finally {
       setActionLoading(false);
     }
@@ -224,8 +235,29 @@ export default function AdminMembersPage() {
               <tbody className="divide-y divide-border-light/50">
                 {loading ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-12 text-center">
-                      <Loader2 className="w-6 h-6 animate-spin text-deep-sage mx-auto" />
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4">
+                        <Loader2 className="w-8 h-8 animate-spin text-deep-sage" />
+                        <p className="text-[10px] uppercase tracking-widest text-muted font-bold">회원 정보를 불러오는 중...</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : error ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-20 text-center">
+                      <div className="flex flex-col items-center gap-4 text-terracotta">
+                        <AlertCircle className="w-10 h-10" />
+                        <div className="space-y-1">
+                          <p className="font-bold">데이터 로드 실패</p>
+                          <p className="text-xs opacity-80">{error}</p>
+                        </div>
+                        <button 
+                          onClick={fetchMembers}
+                          className="mt-4 px-6 py-2 bg-hanji-white border border-terracotta/20 rounded-lg text-xs font-bold hover:bg-terracotta/5 transition-all"
+                        >
+                          다시 시도하기
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ) : filteredAndSortedMembers.length === 0 ? (
@@ -236,11 +268,11 @@ export default function AdminMembersPage() {
                   </tr>
                 ) : (
                   filteredAndSortedMembers.map((member) => (
-                    <tr key={member.id} className={`hover:bg-hanji-white/30 transition-colors group ${member.is_admin ? 'opacity-50' : ''}`}>
+                    <tr key={member.id} className={`hover:bg-hanji-white/30 transition-colors group ${member.is_admin ? 'bg-hanji-white/50' : ''}`}>
                       <td className="px-6 py-4">
                         <div className="font-medium text-charcoal flex items-center gap-2">
                           {member.full_name || '이름 없음'}
-                          {member.is_admin && <span className="bg-charcoal text-white text-[8px] px-1 rounded">ADMIN</span>}
+                          {member.is_admin && <span className="bg-charcoal text-white text-[8px] px-1.5 py-0.5 rounded tracking-tighter">ADMIN</span>}
                         </div>
                         <div className="text-xs text-muted mt-0.5">{member.email}</div>
                       </td>
