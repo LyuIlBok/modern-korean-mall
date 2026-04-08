@@ -71,15 +71,26 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // 2. 관리자 권한 추가 검증
+  // 2. 관리자 권한 추가 검증 (/admin 경로 접근 시)
   if (pathname.startsWith('/admin') && user) {
+    // 최고 관리자 화이트리스트 (Email 기반)
+    const SUPER_ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'grow930706@gmail.com';
+    
+    if (user.email === SUPER_ADMIN_EMAIL) {
+      // 화이트리스트 이메일이면 DB 조회 없이 통과
+      return response;
+    }
+
+    // 그 외 일반 관리자 권한은 DB(profiles) 조회
     const { data: profile } = await supabase
       .from('profiles')
-      .select('is_admin')
+      .select('is_admin, role')
       .eq('id', user.id)
       .single()
 
-    if (!profile?.is_admin) {
+    // is_admin 컬럼이나 role 컬럼이 admin인 경우 허용
+    if (!profile?.is_admin && profile?.role !== 'admin') {
+      console.warn(`[Security Alert] Unauthorized admin access attempt by ${user.email}`);
       return NextResponse.redirect(new URL('/', request.url))
     }
   }
