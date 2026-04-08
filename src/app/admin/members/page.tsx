@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Users, Search, ChevronDown, ChevronUp, Loader2, 
-  ArrowLeft, Edit, Plus, Minus, DollarSign, Crown, ShieldCheck, X 
+  ArrowLeft, Edit, Plus, Minus, DollarSign, Crown, ShieldCheck, X,
+  ShoppingBag, Clock
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
 
@@ -17,7 +18,15 @@ interface Profile {
   total_spent: number;
   tier: string;
   points: number;
+  is_admin: boolean;
   created_at?: string;
+}
+
+interface Order {
+  id: string;
+  total_price: number;
+  status: string;
+  created_at: string;
 }
 
 export default function AdminMembersPage() {
@@ -26,6 +35,8 @@ export default function AdminMembersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortOrder, setSortOrder] = useState<'desc' | 'asc'>('desc');
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null);
+  const [memberOrders, setMemberOrders] = useState<Order[]>([]);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [pointAction, setPointAction] = useState<'add' | 'sub'>('add');
@@ -37,17 +48,23 @@ export default function AdminMembersPage() {
 
   const fetchMembers = useCallback(async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('is_admin', false);
-    
-    if (error) {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) throw new Error('Session not found');
+
+      const response = await fetch(`/api/admin/members?adminToken=${session.user.id}`);
+      const result = await response.json();
+
+      if (result.success) {
+        setMembers(result.data as Profile[]);
+      } else {
+        throw new Error(result.error || 'Failed to fetch members');
+      }
+    } catch (error) {
       console.error('Error fetching members:', error);
-    } else {
-      setMembers((data as Profile[]) || []);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -61,6 +78,19 @@ export default function AdminMembersPage() {
     };
     checkAdminAndFetch();
   }, [router, fetchMembers]);
+
+  const fetchMemberOrders = async (userId: string) => {
+    setOrdersLoading(true);
+    const { data } = await supabase
+      .from('orders')
+      .select('id, total_price, status, created_at')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+    
+    setMemberOrders((data as Order[]) || []);
+    setOrdersLoading(false);
+  };
 
   const filteredAndSortedMembers = members
     .filter(m => 
@@ -78,6 +108,7 @@ export default function AdminMembersPage() {
     setPointAmount('');
     setPointAction('add');
     setIsModalOpen(true);
+    fetchMemberOrders(member.id);
   };
 
   const handleUpdateMember = async () => {
@@ -180,7 +211,7 @@ export default function AdminMembersPage() {
 
         <div className="bg-white rounded-xl shadow-sm border border-border-light overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left border-collapse">
               <thead className="text-xs text-muted uppercase bg-hanji-white/50 border-b border-border-light">
                 <tr>
                   <th className="px-6 py-4 font-medium tracking-wider">회원 정보</th>
@@ -205,9 +236,12 @@ export default function AdminMembersPage() {
                   </tr>
                 ) : (
                   filteredAndSortedMembers.map((member) => (
-                    <tr key={member.id} className="hover:bg-hanji-white/30 transition-colors group">
+                    <tr key={member.id} className={`hover:bg-hanji-white/30 transition-colors group ${member.is_admin ? 'opacity-50' : ''}`}>
                       <td className="px-6 py-4">
-                        <div className="font-medium text-charcoal">{member.full_name || '이름 없음'}</div>
+                        <div className="font-medium text-charcoal flex items-center gap-2">
+                          {member.full_name || '이름 없음'}
+                          {member.is_admin && <span className="bg-charcoal text-white text-[8px] px-1 rounded">ADMIN</span>}
+                        </div>
                         <div className="text-xs text-muted mt-0.5">{member.email}</div>
                       </td>
                       <td className="px-6 py-4">
@@ -215,7 +249,7 @@ export default function AdminMembersPage() {
                           {member.tier || 'FAMILY'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right font-medium">
+                      <td className="px-6 py-4 text-right font-medium text-charcoal">
                         {new Intl.NumberFormat('ko-KR').format(member.total_spent || 0)}원
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -251,8 +285,9 @@ export default function AdminMembersPage() {
             />
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden"
+              className="relative w-full max-w-2xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
             >
+              {/* Modal Header */}
               <div className="p-6 border-b border-border-light flex justify-between items-center bg-hanji-white/30">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm border border-border-light">
@@ -266,81 +301,124 @@ export default function AdminMembersPage() {
                 <button onClick={() => setIsModalOpen(false)} className="p-2 text-muted hover:bg-hanji-white rounded-full"><X className="w-5 h-5" /></button>
               </div>
 
-              <div className="p-6 space-y-6">
-                <div className="space-y-3">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted flex items-center gap-2">
-                    <Crown className="w-3.5 h-3.5" /> 회원 등급 변경
-                  </label>
-                  <select 
-                    value={selectedTier}
-                    onChange={(e) => setSelectedTier(e.target.value)}
-                    className="w-full bg-white border border-border-light p-3 rounded-lg text-sm focus:outline-none focus:border-deep-sage focus:ring-1 focus:ring-deep-sage transition-all appearance-none"
-                  >
-                    <option value="FAMILY">FAMILY (일반)</option>
-                    <option value="VIP">VIP (우수)</option>
-                    <option value="VVIP">VVIP (최우수)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-3 pt-4 border-t border-border-light">
-                  <label className="text-xs font-bold uppercase tracking-widest text-muted flex items-center gap-2">
-                    <DollarSign className="w-3.5 h-3.5" /> 적립금 관리 (현재: {new Intl.NumberFormat('ko-KR').format(selectedMember.points || 0)}P)
-                  </label>
-                  <div className="flex gap-2">
-                    <div className="flex bg-hanji-white rounded-lg p-1 border border-border-light">
-                      <button 
-                        type="button"
-                        onClick={() => setPointAction('add')}
-                        className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-1 transition-all ${pointAction === 'add' ? 'bg-white shadow-sm text-deep-sage' : 'text-muted hover:text-charcoal'}`}
-                      >
-                        <Plus className="w-3 h-3" /> 지급
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={() => setPointAction('sub')}
-                        className={`px-4 py-2 rounded-md text-sm font-bold flex items-center gap-1 transition-all ${pointAction === 'sub' ? 'bg-white shadow-sm text-terracotta' : 'text-muted hover:text-charcoal'}`}
-                      >
-                        <Minus className="w-3 h-3" /> 차감
-                      </button>
+              <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                {/* 1. 최근 주문 내역 */}
+                <section className="space-y-4">
+                  <h4 className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted flex items-center gap-2">
+                    <ShoppingBag className="w-3 h-3" /> 최근 주문 내역 (최신 5건)
+                  </h4>
+                  {ordersLoading ? (
+                    <div className="py-8 flex justify-center"><Loader2 className="w-5 h-5 animate-spin text-muted" /></div>
+                  ) : memberOrders.length === 0 ? (
+                    <p className="text-xs text-muted italic py-4">주문 내역이 없습니다.</p>
+                  ) : (
+                    <div className="bg-hanji-white/50 rounded-lg overflow-hidden border border-border-light/50">
+                      <table className="w-full text-left text-xs">
+                        <thead className="bg-hanji-white text-muted">
+                          <tr>
+                            <th className="px-4 py-2">날짜</th>
+                            <th className="px-4 py-2">금액</th>
+                            <th className="px-4 py-2 text-right">상태</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-border-light/30">
+                          {memberOrders.map(order => (
+                            <tr key={order.id}>
+                              <td className="px-4 py-3 text-muted flex items-center gap-2"><Clock className="w-3 h-3" /> {new Date(order.created_at).toLocaleDateString()}</td>
+                              <td className="px-4 py-3 font-medium">₩{order.total_price.toLocaleString()}</td>
+                              <td className="px-4 py-3 text-right">
+                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${order.status === '결제완료' ? 'bg-deep-sage/10 text-deep-sage' : 'bg-charcoal/5 text-muted'}`}>{order.status}</span>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                    <div className="relative flex-1">
-                      <input 
-                        type="number" 
-                        value={pointAmount}
-                        onChange={(e) => setPointAmount(e.target.value)}
-                        placeholder="금액 입력"
-                        className="w-full h-full bg-white border border-border-light pl-4 pr-8 rounded-lg text-sm focus:outline-none focus:border-deep-sage focus:ring-1 focus:ring-deep-sage transition-all text-right font-medium"
-                      />
-                      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">P</span>
-                    </div>
-                  </div>
-                  {pointAmount && (
-                    <p className="text-xs text-right text-muted">
-                      변경 후 예상: <span className="font-bold text-charcoal">
-                        {new Intl.NumberFormat('ko-KR').format(
-                          pointAction === 'add' 
-                            ? (selectedMember.points || 0) + parseInt(pointAmount || '0')
-                            : Math.max(0, (selectedMember.points || 0) - parseInt(pointAmount || '0'))
-                        )} P
-                      </span>
-                    </p>
                   )}
+                </section>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  {/* 2. 등급 관리 */}
+                  <section className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted flex items-center gap-2">
+                      <Crown className="w-3.5 h-3.5" /> 회원 등급 변경
+                    </label>
+                    <div className="relative">
+                      <select 
+                        value={selectedTier}
+                        onChange={(e) => setSelectedTier(e.target.value)}
+                        className="w-full bg-white border border-border-light p-3.5 rounded-xl text-sm focus:outline-none focus:border-deep-sage focus:ring-4 focus:ring-deep-sage/5 transition-all appearance-none"
+                      >
+                        <option value="FAMILY">FAMILY (일반)</option>
+                        <option value="VIP">VIP (우수)</option>
+                        <option value="VVIP">VVIP (최우수)</option>
+                      </select>
+                      <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+                    </div>
+                  </section>
+
+                  {/* 3. 적립금 관리 */}
+                  <section className="space-y-4">
+                    <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted flex items-center gap-2">
+                      <DollarSign className="w-3.5 h-3.5" /> 적립금 관리 (현재: {selectedMember.points.toLocaleString()}P)
+                    </label>
+                    <div className="flex gap-2">
+                      <div className="flex bg-hanji-white rounded-xl p-1 border border-border-light shadow-inner">
+                        <button 
+                          type="button"
+                          onClick={() => setPointAction('add')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${pointAction === 'add' ? 'bg-white shadow-sm text-deep-sage' : 'text-muted hover:text-charcoal'}`}
+                        >
+                          <Plus className="w-3 h-3" /> 지급
+                        </button>
+                        <button 
+                          type="button"
+                          onClick={() => setPointAction('sub')}
+                          className={`px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-1 transition-all ${pointAction === 'sub' ? 'bg-white shadow-sm text-terracotta' : 'text-muted hover:text-charcoal'}`}
+                        >
+                          <Minus className="w-3 h-3" /> 차감
+                        </button>
+                      </div>
+                      <div className="relative flex-1">
+                        <input 
+                          type="number" 
+                          value={pointAmount}
+                          onChange={(e) => setPointAmount(e.target.value)}
+                          placeholder="금액 입력"
+                          className="w-full h-full bg-white border border-border-light pl-4 pr-8 rounded-xl text-sm focus:outline-none focus:border-deep-sage transition-all text-right font-medium"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-muted">P</span>
+                      </div>
+                    </div>
+                    {pointAmount && (
+                      <p className="text-[10px] text-right text-muted italic">
+                        변경 후 예상: <span className="font-bold text-charcoal">
+                          {new Intl.NumberFormat('ko-KR').format(
+                            pointAction === 'add' 
+                              ? (selectedMember.points || 0) + parseInt(pointAmount || '0')
+                              : Math.max(0, (selectedMember.points || 0) - parseInt(pointAmount || '0'))
+                          )} P
+                        </span>
+                      </p>
+                    )}
+                  </section>
                 </div>
               </div>
 
+              {/* Modal Footer */}
               <div className="p-6 bg-hanji-white/50 border-t border-border-light flex gap-3">
                 <button 
                   onClick={() => setIsModalOpen(false)}
-                  className="flex-1 py-3 text-sm font-bold text-charcoal bg-white border border-border-light rounded-xl hover:bg-hanji-white transition-all"
+                  className="flex-1 py-4 text-sm font-bold text-muted bg-white border border-border-light rounded-xl hover:bg-hanji-white transition-all"
                 >
                   취소
                 </button>
                 <button 
                   onClick={handleUpdateMember}
                   disabled={actionLoading}
-                  className="flex-1 py-3 text-sm font-bold text-white bg-charcoal rounded-xl hover:bg-deep-sage transition-all flex items-center justify-center shadow-lg disabled:opacity-50"
+                  className="flex-1 py-4 text-sm font-bold text-white bg-charcoal rounded-xl hover:bg-deep-sage transition-all flex items-center justify-center shadow-lg disabled:opacity-50"
                 >
-                  {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : '저장하기'}
+                  {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : '수정 내용 저장하기'}
                 </button>
               </div>
             </motion.div>
