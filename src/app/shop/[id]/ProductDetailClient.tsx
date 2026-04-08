@@ -156,7 +156,12 @@ export default function ProductDetailClient({
                   </div>
                 )}
               </div>
-              <p className="text-muted leading-relaxed font-light whitespace-pre-line text-lg">{product.description}</p>
+              
+              {/* Rich Text Description Rendering */}
+              <div 
+                className="text-muted leading-relaxed font-light whitespace-pre-line text-lg prose prose-slate max-w-none"
+                dangerouslySetInnerHTML={{ __html: product.description }}
+              />
             </div>
 
             {/* Product Specs */}

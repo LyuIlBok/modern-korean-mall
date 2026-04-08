@@ -13,6 +13,7 @@ import {
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
+import RichTextEditor from '@/components/admin/RichTextEditor';
 
 // Recharts 관련 Prerendering 에러를 방지하기 위해 SalesChart를 클라이언트 사이드에서만 렌더링
 const SalesChart = dynamic(() => import('./SalesChart'), { 
@@ -323,12 +324,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const removeExistingImage = (idx: number) => {
-    if (!editingProduct) return;
-    const newImages = (editingProduct.images || []).filter((_, i) => i !== idx);
-    setEditingProduct({ ...editingProduct, images: newImages });
-  };
-
   const handleDeleteProduct = async (product: AdminProduct) => {
     if (!confirm(`'${product.name}' 상품을 정말로 삭제하시겠습니까?`)) return;
     
@@ -450,7 +445,10 @@ export default function AdminDashboard() {
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
                         <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                       </div>
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required value={newDesc} onChange={(e) => setNewDesc(e.target.value)} placeholder="상품에 대한 상세한 설명을 적어주세요." className="w-full h-full min-h-[200px] bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
+                      <div className="space-y-2">
+                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold mb-3 block">Description (Rich Text)</label>
+                        <RichTextEditor value={newDesc} onChange={setNewDesc} />
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
@@ -588,7 +586,10 @@ export default function AdminDashboard() {
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
                     <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
                   </div>
-                  <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Description</label><textarea required rows={6} value={editingProduct.description} onChange={(e) => setEditingProduct({...editingProduct, description: e.target.value})} className="w-full h-full bg-hanji-white/30 border border-border-light p-5 rounded-sm focus:outline-none focus:border-deep-sage resize-none text-sm leading-relaxed" /></div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold mb-3 block">Description (Rich Text)</label>
+                    <RichTextEditor value={editingProduct.description} onChange={(html) => setEditingProduct({...editingProduct, description: html})} />
+                  </div>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
                   <div className="space-y-4">
@@ -596,17 +597,6 @@ export default function AdminDashboard() {
                     <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
                       <Image src={mainPreview || editingProduct.imageUrl} alt="Main" fill className="object-cover" />
                       <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                  </div>
-                  <div className="space-y-4 md:col-span-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><Plus className="w-3 h-3" /> Gallery Images</label>
-                    <div className="grid grid-cols-4 gap-4">
-                      {editingProduct.images?.map((url, idx) => (
-                        <div key={idx} className="relative aspect-square rounded-sm overflow-hidden border border-border-light group">
-                          <Image src={url} alt="" fill className="object-cover" />
-                          <button type="button" onClick={() => removeExistingImage(idx)} className="absolute top-1 right-1 p-1 bg-terracotta text-white rounded-full"><X className="w-3 h-3" /></button>
-                        </div>
-                      ))}
                     </div>
                   </div>
                 </div>
