@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { Provider } from '@supabase/supabase-js';
@@ -23,12 +23,31 @@ function LoginContent() {
     const checkUser = async () => {
       const { data } = await supabase.auth.getSession();
       if (data.session) {
-        router.refresh(); // 서버 데이터 동기화
+        router.refresh();
         router.push(redirectedFrom || '/');
       }
     };
     checkUser();
   }, [router, redirectedFrom]);
+
+  /**
+   * Supabase Auth 에러 메시지를 한국어로 번역합니다.
+   */
+  const getErrorMessage = (message: string) => {
+    if (message.includes('Invalid login credentials')) {
+      return '이메일 또는 비밀번호가 일치하지 않습니다.';
+    }
+    if (message.includes('Email not confirmed')) {
+      return '이메일 인증이 완료되지 않았습니다. 메일함을 확인해 주세요.';
+    }
+    if (message.includes('User not found')) {
+      return '등록되지 않은 계정입니다.';
+    }
+    if (message.includes('Rate limit exceeded')) {
+      return '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해 주세요.';
+    }
+    return '로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+  };
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,13 +61,16 @@ function LoginContent() {
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        setErrorMsg(getErrorMessage(error.message));
+        return;
+      }
       
-      router.refresh(); // 중요: 쿠키 기반 세션 동기화를 위해 서버 컴포넌트 리프레시
+      router.refresh();
       router.push(redirectedFrom || '/');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setErrorMsg(msg === 'Invalid login credentials' ? '이메일 또는 비밀번호가 일치하지 않습니다.' : msg);
+      setErrorMsg(getErrorMessage(msg));
     } finally {
       setIsLoading(false);
     }
@@ -73,7 +95,7 @@ function LoginContent() {
 
       if (error) {
         console.error(`[OAuth Error] ${provider}:`, error.message);
-        alert(`로그인 실패 (${provider}): ${error.message}`);
+        alert(`로그인 실패 (${provider}): ${getErrorMessage(error.message)}`);
         setSocialLoading(null);
         return;
       }
@@ -153,13 +175,16 @@ function LoginContent() {
             </div>
 
             {errorMsg && (
-              <motion.p 
+              <motion.div 
                 initial={{ opacity: 0, x: -5 }} 
                 animate={{ opacity: 1, x: 0 }} 
-                className="text-xs text-terracotta bg-terracotta/5 p-3 rounded-sm border border-terracotta/10"
+                className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
               >
-                {errorMsg}
-              </motion.p>
+                <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
+                <p className="text-xs text-terracotta font-medium leading-relaxed">
+                  {errorMsg}
+                </p>
+              </motion.div>
             )}
 
             <button 
