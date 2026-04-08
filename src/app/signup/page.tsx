@@ -1,12 +1,12 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ArrowRight, Mail, Lock, User, Loader2, ShieldCheck, Check, 
-  Phone, CheckCircle2, ChevronRight, AlertCircle 
+  ArrowRight, Mail, Lock, User, Loader2, 
+  Phone, Check, CheckCircle2, ChevronRight, AlertCircle 
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
@@ -18,7 +18,11 @@ export default function SignupPage() {
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
   
-  // 약관 동의 상태
+  // 상태 관리 추가
+  const [isEmailChecked, setIsEmailChecked] = useState(false);
+  const [isEmailDuplicate, setIsEmailDuplicate] = useState(false);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+
   const [agreements, setAgreements] = useState({
     all: false,
     terms: false,
@@ -31,7 +35,28 @@ export default function SignupPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const router = useRouter();
 
-  // 휴대폰 번호 자동 하이픈
+  // 이메일 중복 체크 핸들러
+  const handleEmailCheck = async () => {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !trimmedEmail.includes('@')) return;
+
+    setIsCheckingEmail(true);
+    setIsEmailDuplicate(false);
+    
+    try {
+      const { data, error } = await supabase.rpc('check_email_exists', { lookup_email: trimmedEmail });
+      
+      if (error) throw error;
+      
+      setIsEmailDuplicate(!!data);
+      setIsEmailChecked(true);
+    } catch (err) {
+      console.error('Email check error:', err);
+    } finally {
+      setIsCheckingEmail(false);
+    }
+  };
+
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, '');
     let formatted = value;
@@ -43,7 +68,6 @@ export default function SignupPage() {
     setPhone(formatted);
   };
 
-  // 전체 동의 핸들러
   const handleAllAgreement = (checked: boolean) => {
     setAgreements({
       all: checked,
@@ -53,15 +77,14 @@ export default function SignupPage() {
     });
   };
 
-  // 개별 동의 핸들러
   const handleSingleAgreement = (key: keyof typeof agreements, checked: boolean) => {
     const updated = { ...agreements, [key]: checked };
-    const allChecked = updated.terms && updated.privacy && updated.marketing;
-    setAgreements({ ...updated, all: allChecked });
+    const allRequired = updated.terms && updated.privacy;
+    setAgreements({ ...updated, all: allRequired && updated.marketing });
   };
 
   const isPasswordMatch = password && confirmPassword && password === confirmPassword;
-  const isFormValid = fullName && email && password.length >= 6 && isPasswordMatch && agreements.terms && agreements.privacy && phone.length >= 12;
+  const isFormValid = fullName && email && !isEmailDuplicate && isEmailChecked && password.length >= 6 && isPasswordMatch && agreements.terms && agreements.privacy && phone.length >= 12;
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +111,7 @@ export default function SignupPage() {
       setTimeout(() => router.push('/login'), 4000);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setErrorMsg(msg === 'User already registered' ? '이미 등록된 이메일 주소입니다.' : msg);
+      setErrorMsg(msg);
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +167,6 @@ export default function SignupPage() {
           <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage/20" />
           
           <form onSubmit={handleSignup} className="space-y-10">
-            {/* 기본 정보 섹션 */}
             <section className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-1 h-4 bg-deep-sage" />
@@ -171,9 +193,29 @@ export default function SignupPage() {
               <div className="space-y-2">
                 <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Email Address</label>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
-                  <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="example@email.com" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm focus:outline-none focus:border-deep-sage transition-all text-sm" />
+                  <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${isEmailDuplicate ? 'text-terracotta' : 'text-muted/30'}`} />
+                  <input 
+                    required 
+                    type="email" 
+                    value={email} 
+                    onChange={(e) => { setEmail(e.target.value); setIsEmailChecked(false); }} 
+                    onBlur={handleEmailCheck}
+                    placeholder="example@email.com" 
+                    className={`w-full bg-hanji-white/30 border pl-11 pr-12 py-4 rounded-sm focus:outline-none transition-all text-sm ${isEmailDuplicate ? 'border-terracotta' : 'border-border-light focus:border-deep-sage'}`} 
+                  />
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center">
+                    {isCheckingEmail && <Loader2 className="w-4 h-4 animate-spin text-deep-sage" />}
+                    {!isCheckingEmail && isEmailChecked && !isEmailDuplicate && <Check className="w-4 h-4 text-green-500" />}
+                    {!isCheckingEmail && isEmailChecked && isEmailDuplicate && <AlertCircle className="w-4 h-4 text-terracotta" />}
+                  </div>
                 </div>
+                <AnimatePresence>
+                  {isEmailChecked && isEmailDuplicate && (
+                    <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-[10px] text-terracotta font-medium italic ml-1 mt-1 leading-relaxed">
+                      이미 가입된 이메일입니다. 카카오/구글 등 간편 로그인이나 일반 로그인을 이용해 주세요.
+                    </motion.p>
+                  )}
+                </AnimatePresence>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -197,14 +239,8 @@ export default function SignupPage() {
                   </div>
                 </div>
               </div>
-              <AnimatePresence>
-                {password && confirmPassword && !isPasswordMatch && (
-                  <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="text-[10px] text-terracotta font-medium italic ml-1">비밀번호가 일치하지 않습니다.</motion.p>
-                )}
-              </AnimatePresence>
             </section>
 
-            {/* 약관 동의 섹션 */}
             <section className="space-y-6 pt-4 border-t border-border-light/50">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-1 h-4 bg-deep-sage" />
