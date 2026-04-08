@@ -20,6 +20,7 @@ interface Profile {
   points: number;
   is_admin: boolean;
   phone?: string | null;
+  marketing_consent?: boolean;
   created_at?: string;
 }
 
