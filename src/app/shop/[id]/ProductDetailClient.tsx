@@ -71,13 +71,25 @@ export default function ProductDetailClient({
 
   const handleProductInquiry = () => {
     if (!product) return;
+    
+    const metadata = {
+      productId: product.id,
+      productName: product.name,
+      imageUrl: product.imageUrl,
+      price: product.price
+    };
+
     setInquiryProduct({
       id: product.id,
       name: product.name,
       imageUrl: product.imageUrl,
       price: product.price
     });
-    triggerAutoSend(`[상품 문의: ${product.name}] 이 상품에 대해 궁금한 점이 있습니다.`);
+
+    triggerAutoSend(
+      `이 상품에 대해 궁금한 점이 있습니다.`,
+      metadata
+    );
     toggleChat(true);
   };
 

@@ -60,13 +60,25 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
 
   const handleInquiry = (product: any, orderId: string) => {
     if (!product) return;
+    
+    const metadata = {
+      productId: product.id,
+      productName: product.name,
+      imageUrl: product.imageUrl,
+      orderId: orderId
+    };
+
     setInquiryProduct({
       id: product.id,
       name: product.name,
       imageUrl: product.imageUrl,
       orderId: orderId
     });
-    triggerAutoSend(`[상품 문의: ${product.name} / 주문번호: ${orderId.slice(0,8).toUpperCase()}] 이 상품에 대해 상담하고 싶습니다.`);
+
+    triggerAutoSend(
+      `이 상품에 대해 상담하고 싶습니다.`,
+      metadata
+    );
     toggleChat(true);
   };
 

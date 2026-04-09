@@ -18,11 +18,16 @@ interface ChatMessage {
   content: string;
   is_admin: boolean;
   is_read: boolean;
+  metadata?: any;
   created_at: string;
 }
 
 export default function ChatWidget() {
-  const { isOpen, toggleChat, inquiryProduct, setInquiryProduct, autoSendMessage, triggerAutoSend } = useChatStore();
+  const { 
+    isOpen, toggleChat, inquiryProduct, setInquiryProduct, 
+    autoSendMessage, autoSendMessageMetadata, triggerAutoSend 
+  } = useChatStore();
+  
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
@@ -147,101 +152,110 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
+  // 자동 메시지 전송 로직 (메타데이터 포함)
   useEffect(() => {
     if (isOpen && autoSendMessage && chatUserId) {
       const sendAutoMessage = async () => {
         const content = autoSendMessage;
-        triggerAutoSend(null); 
+        const metadata = autoSendMessageMetadata;
+        triggerAutoSend(null, null); // 중복 전송 방지를 위해 즉시 초기화
         
         await supabase
           .from('support_messages')
-          .insert([{ user_id: chatUserId, content, is_admin: false, is_read: false }]);
+          .insert([{ 
+            user_id: chatUserId, 
+            content, 
+            is_admin: false, 
+            is_read: false,
+            metadata: metadata 
+          }]);
       };
       sendAutoMessage();
     }
-  }, [isOpen, autoSendMessage, chatUserId, triggerAutoSend]);
+  }, [isOpen, autoSendMessage, autoSendMessageMetadata, chatUserId, triggerAutoSend]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !chatUserId) return;
 
-    let content = input.trim();
-    
-    if (inquiryProduct) {
-      // 메타데이터를 포함한 시각화 전용 포맷 (id를 명시적으로 포함하여 클릭 가능하게 함)
-      const productContext = `[상품 문의:${inquiryProduct.id}|${inquiryProduct.name}${inquiryProduct.orderId ? `|${inquiryProduct.orderId}` : ''}]\n\n`;
-      content = productContext + content;
-      setInquiryProduct(null);
-    }
-
+    const content = input.trim();
     setInput('');
     setLoading(true);
 
     const { error } = await supabase
       .from('support_messages')
-      .insert([{ user_id: chatUserId, content, is_admin: false, is_read: false }]);
+      .insert([{ 
+        user_id: chatUserId, 
+        content, 
+        is_admin: false, 
+        is_read: false,
+        metadata: inquiryProduct ? {
+          productId: inquiryProduct.id,
+          productName: inquiryProduct.name,
+          imageUrl: inquiryProduct.imageUrl,
+          orderId: inquiryProduct.orderId
+        } : null
+      }]);
 
     if (error) {
       console.error('Send error:', error.message);
       alert('메시지 전송에 실패했습니다.');
+    } else {
+      if (inquiryProduct) setInquiryProduct(null);
     }
     setLoading(false);
   };
 
   /**
-   * 메시지 텍스트에서 상품 문의 정보를 파싱하여 프리미엄 리치 카드 UI로 렌더링합니다.
+   * DB 메타데이터를 사용하여 프리미엄 리치 카드 UI로 렌더링합니다.
    */
-  const renderRichMessage = (content: string) => {
-    const isProductInquiry = content.startsWith('[상품 문의:') || content.startsWith('[상품 문의');
-    if (!isProductInquiry) return content;
-
-    try {
-      const endBracketIndex = content.indexOf(']');
-      const productInfoRaw = content.substring(content.indexOf(':') + 1, endBracketIndex);
-      const [id, name, orderId] = productInfoRaw.split('|');
-      const userMessage = content.substring(endBracketIndex + 1).trim();
-
-      // 현재 fetchMessages에서는 imageUrl을 가져오지 않으므로, 
-      // 실제 구현에서는 products 테이블과 조인하거나 content에 이미지 URL도 포함해야 합니다.
-      // 여기서는 UI 고도화에 집중합니다.
-
+  const renderRichMessage = (msg: ChatMessage) => {
+    const { content, metadata } = msg;
+    
+    // 메타데이터가 있는 경우 리치 카드 렌더링
+    if (metadata && metadata.productId) {
       return (
-        <div className="space-y-4 w-full">
+        <div className="space-y-4 w-full min-w-[240px]">
           <Link 
-            href={`/shop/${id || ''}`}
+            href={`/shop/${metadata.productId}`}
             target="_blank"
             className="flex items-center gap-4 bg-white/10 hover:bg-white/20 border border-white/20 p-4 rounded-xl transition-all group/card shadow-inner"
           >
-            <div className="relative w-16 h-16 bg-white/20 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-white/10">
-              <ShoppingBag className="w-6 h-6 text-white/40 group-hover/card:scale-110 transition-transform" />
-              {/* 실제 운영 환경에서는 Image 컴포넌트를 사용하고 content에 src를 담아야 함 */}
+            <div className="relative w-16 h-16 bg-white rounded-lg overflow-hidden flex-shrink-0 shadow-sm border border-white/10">
+              {metadata.imageUrl ? (
+                <Image src={metadata.imageUrl} alt="" fill className="object-cover group-hover/card:scale-110 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center bg-white/10">
+                  <ShoppingBag className="w-6 h-6 text-white/40" />
+                </div>
+              )}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-1.5 mb-1">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Product Inquiry</span>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Product Detail</span>
                 <ExternalLink className="w-2.5 h-2.5 text-white/40" />
               </div>
-              <p className="text-sm font-serif font-bold text-white truncate leading-tight mb-1">{name}</p>
-              {orderId && (
+              <p className="text-sm font-serif font-bold text-white truncate leading-tight mb-1">{metadata.productName || '상품 정보'}</p>
+              {metadata.orderId && (
                 <div className="flex items-center gap-1.5 opacity-60">
                   <PackageCheck className="w-3 h-3 text-white" />
-                  <span className="text-[10px] text-white font-mono uppercase tracking-tighter">Order: #{orderId.slice(0,8)}</span>
+                  <span className="text-[10px] text-white font-mono uppercase tracking-tighter">Order: #{metadata.orderId.slice(0,8)}</span>
                 </div>
               )}
             </div>
             <ChevronRight className="w-4 h-4 text-white/20 group-hover/card:translate-x-1 transition-transform" />
           </Link>
-          {userMessage && (
+          {content && (
             <div className="px-1 text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-medium">
-              {userMessage}
+              {content}
             </div>
           )}
         </div>
       );
-    } catch (e) {
-      console.error('Parsing error:', e);
-      return content;
     }
+
+    // 하위 호환성을 위한 예전 텍스트 파싱 로직 (필요시 유지하거나 제거)
+    return <div className="whitespace-pre-wrap">{content}</div>;
   };
 
   if (!chatUserId) return null;
@@ -286,7 +300,7 @@ export default function ChatWidget() {
                 onClick={() => toggleChat(false)}
                 className="bg-hanji-white border-b border-border-light p-4 flex items-center gap-4 hover:bg-white transition-colors group"
               >
-                <div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light flex-shrink-0">
+                <div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light flex-shrink-0 shadow-sm">
                   <Image src={inquiryProduct.imageUrl} alt={inquiryProduct.name} fill className="object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
@@ -344,7 +358,7 @@ export default function ChatWidget() {
                               : 'bg-deep-sage text-white rounded-tr-none font-medium'
                           }`}
                         >
-                          {msg.is_admin ? msg.content : renderRichMessage(msg.content)}
+                          {msg.is_admin ? msg.content : renderRichMessage(msg)}
                         </div>
                         <div className="flex items-center gap-2 mt-1.5 opacity-40 px-1">
                           {!msg.is_admin && msg.is_read && (
@@ -388,7 +402,7 @@ export default function ChatWidget() {
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
         onClick={() => toggleChat(!isOpen)}
-        className="w-16 h-16 bg-charcoal text-white rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.25)] hover:bg-deep-sage transition-all group relative"
+        className="w-16 h-16 bg-charcoal text-white rounded-full flex items-center justify-center shadow-[0_10px_40_rgba(0,0,0,0.25)] hover:bg-deep-sage transition-all group relative"
       >
         <AnimatePresence mode="wait">
           {isOpen ? (
