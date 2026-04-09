@@ -8,12 +8,14 @@ import {
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
-  DollarSign, Save, CreditCard, Wallet, Image as ImageIcon
+  DollarSign, Save, CreditCard, Wallet, Image as ImageIcon,
+  CheckCircle2, AlertCircle, XCircle, Edit
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
 import RichTextEditor from '@/components/admin/RichTextEditor';
+import OrderDetailModal from '@/components/admin/OrderDetailModal';
 
 // Recharts 관련 Prerendering 에러를 방지하기 위해 SalesChart를 클라이언트 사이드에서만 렌더링
 const SalesChart = dynamic(() => import('./SalesChart'), { 
@@ -51,10 +53,12 @@ interface AdminProduct {
 }
 
 interface AdminOrderItem {
+  product_id: string;
   quantity: number;
   price: number;
   products: {
     name: string;
+    imageUrl: string;
   } | null;
 }
 
@@ -110,6 +114,7 @@ export default function AdminDashboard() {
   const [categoryFilter, setCategoryFilter] = useState('전체');
 
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
+  const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
 
   // New Product States
   const [newName, setNewName] = useState('');
@@ -139,7 +144,7 @@ export default function AdminDashboard() {
       
       const [productsRes, ordersRes, alertsRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
-        supabase.from('orders').select('*, order_items(*, products(name))').order('created_at', { ascending: false }),
+        supabase.from('orders').select('*, order_items(*, products(name, imageUrl))').order('created_at', { ascending: false }),
         supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false })
       ]);
 
@@ -262,7 +267,6 @@ export default function AdminDashboard() {
       alert('상품이 등록되었습니다!');
       setIsAdding(false);
       
-      // Reset form
       setNewName(''); setNewPrice(''); setNewStock('100'); setNewShippingFee('0');
       setNewDesc(''); setNewRewardPoints('0'); setNewDiscountRate('0');
       setMainImage(null); setMainPreview(null);
@@ -345,11 +349,22 @@ export default function AdminDashboard() {
     }
   };
 
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case '결제완료': return 'bg-blue-50 text-blue-600 border-blue-100';
+      case '상품준비중': return 'bg-amber-50 text-amber-600 border-amber-100';
+      case '배송중': return 'bg-deep-sage/10 text-deep-sage border-deep-sage/20';
+      case '배송완료': return 'bg-green-50 text-green-600 border-green-100';
+      case '취소됨': return 'bg-terracotta/10 text-terracotta border-terracotta/20';
+      default: return 'bg-hanji-white text-muted border-border-light';
+    }
+  };
+
   if (isCheckingAuth) return <div className="min-h-screen flex items-center justify-center bg-hanji-white text-deep-sage uppercase text-xs">Loading Dashboard...</div>;
   if (!isAdmin) return null;
 
   const totalSales = orders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
-  const pendingOrdersCount = orders.filter(o => o.status === '결제완료').length;
+  const pendingOrdersCount = orders.filter(o => o.status === '결제완료' || o.status === '상품준비중').length;
 
   const sidebarItems: SidebarItem[] = [
     { id: 'dashboard', label: '운영 현황', icon: TrendingUp },
@@ -396,7 +411,7 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Orders</p><h3 className="text-3xl font-serif text-charcoal">{orders.length}건</h3></div><ShoppingCart className="w-8 h-8 text-deep-sage opacity-20" /></div>
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Ship</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrdersCount}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Action</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrdersCount}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
               </div>
             </motion.div>
           )}
@@ -507,7 +522,7 @@ export default function AdminDashboard() {
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
-                    <tr><th className="px-8 py-6">주문 일시 / ID</th><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">결제 수단</th><th className="px-8 py-6 text-right">총 금액</th><th className="px-8 py-6 text-center">상태</th></tr>
+                    <tr><th className="px-8 py-6">주문 일시 / ID</th><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">결제 수단</th><th className="px-8 py-6 text-right">총 금액</th><th className="px-8 py-6 text-center">상태</th><th className="px-8 py-6 text-center">관리</th></tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
                     {orders.map((o) => (
@@ -520,14 +535,18 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-8 py-6 text-right font-medium">₩{Number(o.total_price).toLocaleString()}</td>
-                        <td className="px-8 py-6">
-                          <select value={o.status} onChange={async (e) => {
-                            const newStatus = e.target.value;
-                            const { error } = await supabase.from('orders').update({ status: newStatus }).eq('id', o.id);
-                            if (!error) setOrders(prev => prev.map(item => item.id === o.id ? { ...item, status: newStatus } : item));
-                          }} className="text-[11px] border border-border-light px-2 py-1 rounded-sm focus:outline-none">
-                            <option value="결제완료">결제완료</option><option value="배송준비중">배송준비중</option><option value="배송중">배송중</option><option value="배송완료">배송완료</option><option value="취소됨">취소됨</option>
-                          </select>
+                        <td className="px-8 py-6 text-center">
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border ${getStatusStyle(o.status)}`}>
+                            {o.status}
+                          </span>
+                        </td>
+                        <td className="px-8 py-6 text-center">
+                          <button 
+                            onClick={() => setSelectedOrder(o)}
+                            className="px-4 py-2 text-xs font-bold text-muted hover:text-deep-sage bg-hanji-white hover:bg-deep-sage/10 rounded-sm transition-all border border-border-light hover:border-deep-sage/20 flex items-center gap-2 mx-auto shadow-sm"
+                          >
+                            <Edit className="w-3.5 h-3.5" /> 상세 관리
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -606,6 +625,18 @@ export default function AdminDashboard() {
               </form>
             </motion.div>
           </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedOrder && (
+          <OrderDetailModal 
+            order={selectedOrder} 
+            onClose={() => setSelectedOrder(null)} 
+            onUpdate={(updated) => {
+              setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
+            }}
+          />
         )}
       </AnimatePresence>
     </div>
