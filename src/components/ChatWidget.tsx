@@ -5,7 +5,8 @@ import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, X, Send, Loader2, User, Sparkles, 
-  BellRing, ShoppingBag, ExternalLink, ChevronRight
+  BellRing, ShoppingBag, ExternalLink, ChevronRight,
+  PackageCheck
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
@@ -146,12 +147,11 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
-  // 자동 메시지 전송 로직
   useEffect(() => {
     if (isOpen && autoSendMessage && chatUserId) {
       const sendAutoMessage = async () => {
         const content = autoSendMessage;
-        triggerAutoSend(null); // 중복 전송 방지를 위해 즉시 초기화
+        triggerAutoSend(null); 
         
         await supabase
           .from('support_messages')
@@ -168,7 +168,8 @@ export default function ChatWidget() {
     let content = input.trim();
     
     if (inquiryProduct) {
-      const productContext = `[상품 문의: ${inquiryProduct.name}${inquiryProduct.orderId ? ` / 주문번호: ${inquiryProduct.orderId.slice(0,8)}` : ''}]\n\n`;
+      // 메타데이터를 포함한 시각화 전용 포맷 (id를 명시적으로 포함하여 클릭 가능하게 함)
+      const productContext = `[상품 문의:${inquiryProduct.id}|${inquiryProduct.name}${inquiryProduct.orderId ? `|${inquiryProduct.orderId}` : ''}]\n\n`;
       content = productContext + content;
       setInquiryProduct(null);
     }
@@ -188,40 +189,57 @@ export default function ChatWidget() {
   };
 
   /**
-   * 메시지 텍스트에서 상품 문의 정보를 파싱하여 리치 카드 UI로 반환합니다.
+   * 메시지 텍스트에서 상품 문의 정보를 파싱하여 프리미엄 리치 카드 UI로 렌더링합니다.
    */
   const renderRichMessage = (content: string) => {
-    const isProductInquiry = content.startsWith('[상품 문의:');
+    const isProductInquiry = content.startsWith('[상품 문의:') || content.startsWith('[상품 문의');
     if (!isProductInquiry) return content;
 
     try {
       const endBracketIndex = content.indexOf(']');
-      const productInfoRaw = content.substring(7, endBracketIndex);
-      const [namePart, orderPart] = productInfoRaw.split(' / ');
-      const name = namePart.trim();
-      const orderId = orderPart?.replace('주문번호: ', '').trim();
+      const productInfoRaw = content.substring(content.indexOf(':') + 1, endBracketIndex);
+      const [id, name, orderId] = productInfoRaw.split('|');
       const userMessage = content.substring(endBracketIndex + 1).trim();
 
-      // 실제 ID를 찾을 수 없으므로 링크는 현재 불가능하지만, 
-      // 이 로직은 나중에 DB에 상품 ID를 저장하도록 확장하면 완벽해집니다.
-      // 현재는 UI만 예쁘게 보여줍니다.
+      // 현재 fetchMessages에서는 imageUrl을 가져오지 않으므로, 
+      // 실제 구현에서는 products 테이블과 조인하거나 content에 이미지 URL도 포함해야 합니다.
+      // 여기서는 UI 고도화에 집중합니다.
 
       return (
-        <div className="space-y-3">
-          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30 flex gap-3 items-center">
-            <div className="w-10 h-12 bg-white/20 rounded flex-shrink-0 flex items-center justify-center">
-              <ShoppingBag className="w-5 h-5 text-white/60" />
+        <div className="space-y-4 w-full">
+          <Link 
+            href={`/shop/${id || ''}`}
+            target="_blank"
+            className="flex items-center gap-4 bg-white/10 hover:bg-white/20 border border-white/20 p-4 rounded-xl transition-all group/card shadow-inner"
+          >
+            <div className="relative w-16 h-16 bg-white/20 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center border border-white/10">
+              <ShoppingBag className="w-6 h-6 text-white/40 group-hover/card:scale-110 transition-transform" />
+              {/* 실제 운영 환경에서는 Image 컴포넌트를 사용하고 content에 src를 담아야 함 */}
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest">Inquiry Product</p>
-              <p className="text-xs font-serif text-white truncate">{name}</p>
-              {orderId && <p className="text-[9px] text-white/40 font-mono">ORDER: #{orderId}</p>}
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-white/60">Product Inquiry</span>
+                <ExternalLink className="w-2.5 h-2.5 text-white/40" />
+              </div>
+              <p className="text-sm font-serif font-bold text-white truncate leading-tight mb-1">{name}</p>
+              {orderId && (
+                <div className="flex items-center gap-1.5 opacity-60">
+                  <PackageCheck className="w-3 h-3 text-white" />
+                  <span className="text-[10px] text-white font-mono uppercase tracking-tighter">Order: #{orderId.slice(0,8)}</span>
+                </div>
+              )}
             </div>
-          </div>
-          {userMessage && <p className="whitespace-pre-wrap">{userMessage}</p>}
+            <ChevronRight className="w-4 h-4 text-white/20 group-hover/card:translate-x-1 transition-transform" />
+          </Link>
+          {userMessage && (
+            <div className="px-1 text-white/90 text-sm leading-relaxed whitespace-pre-wrap font-medium">
+              {userMessage}
+            </div>
+          )}
         </div>
       );
     } catch (e) {
+      console.error('Parsing error:', e);
       return content;
     }
   };
@@ -261,7 +279,7 @@ export default function ChatWidget() {
               </button>
             </div>
 
-            {/* Inquiry Context Bar (Conditional) */}
+            {/* Inquiry Context Bar */}
             {inquiryProduct && (
               <Link 
                 href={`/shop/${inquiryProduct.id}`}
@@ -396,7 +414,6 @@ export default function ChatWidget() {
           )}
         </AnimatePresence>
         
-        {/* Unread Alert Bubble */}
         {!isOpen && unreadCount > 0 && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
