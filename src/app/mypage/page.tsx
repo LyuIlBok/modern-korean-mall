@@ -12,7 +12,7 @@ import {
   MapPin, User, Save, Plus, Trash2, Star, Loader2, X, 
   ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, 
   Box, Camera, Edit2, Database, Crown, TrendingUp, ArrowUpRight,
-  ShieldCheck, Lock, Key, Eye, EyeOff
+  ShieldCheck, Lock, Key, Eye, EyeOff, Image as ImageIcon
 } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -50,14 +50,16 @@ function MyPageContent() {
     points: 0 
   });
 
-  // [추가] 재인증 관련 상태
   const [isVerified, setIsVerified] = useState(false);
   const [verifyPassword, setVerifyPassword] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
 
+  // 리뷰 관련 상태
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [selectedProduct, setSelectedReviewProduct] = useState<any>(null);
-  const [reviewData, setReviewData] = useState({ rating: 5, content: '', images: [] as string[] });
+  const [reviewData, setReviewData] = useState({ rating: 5, content: '' });
+  const [reviewImage, setReviewImage] = useState<File | null>(null);
+  const [reviewPreview, setReviewPreview] = useState<string | null>(null);
 
   const [isAddrModalOpen, setIsAddrModalOpen] = useState(false);
   const [editingAddrId, setEditingAddrId] = useState<string | null>(null);
@@ -77,7 +79,6 @@ function MyPageContent() {
       setUser(currentUser);
       setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
-      // 1. Profile & CRM Data Load
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
@@ -105,7 +106,6 @@ function MyPageContent() {
         });
       }
 
-      // 2. Orders Load
       const { data: orderData } = await supabase
         .from('orders')
         .select(`*, order_items (*, products (*))`)
@@ -113,7 +113,6 @@ function MyPageContent() {
         .order('created_at', { ascending: false });
       if (orderData) setOrders(orderData);
       
-      // 3. Addresses Load
       const { data: addrData } = await supabase
         .from('addresses')
         .select('*')
@@ -154,8 +153,65 @@ function MyPageContent() {
 
   const handleOpenReview = (product: any) => {
     setSelectedReviewProduct(product);
-    setReviewData({ rating: 5, content: '', images: [] });
+    setReviewData({ rating: 5, content: '' });
+    setReviewImage(null);
+    setReviewPreview(null);
     setIsReviewModalOpen(true);
+  };
+
+  const handleReviewImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setReviewImage(file);
+      setReviewPreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleReviewSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    setIsSaving(true);
+
+    try {
+      let imageUrl = null;
+
+      if (reviewImage) {
+        const fileExt = reviewImage.name.split('.').pop();
+        const fileName = `${user.id}_${Date.now()}.${fileExt}`;
+        const filePath = `review-images/${fileName}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('reviews')
+          .upload(filePath, reviewImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('reviews')
+          .getPublicUrl(filePath);
+        
+        imageUrl = publicUrl;
+      }
+
+      const { error } = await supabase.from('reviews').insert({
+        product_id: selectedProduct.id,
+        user_id: user.id,
+        user_name: profile.full_name || '회원',
+        rating: reviewData.rating,
+        content: reviewData.content,
+        image_url: imageUrl,
+        is_verified: true
+      });
+
+      if (error) throw error;
+
+      alert('리뷰가 등록되었습니다. 소중한 의견 감사합니다!');
+      setIsReviewModalOpen(false);
+    } catch (err: any) {
+      alert('리뷰 등록 중 오류가 발생했습니다: ' + err.message);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -517,17 +573,63 @@ function MyPageContent() {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsReviewModalOpen(false)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative w-full max-w-xl bg-white rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
-              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">리뷰 작성</h3><button onClick={() => setIsReviewModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
-              <div className="flex gap-6 mb-12 items-center bg-hanji-white/30 p-6 rounded-sm border border-border-light"><div className="relative w-16 h-20 bg-white rounded-sm overflow-hidden border border-border-light shadow-sm"><Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" /></div><div><p className="text-[10px] text-muted uppercase tracking-widest mb-1 font-bold">Review Target</p><h4 className="text-xl font-serif text-charcoal">{selectedProduct.name}</h4></div></div>
-              <form onSubmit={async (e) => {
-                e.preventDefault();
-                setIsSaving(true);
-                await supabase.from('reviews').insert({ product_id: selectedProduct.id, user_id: user.id, user_name: profile.full_name || '회원', rating: reviewData.rating, content: reviewData.content, is_verified: true });
-                setIsReviewModalOpen(false); setIsSaving(false); alert('리뷰가 등록되었습니다.');
-              }} className="space-y-12">
-                <div className="text-center space-y-6"><p className="text-[10px] text-muted uppercase tracking-[0.3em] font-bold">Rate your experience</p><div className="flex justify-center gap-4">{[1, 2, 3, 4, 5].map((star) => (<button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all ${reviewData.rating >= star ? 'text-deep-sage scale-110' : 'text-border-light hover:text-deep-sage/40'}`}><Star className={`w-12 h-12 ${reviewData.rating >= star ? 'fill-current' : ''}`} /></button>))}</div></div>
-                <div className="space-y-3"><label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Write your review</label><textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="상품에 대한 진솔한 후기를 남겨주세요." rows={6} className="w-full bg-hanji-white/30 border border-border-light px-6 py-5 rounded-sm text-sm focus:border-deep-sage outline-none resize-none transition-all" /></div>
-                <button type="submit" disabled={isSaving || reviewData.content.length < 5} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30 uppercase tracking-widest">Complete Review</button>
+              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
+                <h3 className="font-serif text-3xl">리뷰 작성</h3>
+                <button onClick={() => setIsReviewModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button>
+              </div>
+              
+              <div className="flex gap-6 mb-12 items-center bg-hanji-white/30 p-6 rounded-sm border border-border-light">
+                <div className="relative w-16 h-20 bg-white rounded-sm overflow-hidden border border-border-light shadow-sm">
+                  <Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" />
+                </div>
+                <div>
+                  <p className="text-[10px] text-muted uppercase tracking-widest mb-1 font-bold">Review Target</p>
+                  <h4 className="text-xl font-serif text-charcoal">{selectedProduct.name}</h4>
+                </div>
+              </div>
+
+              <form onSubmit={handleReviewSubmit} className="space-y-12">
+                <div className="text-center space-y-6">
+                  <p className="text-[10px] text-muted uppercase tracking-[0.3em] font-bold">Rate your experience</p>
+                  <div className="flex justify-center gap-4">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all ${reviewData.rating >= star ? 'text-amber-400 scale-110' : 'text-border-light hover:text-amber-200'}`}>
+                        <Star className={`w-12 h-12 ${reviewData.rating >= star ? 'fill-current' : ''}`} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1 flex items-center gap-2">
+                    <ImageIcon className="w-3 h-3" /> Photo Review (Optional)
+                  </label>
+                  <div className="flex gap-4">
+                    <div className="relative w-24 h-24 bg-hanji-white border border-border-light rounded-sm flex flex-col items-center justify-center cursor-pointer hover:bg-white transition-colors overflow-hidden group">
+                      {reviewPreview ? (
+                        <Image src={reviewPreview} alt="Preview" fill className="object-cover" />
+                      ) : (
+                        <>
+                          <Camera className="w-6 h-6 text-muted/40 mb-1" />
+                          <span className="text-[8px] font-bold text-muted/60 uppercase">Add Photo</span>
+                        </>
+                      )}
+                      <input type="file" accept="image/*" onChange={handleReviewImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    </div>
+                    {reviewPreview && (
+                      <button type="button" onClick={() => { setReviewImage(null); setReviewPreview(null); }} className="text-[10px] text-terracotta font-bold uppercase tracking-widest self-end pb-1 hover:underline">Remove</button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Write your review</label>
+                  <textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="상품에 대한 진솔한 후기를 남겨주세요." rows={6} className="w-full bg-hanji-white/30 border border-border-light px-6 py-5 rounded-sm text-sm focus:border-deep-sage outline-none resize-none transition-all" />
+                </div>
+
+                <button type="submit" disabled={isSaving || reviewData.content.length < 5} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-xl flex items-center justify-center gap-3 shadow-xl disabled:opacity-30 uppercase tracking-widest">
+                  {isSaving ? <Loader2 className="w-6 h-6 animate-spin" /> : 'Complete Review'}
+                </button>
               </form>
             </motion.div>
           </div>

@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   Package, Truck, ShoppingBag, MessageSquare, 
-  Box, Camera, Clock, ExternalLink, AlertCircle, Loader2
+  Box, Camera, Clock, ExternalLink, AlertCircle, Loader2,
+  Star, StarHalf
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 
@@ -168,9 +169,9 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
                       {order.status === '배송완료' && (
                         <button 
                           onClick={() => onOpenReview(item.products)} 
-                          className="text-[10px] bg-white border border-charcoal text-charcoal px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all font-bold uppercase tracking-widest shadow-sm"
+                          className="text-[10px] bg-charcoal text-white px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all font-bold uppercase tracking-widest shadow-lg"
                         >
-                          <Camera className="w-3.5 h-3.5" /> Post Review
+                          <Camera className="w-3.5 h-3.5" /> 리뷰 작성하기
                         </button>
                       )}
                       <button 
