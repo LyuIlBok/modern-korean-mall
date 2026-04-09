@@ -8,6 +8,7 @@ import {
   Package, Truck, ShoppingBag, MessageSquare, 
   Box, Camera, Clock, ExternalLink, AlertCircle, Loader2
 } from 'lucide-react';
+import { useChatStore } from '@/store/useChatStore';
 
 interface OrderItem {
   product_id: string;
@@ -38,6 +39,7 @@ interface OrderItemListProps {
 
 export default function OrderItemList({ orders, onOpenReview, onCancelOrder, cancellingId }: OrderItemListProps) {
   const router = useRouter();
+  const { setInquiryProduct, toggleChat } = useChatStore();
 
   if (orders.length === 0) {
     return (
@@ -55,6 +57,17 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
       </div>
     );
   }
+
+  const handleInquiry = (product: any, orderId: string) => {
+    if (!product) return;
+    setInquiryProduct({
+      id: product.id,
+      name: product.name,
+      imageUrl: product.imageUrl,
+      orderId: orderId
+    });
+    toggleChat(true);
+  };
 
   const getStatusStyle = (status: string) => {
     switch (status) {
@@ -158,12 +171,12 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
                 </div>
                 
                 <div className="flex md:flex-col gap-3 min-w-[160px]">
-                  <Link 
-                    href="/support" 
+                  <button 
+                    onClick={() => handleInquiry(item.products, order.id)}
                     className="text-[10px] border border-border-light text-charcoal/60 px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest justify-center font-bold font-sans flex-1"
                   >
                     <MessageSquare className="w-3.5 h-3.5" /> 1:1 Inquiry
-                  </Link>
+                  </button>
                   
                   {order.status === '결제완료' && (
                     <button 

@@ -3,7 +3,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Loader2, User, Sparkles, BellRing } from 'lucide-react';
+import { 
+  MessageCircle, X, Send, Loader2, User, Sparkles, 
+  BellRing, ShoppingBag, ExternalLink 
+} from 'lucide-react';
+import { useChatStore } from '@/store/useChatStore';
+import Image from 'next/image';
 
 interface ChatMessage {
   id: string;
@@ -15,7 +20,7 @@ interface ChatMessage {
 }
 
 export default function ChatWidget() {
-  const [isOpen, setIsOpen] = useState(false);
+  const { isOpen, toggleChat, inquiryProduct, setInquiryProduct } = useChatStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
@@ -66,7 +71,6 @@ export default function ChatWidget() {
               if (prev.find(m => m.id === msg.id)) return prev;
               return [...prev, msg];
             });
-            // 관리자 메시지이면 알림 카운트 증가
             if (msg.is_admin) {
               setUnreadCount(c => c + 1);
             }
@@ -119,11 +123,9 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
     
-    // 창이 열려있을 때 마지막 메시지가 관리자 메시지이고 읽지 않았으면 읽음 처리
     if (isOpen && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.is_admin && !lastMsg.is_read) {
-        // 비동기 처리를 위해 setTimeout으로 분리하여 동기적 setState 경고 해결
         const timer = setTimeout(() => {
           markAsRead(lastMsg.id);
           setUnreadCount(0);
@@ -133,7 +135,6 @@ export default function ChatWidget() {
     }
   }, [messages, isOpen, markAsRead]);
 
-  // 창이 열릴 때 알림 초기화
   useEffect(() => {
     if (isOpen) {
       const timer = setTimeout(() => {
@@ -148,7 +149,16 @@ export default function ChatWidget() {
     e.preventDefault();
     if (!input.trim() || !chatUserId) return;
 
-    const content = input.trim();
+    let content = input.trim();
+    
+    // 문의 중인 상품 정보가 있으면 메시지 상단에 추가 (관리자 확인용)
+    if (inquiryProduct) {
+      const productContext = `[상품 문의: ${inquiryProduct.name}${inquiryProduct.orderId ? ` / 주문번호: ${inquiryProduct.orderId.slice(0,8)}` : ''}]\n\n`;
+      content = productContext + content;
+      // 메시지 전송 후 상품 컨텍스트 초기화
+      setInquiryProduct(null);
+    }
+
     setInput('');
     setLoading(true);
 
@@ -173,7 +183,7 @@ export default function ChatWidget() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] h-[600px] bg-white rounded-2xl shadow-2xl border border-border-light flex flex-col overflow-hidden"
+            className="absolute bottom-20 right-0 w-[350px] sm:w-[400px] h-[650px] max-h-[80vh] bg-white rounded-2xl shadow-2xl border border-border-light flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="bg-charcoal p-6 text-white flex justify-between items-center relative overflow-hidden">
@@ -191,12 +201,36 @@ export default function ChatWidget() {
                 </div>
               </div>
               <button 
-                onClick={() => setIsOpen(false)} 
+                onClick={() => toggleChat(false)} 
                 className="hover:bg-white/10 rounded-full p-2 transition-all relative z-10"
               >
                 <X className="w-6 h-6" />
               </button>
             </div>
+
+            {/* Inquiry Context Bar (Conditional) */}
+            {inquiryProduct && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                className="bg-hanji-white border-b border-border-light p-4 flex items-center gap-4"
+              >
+                <div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light flex-shrink-0">
+                  <Image src={inquiryProduct.imageUrl} alt={inquiryProduct.name} fill className="object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] text-muted uppercase tracking-widest font-bold">현재 문의 중인 상품</p>
+                  <p className="text-sm font-serif text-charcoal truncate">{inquiryProduct.name}</p>
+                  {inquiryProduct.orderId && <p className="text-[9px] text-deep-sage font-mono">ORDER: #{inquiryProduct.orderId.slice(0,8).toUpperCase()}</p>}
+                </div>
+                <button 
+                  onClick={() => setInquiryProduct(null)}
+                  className="p-1.5 hover:bg-charcoal/5 rounded-full text-muted transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </motion.div>
+            )}
 
             {/* Chat Messages */}
             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6 bg-hanji-white/30 scroll-smooth custom-scrollbar">
@@ -231,7 +265,7 @@ export default function ChatWidget() {
                     <div className={`flex ${msg.is_admin ? 'justify-start' : 'justify-end'}`}>
                       <div className={`flex flex-col ${msg.is_admin ? 'items-start' : 'items-end'} max-w-[85%]`}>
                         <div
-                          className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed ${
+                          className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed whitespace-pre-wrap ${
                             msg.is_admin
                               ? 'bg-white text-charcoal border border-border-light rounded-tl-none font-light'
                               : 'bg-deep-sage text-white rounded-tr-none font-medium'
@@ -280,7 +314,7 @@ export default function ChatWidget() {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => toggleChat(!isOpen)}
         className="w-16 h-16 bg-charcoal text-white rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.25)] hover:bg-deep-sage transition-all group relative"
       >
         <AnimatePresence mode="wait">

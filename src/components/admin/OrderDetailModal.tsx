@@ -205,6 +205,7 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
                   </select>
                 </div>
 
+                {/* 배송중 또는 배송완료 상태에서만 송장 입력창 노출 */}
                 {(status === '배송중' || status === '배송완료') && (
                   <motion.div 
                     initial={{ opacity: 0, y: -10 }} 
