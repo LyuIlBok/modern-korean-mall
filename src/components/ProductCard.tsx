@@ -28,7 +28,11 @@ export default function ProductCard({ product }: { product: ProductWithRating })
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (product.is_sold_out) return;
-    addItem({ ...product, shipping_fee: product.shipping_fee || 0 });
+    addItem({ 
+      ...product, 
+      quantity: 1,
+      shipping_fee: product.shipping_fee || 0 
+    });
     addToast(`${product.name}이(가) 장바구니에 담겼습니다.`, 'success');
   };
 

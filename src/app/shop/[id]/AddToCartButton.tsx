@@ -25,14 +25,22 @@ export default function PurchaseButtons({ product }: { product: Product }) {
   const handleAddToCart = () => {
     if (product.is_sold_out) return;
     setIsAdding(true);
-    addItem({ ...product, shipping_fee: product.shipping_fee || 0 });
+    addItem({ 
+      ...product, 
+      quantity: 1,
+      shipping_fee: product.shipping_fee || 0 
+    });
     addToast(`${product.name}이(가) 장바구니에 담겼습니다.`, 'success');
     setTimeout(() => setIsAdding(false), 500);
   };
 
   const handleBuyNow = () => {
     if (product.is_sold_out) return;
-    addItem({ ...product, shipping_fee: product.shipping_fee || 0 });
+    addItem({ 
+      ...product, 
+      quantity: 1,
+      shipping_fee: product.shipping_fee || 0 
+    });
     router.push('/checkout');
   };
 

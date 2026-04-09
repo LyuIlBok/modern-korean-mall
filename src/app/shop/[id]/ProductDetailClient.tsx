@@ -1,15 +1,18 @@
 'use client';
 
+import { useState, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
+import { useCartStore } from '@/store/useCartStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
+import { useHasMounted } from '@/hooks/useHasMounted';
+import { useWishlistStore } from '@/store/useWishlistStore';
 import Image from 'next/image';
 import Link from 'next/link';
-import { ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, ChevronRight, Plus, Minus, ShoppingBag, CreditCard } from 'lucide-react';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { 
+  ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, 
+  ChevronRight, Plus, Minus, ShoppingBag, CreditCard 
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useLanguageStore } from '@/store/useLanguageStore';
-import { useWishlistStore } from '@/store/useWishlistStore';
-import { useCartStore } from '@/store/useCartStore';
-import { useHasMounted } from '@/hooks/useHasMounted';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
 import { Product } from '@/data/mockData';
@@ -41,6 +44,8 @@ export default function ProductDetailClient({
       name: product.name, 
       price: product.price, 
       imageUrl: product.imageUrl, 
+      category: product.category,
+      description: product.description,
       shipping_fee: product.shipping_fee || 0,
       quantity 
     });
@@ -54,6 +59,8 @@ export default function ProductDetailClient({
       name: product.name, 
       price: product.price, 
       imageUrl: product.imageUrl, 
+      category: product.category,
+      description: product.description,
       shipping_fee: product.shipping_fee || 0,
       quantity 
     });
@@ -159,7 +166,7 @@ export default function ProductDetailClient({
               
               {/* Rich Text Description Rendering */}
               <div 
-                className="text-muted leading-relaxed font-light whitespace-pre-line text-lg prose prose-slate max-w-none"
+                className="text-muted leading-relaxed font-light text-lg prose prose-slate max-w-none"
                 dangerouslySetInnerHTML={{ __html: product.description }}
               />
             </div>
@@ -176,7 +183,7 @@ export default function ProductDetailClient({
               </div>
               <div className="grid grid-cols-3 text-sm py-2 border-b border-border-light/50 pb-4">
                 <span className="text-muted uppercase tracking-widest font-bold text-[10px]">Shipping</span>
-                <span className="col-span-2 text-charcoal">농장직송 / 신선배송</span>
+                <span className="col-span-2 text-charcoal">{Number(product.shipping_fee) === 0 ? '무료배송' : `₩${Number(product.shipping_fee).toLocaleString()}`}</span>
               </div>
             </div>
 
