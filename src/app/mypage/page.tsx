@@ -18,6 +18,7 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { CONFIG } from '@/lib/config';
 import ProductCard from '@/components/ProductCard';
+import OrderItemList from '@/components/mypage/OrderItemList';
 import Script from 'next/script';
 
 type ActiveTab = 'orders' | 'wishlist' | 'addresses' | 'profile';
@@ -81,9 +82,8 @@ function MyPageContent() {
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
-        .maybeSingle(); // .single() 대신 .maybeSingle()을 사용하여 데이터가 없을 때의 406 에러 방지
+        .maybeSingle();
       
-      // [개선] DB에 정보가 없거나 부족하면 소셜 메타데이터에서 자동 완성
       const metadata = currentUser.user_metadata;
       const socialName = metadata?.full_name || metadata?.name || '';
       
@@ -95,20 +95,14 @@ function MyPageContent() {
         points: Number(profileData?.points) || 0
       });
 
-      // 만약 profiles 테이블에 데이터가 아예 없다면 초기화를 위해 upsert (id 필수 포함)
       if (!profileData) {
-        console.log('Syncing social metadata to profiles table...');
-        const { error: upsertError } = await supabase.from('profiles').upsert({
-          id: currentUser.id, // 필수 컬럼
+        await supabase.from('profiles').upsert({
+          id: currentUser.id,
           email: currentUser.email,
           full_name: socialName,
           avatar_url: metadata?.avatar_url || '',
           updated_at: new Date().toISOString()
         });
-        
-        if (upsertError) {
-          console.error('[Profile Sync Error]:', upsertError.message);
-        }
       }
 
       // 2. Orders Load
@@ -143,7 +137,6 @@ function MyPageContent() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // 등급 프로그레스 계산
   const tierProgress = useMemo(() => {
     const spent = profile.total_spent;
     if (profile.tier === 'VVIP' || spent >= TIER_THRESHOLDS.VVIP) {
@@ -191,20 +184,18 @@ function MyPageContent() {
     if (error) alert('정보 수정 실패: ' + error.message);
     else {
       alert('회원 정보가 성공적으로 수정되었습니다.');
-      setIsVerified(false); // 수정 후 보안을 위해 재인증 상태 초기화
-      setActiveTab('orders'); // 대시보드로 이동
+      setIsVerified(false);
+      setActiveTab('orders');
     }
     setIsSaving(false);
   };
 
-  // [추가] 비밀번호 재확인 로직
   const handleVerifyPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.email || !verifyPassword) return;
     
     setIsVerifying(true);
     try {
-      // Supabase signInWithPassword를 활용하여 현재 유저의 비밀번호 검증
       const { error } = await supabase.auth.signInWithPassword({
         email: user.email,
         password: verifyPassword
@@ -223,20 +214,16 @@ function MyPageContent() {
     }
   };
 
-  // 탭 변경 시 리셋 및 자동 패스 로직
   useEffect(() => {
     if (activeTab === 'profile') {
       const provider = user?.app_metadata?.provider;
-      // [개선] 소셜 로그인 유저는 즉시 프리패스
       if (provider && provider !== 'email') {
         setIsVerified(true);
       } else {
-        // 이메일 유저는 명시적 검증 필요
         setIsVerified(false);
         setVerifyPassword('');
       }
     } else {
-      // 다른 탭으로 이동 시 보안을 위해 상태 초기화
       setIsVerified(false);
       setVerifyPassword('');
     }
@@ -304,7 +291,6 @@ function MyPageContent() {
 
         {/* CRM Dashboard Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
-          {/* Tier Progress Widget */}
           <div className="lg:col-span-2 bg-white border border-border-light p-10 rounded-sm shadow-sm relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-5"><TrendingUp className="w-32 h-32" /></div>
             <div className="relative z-10 space-y-8">
@@ -336,7 +322,6 @@ function MyPageContent() {
             </div>
           </div>
 
-          {/* Points Widget */}
           <div className="bg-charcoal p-10 rounded-sm shadow-xl flex flex-col justify-between group cursor-pointer hover:bg-deep-sage transition-all duration-500 relative overflow-hidden">
             <div className="absolute -bottom-4 -right-4 opacity-10 group-hover:scale-110 transition-transform duration-700"><Database className="w-32 h-32 text-white" /></div>
             <div className="space-y-2 relative z-10">
@@ -361,77 +346,18 @@ function MyPageContent() {
 
         <div className="min-h-[400px]">
           {activeTab === 'orders' && (
-            <section className="space-y-10">
-              {orders.length === 0 ? (
-                <div className="py-32 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6">
-                  <div className="w-16 h-16 bg-hanji-white rounded-full flex items-center justify-center text-muted"><Package className="w-8 h-8" /></div>
-                  <p className="text-muted font-light italic">아직 주문 내역이 없습니다.</p>
-                  <Link href="/shop" className="bg-charcoal text-white px-8 py-3 rounded-sm hover:bg-deep-sage transition-all text-[10px] uppercase tracking-widest flex items-center gap-2 font-bold"><ShoppingCart className="w-3.5 h-3.5" /> 상점 구경하기 <ChevronRight className="w-3 h-3" /></Link>
-                </div>
-              ) : (
-                orders.map((order) => (
-                  <div key={order.id} className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                    <div className="bg-hanji-white/50 px-8 py-5 border-b border-border-light flex flex-col md:flex-row md:justify-between md:items-center gap-4">
-                      <div className="flex items-center gap-8">
-                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest font-bold">Order Date</p><p className="text-sm font-medium">{new Date(order.created_at).toLocaleDateString()}</p></div>
-                        <div className="space-y-1"><p className="text-[9px] text-muted uppercase tracking-widest font-bold">Order ID</p><p className="text-sm text-charcoal/60 font-mono tracking-tighter">{order.id.slice(0, 12).toUpperCase()}</p></div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-4 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest border ${
-                          order.status === '배송완료' ? 'bg-charcoal text-white border-charcoal' :
-                          order.status === '배송중' ? 'bg-deep-sage text-white border-deep-sage' :
-                          order.status === '배송준비중' ? 'bg-amber-50 text-amber-600 border-amber-200' :
-                          'bg-hanji-white text-muted border-border-light'
-                        }`}>
-                          {order.status}
-                        </span>
-                      </div>
-                    </div>
-                    <div className="p-8 space-y-8">
-                      {order.order_items?.map((item: any, idx: number) => (
-                        <div key={idx} className="flex flex-col md:flex-row md:items-center justify-between gap-8 group">
-                          <div className="flex gap-8">
-                            <div className="relative w-24 h-28 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0"><Image src={item.products?.imageUrl || ''} alt="" fill className="object-cover group-hover:scale-105 transition-transform duration-700" /></div>
-                            <div className="space-y-2 py-1">
-                              <h4 className="text-xl font-serif text-charcoal tracking-tight">{item.products?.name}</h4>
-                              <p className="text-sm text-muted font-light">{item.quantity}개 / ₩{item.price.toLocaleString()}</p>
-                              <div className="pt-4 flex gap-3">
-                                {order.status === '배송완료' && (
-                                  <button onClick={() => handleOpenReview(item.products)} className="text-[10px] bg-white border border-charcoal text-charcoal px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all font-bold uppercase tracking-widest"><Camera className="w-3.5 h-3.5" /> Post Review</button>
-                                )}
-                                <button onClick={() => router.push(`/shop/${item.products?.id}`)} className="text-[10px] border border-border-light text-muted px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest"><Box className="w-3.5 h-3.5" /> Reorder</button>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex md:flex-col gap-3">
-                            <Link href="/support" className="text-[10px] border border-border-light text-charcoal/60 px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest min-w-[140px] justify-center font-bold font-sans">
-                              <MessageSquare className="w-3.5 h-3.5" /> 1:1 Inquiry
-                            </Link>
-                            {order.status === '배송중' && (
-                              <button className="text-[10px] bg-deep-sage text-white px-6 py-3 rounded-sm flex items-center gap-2 hover:opacity-90 transition-all uppercase tracking-widest min-w-[140px] justify-center font-bold font-sans shadow-lg">
-                                <Truck className="w-3.5 h-3.5" /> Track Package
-                              </button>
-                            )}
-                            {order.status === '결제완료' && (
-                              <button onClick={() => handleCancelOrder(order.id)} disabled={cancellingId === order.id} className="text-[10px] text-terracotta/60 hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-bold py-2 text-center disabled:opacity-30 underline underline-offset-4 decoration-terracotta/20">
-                                {cancellingId === order.id ? 'Cancelling...' : 'Cancel Order'}
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))
-              )}
-            </section>
+            <OrderItemList 
+              orders={orders} 
+              onOpenReview={handleOpenReview} 
+              onCancelOrder={handleCancelOrder}
+              cancellingId={cancellingId}
+            />
           )}
 
           {activeTab === 'profile' && (
             <div className="max-w-2xl mx-auto">
               <AnimatePresence mode="wait">
                 {(!isVerified && user?.app_metadata?.provider === 'email') ? (
-                  /* 이메일 사용자 전용 비밀번호 재확인 뷰 */
                   <motion.div 
                     key="verify"
                     initial={{ opacity: 0, y: 10 }}
@@ -481,7 +407,6 @@ function MyPageContent() {
                     </form>
                   </motion.div>
                 ) : (
-                  /* 소셜 로그인 사용자 또는 인증 완료된 이메일 사용자용 수정 폼 (즉시 렌더링) */
                   <motion.div 
                     key="edit"
                     initial={isVerified ? { opacity: 0, x: 20 } : { opacity: 1 }}
@@ -613,7 +538,7 @@ function MyPageContent() {
       <AnimatePresence>
         {isAddrModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-md" />
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsAddrModalOpen(false)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-md bg-white rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
               <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light"><h3 className="font-serif text-3xl">{editingAddrId ? 'Address Edit' : 'New Address'}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-1 hover:rotate-90 transition-transform"><X className="w-7 h-7" /></button></div>
               <form onSubmit={handleSaveAddress} className="space-y-8">
