@@ -240,9 +240,9 @@ export default function AdminOrdersPage() {
                       <td className="px-8 py-6 text-center">
                         <button 
                           onClick={() => setSelectedOrder(order)}
-                          className="p-2 text-muted hover:text-deep-sage bg-hanji-white hover:bg-deep-sage/10 rounded-sm transition-all opacity-0 group-hover:opacity-100 focus:opacity-100 border border-transparent hover:border-deep-sage/20"
+                          className="px-4 py-2 text-xs font-bold text-muted hover:text-deep-sage bg-hanji-white hover:bg-deep-sage/10 rounded-sm transition-all border border-border-light hover:border-deep-sage/20 flex items-center gap-2 mx-auto"
                         >
-                          <Edit className="w-4 h-4" />
+                          <Edit className="w-3.5 h-3.5" /> 상세 관리
                         </button>
                       </td>
                     </tr>
