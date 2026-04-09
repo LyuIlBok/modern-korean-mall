@@ -5,10 +5,11 @@ import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, X, Send, Loader2, User, Sparkles, 
-  BellRing, ShoppingBag, ExternalLink 
+  BellRing, ShoppingBag, ExternalLink, ChevronRight
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
+import Link from 'next/link';
 
 interface ChatMessage {
   id: string;
@@ -20,7 +21,7 @@ interface ChatMessage {
 }
 
 export default function ChatWidget() {
-  const { isOpen, toggleChat, inquiryProduct, setInquiryProduct } = useChatStore();
+  const { isOpen, toggleChat, inquiryProduct, setInquiryProduct, autoSendMessage, triggerAutoSend } = useChatStore();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
@@ -145,17 +146,30 @@ export default function ChatWidget() {
     }
   }, [isOpen]);
 
+  // 자동 메시지 전송 로직
+  useEffect(() => {
+    if (isOpen && autoSendMessage && chatUserId) {
+      const sendAutoMessage = async () => {
+        const content = autoSendMessage;
+        triggerAutoSend(null); // 중복 전송 방지를 위해 즉시 초기화
+        
+        await supabase
+          .from('support_messages')
+          .insert([{ user_id: chatUserId, content, is_admin: false, is_read: false }]);
+      };
+      sendAutoMessage();
+    }
+  }, [isOpen, autoSendMessage, chatUserId, triggerAutoSend]);
+
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || !chatUserId) return;
 
     let content = input.trim();
     
-    // 문의 중인 상품 정보가 있으면 메시지 상단에 추가 (관리자 확인용)
     if (inquiryProduct) {
       const productContext = `[상품 문의: ${inquiryProduct.name}${inquiryProduct.orderId ? ` / 주문번호: ${inquiryProduct.orderId.slice(0,8)}` : ''}]\n\n`;
       content = productContext + content;
-      // 메시지 전송 후 상품 컨텍스트 초기화
       setInquiryProduct(null);
     }
 
@@ -171,6 +185,45 @@ export default function ChatWidget() {
       alert('메시지 전송에 실패했습니다.');
     }
     setLoading(false);
+  };
+
+  /**
+   * 메시지 텍스트에서 상품 문의 정보를 파싱하여 리치 카드 UI로 반환합니다.
+   */
+  const renderRichMessage = (content: string) => {
+    const isProductInquiry = content.startsWith('[상품 문의:');
+    if (!isProductInquiry) return content;
+
+    try {
+      const endBracketIndex = content.indexOf(']');
+      const productInfoRaw = content.substring(7, endBracketIndex);
+      const [namePart, orderPart] = productInfoRaw.split(' / ');
+      const name = namePart.trim();
+      const orderId = orderPart?.replace('주문번호: ', '').trim();
+      const userMessage = content.substring(endBracketIndex + 1).trim();
+
+      // 실제 ID를 찾을 수 없으므로 링크는 현재 불가능하지만, 
+      // 이 로직은 나중에 DB에 상품 ID를 저장하도록 확장하면 완벽해집니다.
+      // 현재는 UI만 예쁘게 보여줍니다.
+
+      return (
+        <div className="space-y-3">
+          <div className="bg-white/20 backdrop-blur-sm rounded-lg p-3 border border-white/30 flex gap-3 items-center">
+            <div className="w-10 h-12 bg-white/20 rounded flex-shrink-0 flex items-center justify-center">
+              <ShoppingBag className="w-5 h-5 text-white/60" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-[10px] text-white/60 uppercase font-bold tracking-widest">Inquiry Product</p>
+              <p className="text-xs font-serif text-white truncate">{name}</p>
+              {orderId && <p className="text-[9px] text-white/40 font-mono">ORDER: #{orderId}</p>}
+            </div>
+          </div>
+          {userMessage && <p className="whitespace-pre-wrap">{userMessage}</p>}
+        </div>
+      );
+    } catch (e) {
+      return content;
+    }
   };
 
   if (!chatUserId) return null;
@@ -210,26 +263,28 @@ export default function ChatWidget() {
 
             {/* Inquiry Context Bar (Conditional) */}
             {inquiryProduct && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                className="bg-hanji-white border-b border-border-light p-4 flex items-center gap-4"
+              <Link 
+                href={`/shop/${inquiryProduct.id}`}
+                onClick={() => toggleChat(false)}
+                className="bg-hanji-white border-b border-border-light p-4 flex items-center gap-4 hover:bg-white transition-colors group"
               >
                 <div className="relative w-12 h-14 rounded-sm overflow-hidden border border-border-light flex-shrink-0">
                   <Image src={inquiryProduct.imageUrl} alt={inquiryProduct.name} fill className="object-cover" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-[10px] text-muted uppercase tracking-widest font-bold">현재 문의 중인 상품</p>
+                  <p className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-1">
+                    현재 문의 중인 상품 <ChevronRight className="w-2.5 h-2.5" />
+                  </p>
                   <p className="text-sm font-serif text-charcoal truncate">{inquiryProduct.name}</p>
                   {inquiryProduct.orderId && <p className="text-[9px] text-deep-sage font-mono">ORDER: #{inquiryProduct.orderId.slice(0,8).toUpperCase()}</p>}
                 </div>
                 <button 
-                  onClick={() => setInquiryProduct(null)}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setInquiryProduct(null); }}
                   className="p-1.5 hover:bg-charcoal/5 rounded-full text-muted transition-colors"
                 >
                   <X className="w-4 h-4" />
                 </button>
-              </motion.div>
+              </Link>
             )}
 
             {/* Chat Messages */}
@@ -265,13 +320,13 @@ export default function ChatWidget() {
                     <div className={`flex ${msg.is_admin ? 'justify-start' : 'justify-end'}`}>
                       <div className={`flex flex-col ${msg.is_admin ? 'items-start' : 'items-end'} max-w-[85%]`}>
                         <div
-                          className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed whitespace-pre-wrap ${
+                          className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed ${
                             msg.is_admin
                               ? 'bg-white text-charcoal border border-border-light rounded-tl-none font-light'
                               : 'bg-deep-sage text-white rounded-tr-none font-medium'
                           }`}
                         >
-                          {msg.content}
+                          {msg.is_admin ? msg.content : renderRichMessage(msg.content)}
                         </div>
                         <div className="flex items-center gap-2 mt-1.5 opacity-40 px-1">
                           {!msg.is_admin && msg.is_read && (

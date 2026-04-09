@@ -6,11 +6,12 @@ import { useCartStore } from '@/store/useCartStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import { useHasMounted } from '@/hooks/useHasMounted';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
   ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, 
-  ChevronRight, Plus, Minus, ShoppingBag, CreditCard 
+  ChevronRight, Plus, Minus, ShoppingBag, CreditCard, MessageSquare
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
@@ -28,6 +29,7 @@ export default function ProductDetailClient({
   const { t } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
   const { addItem, toggleCart } = useCartStore();
+  const { setInquiryProduct, toggleChat, triggerAutoSend } = useChatStore();
   const hasMounted = useHasMounted();
   
   const [activeImage, setActiveImage] = useState(0);
@@ -65,6 +67,18 @@ export default function ProductDetailClient({
       quantity 
     });
     router.push('/checkout');
+  };
+
+  const handleProductInquiry = () => {
+    if (!product) return;
+    setInquiryProduct({
+      id: product.id,
+      name: product.name,
+      imageUrl: product.imageUrl,
+      price: product.price
+    });
+    triggerAutoSend(`[상품 문의: ${product.name}] 이 상품에 대해 궁금한 점이 있습니다.`);
+    toggleChat(true);
   };
 
   return (
@@ -214,6 +228,13 @@ export default function ProductDetailClient({
                   <CreditCard className="w-5 h-5" /> 바로 구매하기
                 </button>
               </div>
+              
+              <button 
+                onClick={handleProductInquiry}
+                className="w-full py-4 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 rounded-sm"
+              >
+                <MessageSquare className="w-4 h-4" /> 이 제품 상담하기
+              </button>
             </div>
           </div>
         </div>

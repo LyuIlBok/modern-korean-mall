@@ -39,7 +39,7 @@ interface OrderItemListProps {
 
 export default function OrderItemList({ orders, onOpenReview, onCancelOrder, cancellingId }: OrderItemListProps) {
   const router = useRouter();
-  const { setInquiryProduct, toggleChat } = useChatStore();
+  const { setInquiryProduct, toggleChat, triggerAutoSend } = useChatStore();
 
   if (orders.length === 0) {
     return (
@@ -66,6 +66,7 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
       imageUrl: product.imageUrl,
       orderId: orderId
     });
+    triggerAutoSend(`[상품 문의: ${product.name} / 주문번호: ${orderId.slice(0,8).toUpperCase()}] 이 상품에 대해 상담하고 싶습니다.`);
     toggleChat(true);
   };
 
@@ -175,7 +176,7 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
                     onClick={() => handleInquiry(item.products, order.id)}
                     className="text-[10px] border border-border-light text-charcoal/60 px-6 py-3 rounded-sm flex items-center gap-2 hover:bg-hanji-white transition-all uppercase tracking-widest justify-center font-bold font-sans flex-1"
                   >
-                    <MessageSquare className="w-3.5 h-3.5" /> 1:1 Inquiry
+                    <MessageSquare className="w-3.5 h-3.5" /> 이 제품 상담하기
                   </button>
                   
                   {order.status === '결제완료' && (
