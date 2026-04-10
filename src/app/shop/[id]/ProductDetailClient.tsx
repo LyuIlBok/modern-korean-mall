@@ -11,7 +11,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { 
   ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, 
-  ChevronRight, Plus, Minus, ShoppingBag, CreditCard, MessageSquare,
+  ChevronRight, ChevronDown, Plus, Minus, ShoppingBag, CreditCard, MessageSquare,
   Star, StarHalf, MessageCircle, Camera, User
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
