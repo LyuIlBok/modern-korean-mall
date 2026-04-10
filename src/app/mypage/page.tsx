@@ -85,6 +85,13 @@ function MyPageContent() {
         .eq('id', currentUser.id)
         .maybeSingle();
       
+      // Fetch total points from ledger view
+      const { data: pointData } = await supabase
+        .from('user_total_points')
+        .select('total_points')
+        .eq('user_id', currentUser.id)
+        .maybeSingle();
+      
       const metadata = currentUser.user_metadata;
       const socialName = metadata?.full_name || metadata?.name || '';
       
@@ -93,7 +100,7 @@ function MyPageContent() {
         phone: profileData?.phone || '',
         tier: profileData?.tier || 'FAMILY',
         total_spent: Number(profileData?.total_spent) || 0,
-        points: Number(profileData?.points) || 0
+        points: Number(pointData?.total_points) || Number(profileData?.points) || 0
       });
 
       if (!profileData) {

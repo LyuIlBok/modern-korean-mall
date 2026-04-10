@@ -139,6 +139,18 @@ export default function CheckoutInternal() {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // 2.5. Record Purchase Reward Points (1% of finalAmount)
+      if (session?.user?.id) {
+        const rewardPoints = Math.floor(finalAmount * 0.01);
+        if (rewardPoints > 0) {
+          await supabase.from('point_logs').insert([{
+            user_id: session.user.id,
+            amount: rewardPoints,
+            reason: 'PURCHASE_REWARD'
+          }]);
+        }
+      }
+
       // 3. Trigger PortOne V2
       if (paymentMethod === 'card') {
         const PortOne = (window as any).PortOne;
