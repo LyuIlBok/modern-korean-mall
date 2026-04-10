@@ -5,6 +5,7 @@ import Footer from "@/components/Footer";
 import CartSidebar from "@/components/CartSidebar";
 import ToastContainer from "@/components/Toast";
 import ChatWidget from "@/components/ChatWidget";
+import AnnouncementPopup from "@/components/layout/AnnouncementPopup";
 import Script from "next/script";
 import { Metadata } from 'next';
 
@@ -102,6 +103,7 @@ export default function RootLayout({
           ></iframe>
         </noscript>
 
+        <AnnouncementPopup />
         <Header />
         <main className="flex-1 flex flex-col">
           {children}
