@@ -16,7 +16,6 @@ import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import OrderDetailModal from '@/components/admin/OrderDetailModal';
-import ProductOptionModal from '@/components/admin/ProductOptionModal';
 
 // Recharts 관련 Prerendering 에러를 방지하기 위해 SalesChart를 클라이언트 사이드에서만 렌더링
 const SalesChart = dynamic(() => import('./SalesChart'), { 
@@ -106,7 +105,6 @@ export default function AdminDashboard() {
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
   const [userCount, setUserCount] = useState(0);
-  const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -115,24 +113,7 @@ export default function AdminDashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('전체');
 
-  const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
-  const [selectedOptionProduct, setSelectedOptionProduct] = useState<AdminProduct | null>(null);
-
-  // New Product States
-  const [newName, setNewName] = useState('');
-  const [newPrice, setNewPrice] = useState('');
-  const [newStock, setNewStock] = useState('100');
-  const [newShippingFee, setNewShippingFee] = useState('0');
-  const [newCategory, setNewCategory] = useState('농산물');
-  const [newDesc, setNewDesc] = useState('');
-  const [newRewardPoints, setNewRewardPoints] = useState('0');
-  const [newDiscountRate, setNewDiscountRate] = useState('0');
-  const [newOrigin, setNewOrigin] = useState('경기도 연천군');
-  const [newProducer, setNewProducer] = useState('농업회사법인 복이네농장(주)');
-  
-  const [mainImage, setMainImage] = useState<File | null>(null);
-  const [mainPreview, setMainPreview] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     try {
@@ -243,131 +224,6 @@ export default function AdminDashboard() {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, categoryFilter]);
-
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (files.length === 0) return;
-    setMainImage(files[0]);
-    setMainPreview(URL.createObjectURL(files[0]));
-  };
-
-  const uploadFile = async (file: File, folder: string) => {
-    const fileExt = file.name.split('.').pop();
-    const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
-    const filePath = `${folder}/${fileName}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from('product-images')
-      .upload(filePath, file);
-
-    if (uploadError) throw uploadError;
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('product-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
-  };
-
-  const handleAddProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newName || !newPrice || !newDesc) return alert('필수 정보를 입력해 주세요.');
-
-    setIsLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      let customImageUrl = 'https://images.unsplash.com/photo-1542838132-92c53300491e';
-
-      if (mainImage) {
-        customImageUrl = await uploadFile(mainImage, 'main');
-      }
-
-      const productPayload = {
-        name: newName, 
-        price: Number(newPrice || 0), 
-        stock: Number(newStock || 0), 
-        shipping_fee: Number(newShippingFee || 0),
-        category: newCategory, 
-        description: newDesc, 
-        imageUrl: customImageUrl,
-        is_sold_out: Number(newStock || 0) <= 0,
-        reward_points: Number(newRewardPoints || 0),
-        discount_rate: Number(newDiscountRate || 0),
-        specs: { origin: newOrigin, producer: newProducer }
-      };
-
-      const res = await fetch('/api/admin/products', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productData: productPayload, adminToken: session?.user?.id })
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
-      
-      alert('상품이 등록되었습니다!');
-      setIsAdding(false);
-      
-      setNewName(''); setNewPrice(''); setNewStock('100'); setNewShippingFee('0');
-      setNewDesc(''); setNewRewardPoints('0'); setNewDiscountRate('0');
-      setMainImage(null); setMainPreview(null);
-
-      fetchData(); 
-    } catch (error: unknown) { 
-      const msg = error instanceof Error ? error.message : 'Unknown error';
-      alert(msg); 
-    } finally { 
-      setIsLoading(false); 
-    }
-  };
-
-  const handleUpdateProduct = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingProduct) return;
-
-    setIsLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      let finalMainUrl = editingProduct.imageUrl;
-      
-      if (mainImage) {
-        finalMainUrl = await uploadFile(mainImage, 'main');
-      }
-
-      const productPayload = {
-        name: editingProduct.name, 
-        price: Number(editingProduct.price || 0), 
-        stock: Number(editingProduct.stock || 0), 
-        shipping_fee: Number(editingProduct.shipping_fee || 0),
-        category: editingProduct.category, 
-        description: editingProduct.description, 
-        imageUrl: finalMainUrl,
-        reward_points: Number(editingProduct.reward_points || 0),
-        discount_rate: Number(editingProduct.discount_rate || 0),
-        is_sold_out: Number(editingProduct.stock || 0) <= 0,
-        specs: editingProduct.specs
-      };
-
-      const res = await fetch('/api/admin/products', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId: editingProduct.id, productData: productPayload, adminToken: session?.user?.id })
-      });
-
-      const result = await res.json();
-      if (!res.ok) throw new Error(result.error);
-      
-      alert('상품 정보가 수정되었습니다.');
-      setEditingProduct(null);
-      setMainImage(null); setMainPreview(null);
-      fetchData();
-    } catch (err: unknown) { 
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      alert(msg); 
-    } finally { 
-      setIsLoading(false); 
-    }
-  };
 
   const handleDeleteProduct = async (product: AdminProduct) => {
     if (!confirm(`'${product.name}' 상품을 정말로 삭제하시겠습니까?`)) return;
@@ -551,7 +407,12 @@ export default function AdminDashboard() {
                   <h1 className="font-serif text-4xl">상품 관리</h1>
                   <p className="text-muted text-sm font-light">등록된 전체 상품 {products.length}개를 관리합니다.</p>
                 </div>
-                <button onClick={() => setIsAdding(!isAdding)} className="bg-charcoal text-white px-8 py-3.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all shadow-lg font-medium">{isAdding ? <X className="w-4 h-4" /> : <Plus className="w-4 h-4" />} {isAdding ? '닫기' : '새 상품 등록하기'}</button>
+                <button 
+                  onClick={() => router.push('/admin/products/new')} 
+                  className="bg-charcoal text-white px-8 py-3.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all shadow-lg font-medium"
+                >
+                  <Plus className="w-4 h-4" /> 새 상품 등록하기
+                </button>
               </div>
 
               <div className="bg-white p-6 rounded-sm border border-border-light shadow-sm flex flex-col md:flex-row gap-6">
@@ -565,55 +426,6 @@ export default function AdminDashboard() {
                   </select>
                 </div>
               </div>
-
-              {isAdding && (
-                <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="bg-white border border-border-light p-10 rounded-sm shadow-xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
-                  <form onSubmit={handleAddProduct} className="space-y-12">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                      <div className="space-y-8">
-                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="상품명을 입력해 주세요" className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-lg font-serif" /></div>
-                        <div className="grid grid-cols-2 gap-8">
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label><input required value={newPrice} onChange={(e) => setNewPrice(e.target.value)} type="number" placeholder="판매가" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee (KRW)</label><input required value={newShippingFee} onChange={(e) => setNewShippingFee(e.target.value)} type="number" placeholder="배송비" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label><input value={newRewardPoints} onChange={(e) => setNewRewardPoints(e.target.value)} type="number" placeholder="지급 적립금" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label><input value={newDiscountRate} onChange={(e) => setNewDiscountRate(e.target.value)} type="number" placeholder="할인율" className="w-full border-b border-border-light py-2 focus:outline-none font-bold" /></div>
-                        </div>
-                        <div className="grid grid-cols-2 gap-8">
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Origin</label><input value={newOrigin} onChange={(e) => setNewOrigin(e.target.value)} placeholder="원산지" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                          <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Producer</label><input value={newProducer} onChange={(e) => setNewProducer(e.target.value)} placeholder="생산자" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                        </div>
-                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required value={newStock} onChange={(e) => setNewStock(e.target.value)} type="number" placeholder="수량" className="w-full border-b border-border-light py-2 focus:outline-none" /></div>
-                        <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={newCategory} onChange={(e) => setNewCategory(e.target.value)} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold mb-3 block">Description (Rich Text)</label>
-                        <RichTextEditor value={newDesc} onChange={setNewDesc} />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
-                      <div className="space-y-4">
-                        <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
-                        <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                          {mainPreview ? (
-                            <Image src={mainPreview} alt="Main" fill className="object-cover" />
-                          ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center text-muted/30"><Camera className="w-8 h-8 mb-2" /><span className="text-[9px] font-bold">대표 이미지</span></div>
-                          )}
-                          <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                        </div>
-                      </div>
-                    </div>
-
-                    <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl">
-                      {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <CheckCircle className="w-8 h-8" />} 상품 등록 완료하기
-                    </button>
-                  </form>
-                </motion.div>
-              )}
 
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
@@ -635,13 +447,12 @@ export default function AdminDashboard() {
                         <td className="px-8 py-6 text-center">
                           <div className="flex justify-center gap-3">
                             <button 
-                              onClick={() => setSelectedOptionProduct(p)} 
-                              className="p-2 hover:bg-amber-50 rounded-full transition-all text-muted hover:text-amber-600"
-                              title="옵션 관리"
+                              onClick={() => router.push(`/admin/products/${p.id}/edit`)} 
+                              className="p-2 hover:bg-deep-sage/10 rounded-full transition-all text-muted hover:text-deep-sage"
+                              title="상품 수정 및 옵션 관리"
                             >
-                              <Settings className="w-4 h-4" />
+                              <Edit3 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => setEditingProduct(p)} className="p-2 hover:bg-deep-sage/10 rounded-full transition-all text-muted hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button>
                             <button onClick={() => handleDeleteProduct(p)} className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"><Trash2 className="w-4 h-4" /></button>
                           </div>
                         </td>
@@ -725,50 +536,6 @@ export default function AdminDashboard() {
       </main>
 
       <AnimatePresence>
-        {editingProduct && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setEditingProduct(null)} className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" />
-            <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="relative bg-white w-full max-w-4xl rounded-sm shadow-2xl p-12 overflow-y-auto max-h-[90vh]">
-              <div className="absolute top-0 left-0 w-full h-1 bg-deep-sage" />
-              <div className="flex justify-between items-center mb-10 pb-4 border-b border-border-light">
-                <h2 className="font-serif text-3xl">상품 정보 수정</h2>
-                <button onClick={() => setEditingProduct(null)} className="p-2 hover:bg-hanji-white rounded-full transition-colors"><X className="w-7 h-7" /></button>
-              </div>
-              <form onSubmit={handleUpdateProduct} className="space-y-12">
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-                  <div className="space-y-8">
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label><input required value={editingProduct.name} onChange={(e) => setEditingProduct({...editingProduct, name: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none focus:border-deep-sage text-lg font-serif bg-transparent" /></div>
-                    <div className="grid grid-cols-2 gap-8">
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price</label><input required type="number" value={editingProduct.price} onChange={(e) => setEditingProduct({...editingProduct, price: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                      <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label><input required type="number" value={editingProduct.shipping_fee || 0} onChange={(e) => setEditingProduct({...editingProduct, shipping_fee: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                    </div>
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label><input required type="number" value={editingProduct.stock} onChange={(e) => setEditingProduct({...editingProduct, stock: Number(e.target.value)})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" /></div>
-                    <div className="space-y-2"><label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label><select value={editingProduct.category} onChange={(e) => setEditingProduct({...editingProduct, category: e.target.value})} className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"><option value="농산물">농산물</option><option value="농자재">농자재</option></select></div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold mb-3 block">Description (Rich Text)</label>
-                    <RichTextEditor value={editingProduct.description} onChange={(html) => setEditingProduct({...editingProduct, description: html})} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-10 border-t border-border-light pt-10">
-                  <div className="space-y-4">
-                    <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2"><ImageIcon className="w-3 h-3" /> Main Image</label>
-                    <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group">
-                      <Image src={mainPreview || editingProduct.imageUrl} alt="Main" fill className="object-cover" />
-                      <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                    </div>
-                  </div>
-                </div>
-                <button type="submit" disabled={isLoading} className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl">
-                  {isLoading ? <Loader2 className="w-8 h-8 animate-spin" /> : <Save className="w-8 h-8" />} 수정 내용 저장하기
-                </button>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
         {selectedOrder && (
           <OrderDetailModal 
             order={selectedOrder} 
@@ -776,15 +543,6 @@ export default function AdminDashboard() {
             onUpdate={(updated) => {
               setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
             }}
-          />
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {selectedOptionProduct && (
-          <ProductOptionModal
-            product={selectedOptionProduct}
-            onClose={() => setSelectedOptionProduct(null)}
           />
         )}
       </AnimatePresence>
