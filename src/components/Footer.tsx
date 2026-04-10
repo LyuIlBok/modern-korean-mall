@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Phone, MapPin, Instagram, Youtube, Facebook, ShieldCheck } from 'lucide-react';
+import { Mail, Phone, MapPin, Instagram, Youtube, Facebook, ShieldCheck, Megaphone } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -39,9 +39,14 @@ export default function Footer() {
           <div>
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">Menu</h4>
             <ul className="space-y-4 text-xs text-muted tracking-wide">
+              {/* 공지사항을 최상단으로 이동 및 강조 */}
+              <li>
+                <Link href="/support/notices" className="text-deep-sage font-bold hover:text-charcoal transition-colors flex items-center gap-1.5 underline underline-offset-4">
+                  <Megaphone className="w-3 h-3" /> 공지사항 (Notice)
+                </Link>
+              </li>
               <li><Link href="/shop" className="hover:text-deep-sage transition-colors">{t.common.shop}</Link></li>
               <li><Link href="/about" className="hover:text-deep-sage transition-colors">{t.common.about}</Link></li>
-              <li><Link href="/support/notices" className="hover:text-deep-sage transition-colors font-bold text-deep-sage">공지사항 (Notice)</Link></li>
               <li><Link href="/support/refund" className="hover:text-deep-sage transition-colors">{t.common.refundPolicy}</Link></li>
               <li><Link href="/mypage" className="hover:text-deep-sage transition-colors">{t.common.mypage}</Link></li>
             </ul>
@@ -86,13 +91,17 @@ export default function Footer() {
               <p className="text-[10px] text-muted leading-relaxed">{t.common.escrowDesc}</p>
             </div>
           </div>
-          <button className="text-[10px] px-4 py-2 border border-border-light hover:bg-charcoal hover:text-white transition-all uppercase tracking-widest">{t.common.escrowConfirm}</button>
+          <Link href="/support/notices" className="flex items-center gap-2 px-6 py-3 bg-charcoal text-white rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage transition-all shadow-md">
+            <Megaphone className="w-3.5 h-3.5" /> 최신 공지 확인하기
+          </Link>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border-light flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex gap-6 text-[10px] text-muted uppercase tracking-widest">
-            <Link href="#" className="hover:text-charcoal transition-colors font-medium text-deep-sage">{t.common.privacyPolicy}</Link>
+          <div className="flex gap-6 text-[10px] text-muted uppercase tracking-widest items-center">
+            <Link href="/support/notices" className="hover:text-charcoal transition-colors font-bold text-deep-sage underline underline-offset-4">공지사항 (Notice)</Link>
+            <div className="w-px h-3 bg-border-light" />
+            <Link href="#" className="hover:text-charcoal transition-colors font-medium">{t.common.privacyPolicy}</Link>
             <Link href="#" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</Link>
             <Link href="/support/refund" className="hover:text-charcoal transition-colors font-bold text-terracotta underline">{t.common.refundPolicy}</Link>
           </div>

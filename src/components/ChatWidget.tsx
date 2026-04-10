@@ -186,7 +186,7 @@ export default function ChatWidget() {
             content, 
             is_admin: false, 
             is_read: false,
-            metadata: metadata 
+            metadata: metadata || null 
           }]);
         
         // 초기화 완료 플래그 리셋
@@ -231,7 +231,7 @@ export default function ChatWidget() {
         content, 
         is_admin: false, 
         is_read: false,
-        metadata: currentMetadata
+        metadata: currentMetadata || null
       }]);
 
     if (error) {

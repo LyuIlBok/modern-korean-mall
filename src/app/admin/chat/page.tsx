@@ -7,9 +7,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageSquare, User, Send, Loader2, Search, 
   ArrowLeft, Clock, ChevronRight, Hash,
-  Edit2, Trash2, Check, Bell, UserCheck
+  Edit2, Trash2, Check, Bell, UserCheck,
+  ExternalLink, PackageCheck, ShoppingBag
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
+import Image from 'next/image';
+import Link from 'next/link';
 
 interface AdminChatMessage {
   id: string;
@@ -17,6 +20,7 @@ interface AdminChatMessage {
   content: string;
   is_admin: boolean;
   is_read: boolean;
+  metadata?: any;
   created_at: string;
   updated_at?: string;
 }
@@ -80,14 +84,14 @@ export default function AdminChatPage() {
       const userMap = new Map<string, ChatUser>();
       data.forEach((msg) => {
         if (!userMap.has(msg.user_id)) {
-          const unreadCount = data.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
+          const unreadForThisUser = data.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
           userMap.set(msg.user_id, {
             id: msg.user_id,
             lastMessage: msg.content,
             lastTime: msg.created_at,
             lastIsAdmin: msg.is_admin,
             isGuest: msg.user_id.startsWith('guest_'),
-            unreadCount
+            unreadCount: unreadForThisUser
           });
         }
       });
@@ -247,7 +251,7 @@ export default function AdminChatPage() {
     try {
       const { data, error } = await supabase
         .from('support_messages')
-        .insert([{ user_id: selectedUserId, content, is_admin: true, is_read: false }])
+        .insert([{ user_id: selectedUserId, content, is_admin: true, is_read: false, metadata: null }])
         .select()
         .single();
 
@@ -259,6 +263,58 @@ export default function AdminChatPage() {
     } finally {
       setSendLoading(false);
     }
+  };
+
+  /**
+   * 관리자 화면용 리치 카드 렌더링
+   */
+  const renderRichMessage = (msg: AdminChatMessage) => {
+    const { content, metadata, is_admin } = msg;
+    
+    if (metadata && metadata.productId) {
+      return (
+        <div className={`space-y-4 w-full min-w-[240px] ${is_admin ? 'text-white' : 'text-charcoal'}`}>
+          <Link 
+            href={`/shop/${metadata.productId}`}
+            target="_blank"
+            className={`flex items-center gap-4 border p-4 rounded-xl transition-all group/card shadow-inner ${
+              is_admin ? 'bg-white/10 border-white/20 hover:bg-white/20' : 'bg-hanji-white border-border-light hover:bg-white'
+            }`}
+          >
+            <div className={`relative w-16 h-16 rounded-lg overflow-hidden flex-shrink-0 shadow-sm border ${is_admin ? 'bg-white/20 border-white/10' : 'bg-white border-border-light'}`}>
+              {metadata.imageUrl ? (
+                <Image src={metadata.imageUrl} alt="" fill className="object-cover group-hover/card:scale-110 transition-transform duration-500" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <ShoppingBag className={`w-6 h-6 ${is_admin ? 'text-white/40' : 'text-muted/40'}`} />
+                </div>
+              )}
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 mb-1">
+                <span className={`text-[10px] font-bold uppercase tracking-widest ${is_admin ? 'text-white/60' : 'text-muted'}`}>Product Inquiry</span>
+                <ExternalLink className={`w-2.5 h-2.5 ${is_admin ? 'text-white/40' : 'text-muted/40'}`} />
+              </div>
+              <p className="text-sm font-serif font-bold truncate leading-tight mb-1">{metadata.productName || '상품 정보'}</p>
+              {metadata.orderId && (
+                <div className="flex items-center gap-1.5 opacity-60">
+                  <PackageCheck className="w-3 h-3" />
+                  <span className="text-[10px] font-mono uppercase tracking-tighter">Order: #{metadata.orderId.slice(0,8)}</span>
+                </div>
+              )}
+            </div>
+            <ChevronRight className={`w-4 h-4 transition-transform ${is_admin ? 'text-white/20' : 'text-muted/20'} group-hover/card:translate-x-1`} />
+          </Link>
+          {content && (
+            <div className={`px-1 text-sm leading-relaxed whitespace-pre-wrap font-medium ${is_admin ? 'text-white/90' : 'text-charcoal/90'}`}>
+              {content}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    return <div className="whitespace-pre-wrap">{content}</div>;
   };
 
   if (!isAdmin) return null;
@@ -425,7 +481,7 @@ export default function AdminChatPage() {
                               </div>
                             </div>
                           ) : (
-                            msg.content
+                            renderRichMessage(msg)
                           )}
                         </div>
                         
