@@ -249,17 +249,29 @@ export default function AdminChatPage() {
     setSendLoading(true);
 
     try {
+      const payload: any = {
+        user_id: selectedUserId,
+        content,
+        is_admin: true,
+        is_read: false,
+        metadata: {}
+      };
+
       const { data, error } = await supabase
         .from('support_messages')
-        .insert([{ user_id: selectedUserId, content, is_admin: true, is_read: false, metadata: null }])
+        .insert([payload])
         .select()
         .single();
 
-      if (error) throw error;
+      if (error) {
+        console.error('Admin send error details:', error.message, error.details);
+        throw error;
+      }
       setMessages(prev => prev.map(m => m.id === tempId ? (data as AdminChatMessage) : m));
     } catch (err) {
       console.error('Send error:', err);
       setMessages(prev => prev.filter(m => m.id !== tempId));
+      alert('메시지 전송에 실패했습니다.');
     } finally {
       setSendLoading(false);
     }

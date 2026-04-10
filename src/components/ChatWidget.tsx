@@ -179,15 +179,26 @@ export default function ChatWidget() {
         triggerAutoSend(null, null); // 상태 초기화
         
         // 2. DB 저장
-        await supabase
+        const payload: any = {
+          user_id: chatUserId,
+          content,
+          is_admin: false,
+          is_read: false
+        };
+        
+        if (metadata) {
+          payload.metadata = metadata;
+        } else {
+          payload.metadata = {};
+        }
+
+        const { error } = await supabase
           .from('support_messages')
-          .insert([{ 
-            user_id: chatUserId, 
-            content, 
-            is_admin: false, 
-            is_read: false,
-            metadata: metadata || null 
-          }]);
+          .insert([payload]);
+        
+        if (error) {
+          console.error('Auto-send error details:', error.message, error.details);
+        }
         
         // 초기화 완료 플래그 리셋
         resetInitializing();
@@ -224,18 +235,25 @@ export default function ChatWidget() {
     };
     setMessages(prev => [...prev, optimisticMsg]);
 
+    const payload: any = {
+      user_id: chatUserId,
+      content,
+      is_admin: false,
+      is_read: false
+    };
+
+    if (currentMetadata) {
+      payload.metadata = currentMetadata;
+    } else {
+      payload.metadata = {};
+    }
+
     const { error } = await supabase
       .from('support_messages')
-      .insert([{ 
-        user_id: chatUserId, 
-        content, 
-        is_admin: false, 
-        is_read: false,
-        metadata: currentMetadata || null
-      }]);
+      .insert([payload]);
 
     if (error) {
-      console.error('Send error:', error.message);
+      console.error('Send error details:', error.message, error.details);
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
       alert('메시지 전송에 실패했습니다.');
     } else {
