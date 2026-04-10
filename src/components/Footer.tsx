@@ -41,6 +41,7 @@ export default function Footer() {
             <ul className="space-y-4 text-xs text-muted tracking-wide">
               <li><Link href="/shop" className="hover:text-deep-sage transition-colors">{t.common.shop}</Link></li>
               <li><Link href="/about" className="hover:text-deep-sage transition-colors">{t.common.about}</Link></li>
+              <li><Link href="/support/notices" className="hover:text-deep-sage transition-colors font-bold text-deep-sage">공지사항 (Notice)</Link></li>
               <li><Link href="/support/refund" className="hover:text-deep-sage transition-colors">{t.common.refundPolicy}</Link></li>
               <li><Link href="/mypage" className="hover:text-deep-sage transition-colors">{t.common.mypage}</Link></li>
             </ul>
