@@ -15,7 +15,7 @@ export default function CartSidebar() {
 
   if (!hasMounted) return null;
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + (item.price + (item.optionPrice || 0)) * item.quantity, 0);
   const shippingFee = subtotal >= 50000 || items.length === 0 ? 0 : 3000;
   const total = subtotal + shippingFee;
 
@@ -71,32 +71,39 @@ export default function CartSidebar() {
                   </button>
                 </div>
               ) : (
-                items.map((item) => (
-                  <div key={item.id} className="flex gap-5 group">
+                items.map((item, idx) => (
+                  <div key={`${item.id}-${item.optionName || idx}`} className="flex gap-5 group">
                     <div className="relative w-24 h-28 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0">
                       <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
                     </div>
                     <div className="flex-1 flex flex-col justify-between py-1">
                       <div>
                         <div className="flex justify-between items-start">
-                          <h3 className="font-serif text-lg text-charcoal leading-tight line-clamp-1">{item.name}</h3>
+                          <div className="space-y-1">
+                            <h3 className="font-serif text-lg text-charcoal leading-tight line-clamp-1">{item.name}</h3>
+                            {item.optionName && (
+                              <p className="text-[10px] bg-hanji-white border border-border-light px-2 py-0.5 rounded-full inline-block text-muted font-bold">
+                                {item.optionName}
+                              </p>
+                            )}
+                          </div>
                           <button 
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeItem(item.id, item.optionName)}
                             className="text-muted hover:text-terracotta transition-colors p-1"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </div>
-                        <p className="text-sm font-medium text-charcoal/60 mt-1">₩{item.price.toLocaleString()}</p>
+                        <p className="text-sm font-medium text-charcoal/60 mt-1">₩{(item.price + (item.optionPrice || 0)).toLocaleString()}</p>
                       </div>
                       
                       <div className="flex justify-between items-center mt-4">
                         <div className="flex items-center border border-border-light rounded-sm bg-hanji-white">
-                          <button onClick={() => updateQuantity(item.id, -1)} className="p-1.5 hover:text-deep-sage"><Minus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item.id, item.quantity - 1, item.optionName)} className="p-1.5 hover:text-deep-sage"><Minus className="w-3 h-3" /></button>
                           <span className="w-8 text-center text-xs font-serif">{item.quantity}</span>
-                          <button onClick={() => updateQuantity(item.id, 1)} className="p-1.5 hover:text-deep-sage"><Plus className="w-3 h-3" /></button>
+                          <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.optionName)} className="p-1.5 hover:text-deep-sage"><Plus className="w-3 h-3" /></button>
                         </div>
-                        <p className="text-sm font-bold text-charcoal">₩{(item.price * item.quantity).toLocaleString()}</p>
+                        <p className="text-sm font-bold text-charcoal">₩{((item.price + (item.optionPrice || 0)) * item.quantity).toLocaleString()}</p>
                       </div>
                     </div>
                   </div>

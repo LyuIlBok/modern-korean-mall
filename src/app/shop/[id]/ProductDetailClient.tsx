@@ -29,6 +29,12 @@ interface Review {
   created_at: string;
 }
 
+interface ProductOption {
+  id: string;
+  option_name: string;
+  additional_price: number;
+}
+
 export default function ProductDetailClient({ 
   product, 
   relatedProducts 
@@ -49,6 +55,9 @@ export default function ProductDetailClient({
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
 
+  const [options, setOptions] = useState<ProductOption[]>([]);
+  const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
+
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
   const galleryImages = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
   const detailImages = product.detail_content_images || [];
@@ -64,24 +73,45 @@ export default function ProductDetailClient({
       if (data) setReviews(data as Review[]);
       setLoadingReviews(false);
     };
+    
+    const fetchOptions = async () => {
+      const { data, error } = await supabase
+        .from('product_options')
+        .select('*')
+        .eq('product_id', product.id)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+      
+      if (data) setOptions(data as ProductOption[]);
+    };
+
     fetchReviews();
+    fetchOptions();
   }, [product.id]);
 
   const avgRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
     : 0;
 
+  const basePrice = Number(product.discount_rate || 0) > 0 
+    ? Math.floor(product.price * (1 - (product.discount_rate || 0) / 100))
+    : product.price;
+
+  const totalPrice = (basePrice + (selectedOption?.additional_price || 0)) * quantity;
+
   const handleAddToCart = () => {
     if (!product) return;
     addItem({ 
       id: product.id, 
       name: product.name, 
-      price: product.price, 
+      price: product.price, // useCartStore handles discount/options if updated accordingly
       imageUrl: product.imageUrl, 
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,
-      quantity 
+      quantity,
+      optionName: selectedOption?.option_name,
+      optionPrice: selectedOption?.additional_price
     });
     toggleCart(true);
   };
@@ -96,7 +126,9 @@ export default function ProductDetailClient({
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,
-      quantity 
+      quantity,
+      optionName: selectedOption?.option_name,
+      optionPrice: selectedOption?.additional_price
     });
     router.push('/checkout');
   };
@@ -259,28 +291,62 @@ export default function ProductDetailClient({
               </div>
             </div>
 
+            {/* Options Selection */}
+            {options.length > 0 && (
+              <div className="space-y-4 mb-8">
+                <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Option Selection</label>
+                <div className="relative">
+                  <select 
+                    value={selectedOption?.id || ''} 
+                    onChange={(e) => {
+                      const opt = options.find(o => o.id === e.target.value);
+                      setSelectedOption(opt || null);
+                    }}
+                    className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none appearance-none cursor-pointer transition-all"
+                  >
+                    <option value="">옵션을 선택해 주세요 (필수)</option>
+                    {options.map(opt => (
+                      <option key={opt.id} value={opt.id}>
+                        {opt.option_name} {opt.additional_price > 0 ? `(+₩${opt.additional_price.toLocaleString()})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <ChevronDown className="w-4 h-4 text-muted" />
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Quantity & Buttons */}
             <div className="space-y-8">
-              <div className="flex items-center justify-between bg-hanji-white border border-border-light p-4 rounded-sm">
-                <span className="text-xs font-bold uppercase tracking-widest text-muted">Quantity</span>
-                <div className="flex items-center gap-6">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-deep-sage transition-colors"><Minus className="w-4 h-4" /></button>
-                  <span className="font-serif text-xl w-8 text-center">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-deep-sage transition-colors"><Plus className="w-4 h-4" /></button>
+              <div className="flex flex-col gap-4 bg-hanji-white border border-border-light p-6 rounded-sm">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold uppercase tracking-widest text-muted">Quantity</span>
+                  <div className="flex items-center gap-6">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-deep-sage transition-colors"><Minus className="w-4 h-4" /></button>
+                    <span className="font-serif text-xl w-8 text-center">{quantity}</span>
+                    <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-deep-sage transition-colors"><Plus className="w-4 h-4" /></button>
+                  </div>
+                </div>
+                
+                <div className="pt-4 border-t border-border-light/50 flex justify-between items-end">
+                  <span className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Amount</span>
+                  <p className="text-2xl font-serif text-charcoal font-bold">₩{totalPrice.toLocaleString()}</p>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <button 
                   onClick={handleAddToCart}
-                  disabled={product.is_sold_out}
+                  disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
                   className="flex items-center justify-center gap-3 py-5 bg-white border border-charcoal text-charcoal hover:bg-hanji-white transition-all font-serif text-lg rounded-sm disabled:opacity-50"
                 >
                   <ShoppingBag className="w-5 h-5" /> 장바구니 담기
                 </button>
                 <button 
                   onClick={handleBuyNow}
-                  disabled={product.is_sold_out}
+                  disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
                   className="flex items-center justify-center gap-3 py-5 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-lg rounded-sm shadow-xl disabled:opacity-50"
                 >
                   <CreditCard className="w-5 h-5" /> 바로 구매하기

@@ -104,6 +104,7 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
+  const [userCount, setUserCount] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -142,15 +143,17 @@ export default function AdminDashboard() {
 
       setIsAdmin(true);
       
-      const [productsRes, ordersRes, alertsRes] = await Promise.all([
+      const [productsRes, ordersRes, alertsRes, userCountRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('orders').select('*, order_items(*, products(name, imageUrl))').order('created_at', { ascending: false }),
-        supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false })
+        supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false }),
+        supabase.from('profiles').select('*', { count: 'exact', head: true })
       ]);
 
       if (productsRes.data) setProducts(productsRes.data as AdminProduct[]);
       if (ordersRes.data) setOrders(ordersRes.data as AdminOrder[]);
       if (alertsRes.data) setRestockAlerts(alertsRes.data as AdminRestockAlert[]);
+      if (userCountRes.count !== null) setUserCount(userCountRes.count);
       
     } catch (err) { 
       console.error('Admin data fetch failed:', err);
@@ -158,6 +161,42 @@ export default function AdminDashboard() {
       setIsCheckingAuth(false);
     }
   }, [router]);
+
+  // Dashboard Stats Calculations
+  const stats = useMemo(() => {
+    const now = new Date();
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    
+    // 이번 주 시작 (일요일 기준)
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay());
+    weekStart.setHours(0, 0, 0, 0);
+
+    const todaySales = orders
+      .filter(o => new Date(o.created_at) >= todayStart && o.status !== '취소됨')
+      .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+
+    const weekSales = orders
+      .filter(o => new Date(o.created_at) >= weekStart && o.status !== '취소됨')
+      .reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
+
+    // Bestsellers logic
+    const salesMap = new Map<string, { name: string, quantity: number, imageUrl: string }>();
+    orders.forEach(order => {
+      if (order.status === '취소됨') return;
+      order.order_items?.forEach(item => {
+        const id = item.product_id;
+        const current = salesMap.get(id) || { name: item.products?.name || 'Unknown', quantity: 0, imageUrl: item.products?.imageUrl || '' };
+        salesMap.set(id, { ...current, quantity: current.quantity + item.quantity });
+      });
+    });
+
+    const bestsellers = Array.from(salesMap.values())
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 3);
+
+    return { todaySales, weekSales, bestsellers };
+  }, [orders]);
 
   // Realtime Subscriptions
   useEffect(() => {
@@ -407,11 +446,98 @@ export default function AdminDashboard() {
                   <p className="text-muted text-sm font-light">복이네농장의 실시간 비즈니스 성과를 분석합니다.</p>
                 </div>
               </div>
-              <SalesChart />
+
+              {/* 핵심 지표 요약 카드 */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Sales</p><h3 className="text-3xl font-serif text-charcoal">₩{totalSales.toLocaleString()}</h3></div><DollarSign className="w-8 h-8 text-deep-sage opacity-20" /></div>
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Total Orders</p><h3 className="text-3xl font-serif text-charcoal">{orders.length}건</h3></div><ShoppingCart className="w-8 h-8 text-deep-sage opacity-20" /></div>
-                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center"><div className="space-y-2"><p className="text-[10px] text-muted uppercase tracking-widest">Pending Action</p><h3 className="text-3xl font-serif text-charcoal">{pendingOrdersCount}건</h3></div><Truck className="w-8 h-8 text-terracotta opacity-20" /></div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Today Revenue</p>
+                    <h3 className="text-3xl font-serif text-charcoal">₩{stats.todaySales.toLocaleString()}</h3>
+                  </div>
+                  <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><DollarSign className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
+                </div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">This Week</p>
+                    <h3 className="text-3xl font-serif text-charcoal">₩{stats.weekSales.toLocaleString()}</h3>
+                  </div>
+                  <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><TrendingUp className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
+                </div>
+                <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
+                  <div className="space-y-2">
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Members</p>
+                    <h3 className="text-3xl font-serif text-charcoal">{userCount.toLocaleString()}명</h3>
+                  </div>
+                  <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><Users className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+                {/* Sales Chart */}
+                <div className="lg:col-span-2 space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h2 className="font-serif text-2xl">Sales Analytics</h2>
+                    <span className="text-[10px] uppercase tracking-widest text-muted font-bold">Last 7 Days</span>
+                  </div>
+                  <SalesChart />
+                </div>
+
+                {/* 베스트셀러 TOP 3 */}
+                <div className="space-y-6">
+                  <h2 className="font-serif text-2xl">Bestsellers TOP 3</h2>
+                  <div className="bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
+                    <div className="divide-y divide-border-light">
+                      {stats.bestsellers.length > 0 ? stats.bestsellers.map((item, idx) => (
+                        <div key={idx} className="p-6 flex items-center gap-6 group hover:bg-hanji-white transition-all">
+                          <div className="relative w-14 h-14 rounded-sm overflow-hidden flex-shrink-0 border border-border-light bg-hanji-white">
+                            <Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <p className="text-sm font-bold text-charcoal line-clamp-1">{item.name}</p>
+                            <p className="text-[10px] text-muted uppercase tracking-widest">{item.quantity} units sold</p>
+                          </div>
+                          <div className={`w-8 h-8 rounded-full flex items-center justify-center font-serif italic border ${idx === 0 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-hanji-white text-muted border-border-light'}`}>{idx + 1}</div>
+                        </div>
+                      )) : (
+                        <div className="p-12 text-center text-muted text-xs italic">데이터가 없습니다.</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 최근 주문 내역 리스트 */}
+              <div className="space-y-6">
+                <div className="flex justify-between items-end">
+                  <h2 className="font-serif text-2xl">Recent Orders</h2>
+                  <button onClick={() => setActiveTab('orders')} className="text-xs font-bold text-deep-sage border-b border-current pb-1 uppercase tracking-widest hover:text-charcoal transition-all">View All Orders</button>
+                </div>
+                <div className="bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
+                      <tr>
+                        <th className="px-8 py-4">Order ID</th>
+                        <th className="px-8 py-4">Customer</th>
+                        <th className="px-8 py-4">Total Price</th>
+                        <th className="px-8 py-4 text-center">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-light">
+                      {orders.slice(0, 5).map((o) => (
+                        <tr key={o.id} className="hover:bg-hanji-white transition-all cursor-pointer" onClick={() => setSelectedOrder(o)}>
+                          <td className="px-8 py-5 font-mono text-[10px] text-muted">{o.id.slice(0,8).toUpperCase()}</td>
+                          <td className="px-8 py-5 text-sm font-medium">{o.customer_name}</td>
+                          <td className="px-8 py-5 text-sm font-bold text-charcoal">₩{Number(o.total_price).toLocaleString()}</td>
+                          <td className="px-8 py-5 text-center">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[9px] font-extrabold border ${getStatusStyle(o.status)}`}>
+                              {o.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </motion.div>
           )}

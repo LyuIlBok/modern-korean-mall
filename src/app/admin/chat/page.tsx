@@ -27,6 +27,8 @@ interface AdminChatMessage {
 
 interface ChatUser {
   id: string;
+  name?: string;
+  tier?: string;
   lastMessage: string;
   lastTime: string;
   lastIsAdmin: boolean;
@@ -75,16 +77,16 @@ export default function AdminChatPage() {
   }, [selectedUserId, fetchMessages, markAllAsRead]);
 
   const fetchChatUsers = useCallback(async () => {
-    const { data } = await supabase
+    const { data: messagesData } = await supabase
       .from('support_messages')
       .select('user_id, created_at, content, is_admin, is_read')
       .order('created_at', { ascending: false });
 
-    if (data) {
+    if (messagesData) {
       const userMap = new Map<string, ChatUser>();
-      data.forEach((msg) => {
+      messagesData.forEach((msg) => {
         if (!userMap.has(msg.user_id)) {
-          const unreadForThisUser = data.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
+          const unreadForThisUser = messagesData.filter(m => m.user_id === msg.user_id && !m.is_admin && !m.is_read).length;
           userMap.set(msg.user_id, {
             id: msg.user_id,
             lastMessage: msg.content,
@@ -95,12 +97,47 @@ export default function AdminChatPage() {
           });
         }
       });
+
+      // Fetch profiles for non-guest users
+      const memberIds = Array.from(userMap.keys()).filter(id => !id.startsWith('guest_'));
+      if (memberIds.length > 0) {
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, full_name, tier')
+          .in('id', memberIds);
+
+        if (profiles) {
+          profiles.forEach(p => {
+            const user = userMap.get(p.id);
+            if (user) {
+              user.name = p.full_name;
+              user.tier = p.tier;
+            }
+          });
+        }
+      }
+
       setUsers(Array.from(userMap.values()));
     }
     setLoading(false);
   }, []);
 
-  const updateUserList = useCallback((msg: AdminChatMessage) => {
+  const updateUserList = useCallback(async (msg: AdminChatMessage) => {
+    let userName = '';
+    let userTier = '';
+
+    if (!msg.user_id.startsWith('guest_')) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, tier')
+        .eq('id', msg.user_id)
+        .single();
+      if (profile) {
+        userName = profile.full_name;
+        userTier = profile.tier;
+      }
+    }
+
     setUsers(prev => {
       const others = prev.filter(u => u.id !== msg.user_id);
       const target = prev.find(u => u.id === msg.user_id) || { 
@@ -109,7 +146,9 @@ export default function AdminChatPage() {
         unreadCount: 0,
         lastMessage: '',
         lastTime: '',
-        lastIsAdmin: false
+        lastIsAdmin: false,
+        name: userName,
+        tier: userTier
       };
       
       const newUnreadCount = (msg.user_id !== selectedUserRef.current && !msg.is_admin) 
@@ -121,7 +160,9 @@ export default function AdminChatPage() {
         lastMessage: msg.content, 
         lastTime: msg.created_at, 
         lastIsAdmin: msg.is_admin,
-        unreadCount: newUnreadCount 
+        unreadCount: newUnreadCount,
+        name: target.name || userName,
+        tier: target.tier || userTier
       }, ...others];
     });
   }, []);
@@ -389,14 +430,26 @@ export default function AdminChatPage() {
                   </div>
                   <div className="flex-1 text-left overflow-hidden pt-1">
                     <div className="flex justify-between items-center mb-1.5">
-                      <p className={`text-[10px] font-bold tracking-widest ${user.isGuest ? 'text-muted' : 'text-deep-sage'}`}>
-                        {user.isGuest ? 'GUEST' : 'MEMBER'}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className={`text-[10px] font-bold tracking-widest ${user.isGuest ? 'text-muted' : 'text-deep-sage'}`}>
+                          {user.isGuest ? 'GUEST' : 'MEMBER'}
+                        </p>
+                        {user.tier && (
+                          <span className={`px-1.5 py-0.5 rounded-full text-[8px] font-extrabold border ${
+                            user.tier === 'VVIP' ? 'bg-purple-50 text-purple-600 border-purple-200' : 
+                            user.tier === 'VIP' ? 'bg-amber-50 text-amber-600 border-amber-200' : 
+                            'bg-charcoal/5 text-charcoal/40 border-charcoal/10'
+                          }`}>
+                            {user.tier}
+                          </span>
+                        )}
+                      </div>
                       <span className="text-[10px] text-muted flex items-center gap-1">
                         <Clock className="w-3 h-3" /> {new Date(user.lastTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </span>
                     </div>
                     <p className={`text-[13px] truncate ${user.unreadCount > 0 ? 'text-charcoal font-bold' : 'text-muted font-light'}`}>
+                      <span className="font-bold mr-1.5">{user.name || (user.isGuest ? '비회원' : '회원')}</span>
                       {user.lastMessage}
                     </p>
                     {user.lastIsAdmin && (
@@ -422,7 +475,20 @@ export default function AdminChatPage() {
                   <UserCheck className="w-6 h-6" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-2xl font-bold">{selectedUserId.startsWith('guest_') ? '비회원 고객님' : '정회원 고객님'}</h3>
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-serif text-2xl font-bold">
+                      {users.find(u => u.id === selectedUserId)?.name || (selectedUserId.startsWith('guest_') ? '비회원 고객님' : '정회원 고객님')}
+                    </h3>
+                    {users.find(u => u.id === selectedUserId)?.tier && (
+                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-extrabold tracking-widest border ${
+                        users.find(u => u.id === selectedUserId)?.tier === 'VVIP' ? 'bg-purple-50 text-purple-600 border-purple-200' : 
+                        users.find(u => u.id === selectedUserId)?.tier === 'VIP' ? 'bg-amber-50 text-amber-600 border-amber-200' : 
+                        'bg-charcoal/5 text-charcoal/40 border-charcoal/10'
+                      }`}>
+                        {users.find(u => u.id === selectedUserId)?.tier}
+                      </span>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[10px] font-mono text-muted">ID: {selectedUserId}</span>
                     <span className="w-1 h-1 bg-muted rounded-full" />

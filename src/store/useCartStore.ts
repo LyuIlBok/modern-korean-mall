@@ -10,6 +10,8 @@ export interface CartItem {
   description?: string | null;
   quantity: number;
   shipping_fee: number;
+  optionName?: string;
+  optionPrice?: number;
 }
 
 interface CartState {
@@ -17,8 +19,8 @@ interface CartState {
   isOpen: boolean;
   userId: string | null;
   addItem: (item: CartItem) => void;
-  removeItem: (id: string) => void;
-  updateQuantity: (id: string, quantity: number) => void;
+  removeItem: (id: string, optionName?: string) => void;
+  updateQuantity: (id: string, quantity: number, optionName?: string) => void;
   clearCart: () => void;
   toggleCart: (open?: boolean) => void;
   setUserId: (id: string | null) => void;
@@ -35,12 +37,14 @@ export const useCartStore = create<CartState>()(
 
       addItem: (newItem) => {
         const currentItems = get().items;
-        const existingItem = currentItems.find((item) => item.id === newItem.id);
+        const existingItem = currentItems.find(
+          (item) => item.id === newItem.id && item.optionName === newItem.optionName
+        );
 
         if (existingItem) {
           set({
             items: currentItems.map((item) =>
-              item.id === newItem.id
+              item.id === newItem.id && item.optionName === newItem.optionName
                 ? { ...item, quantity: item.quantity + (newItem.quantity || 1) }
                 : item
             ),
@@ -50,17 +54,19 @@ export const useCartStore = create<CartState>()(
         }
       },
 
-      removeItem: (id) => {
+      removeItem: (id, optionName) => {
         set({
-          items: get().items.filter((item) => item.id !== id),
+          items: get().items.filter(
+            (item) => !(item.id === id && item.optionName === optionName)
+          ),
         });
       },
 
-      updateQuantity: (id, quantity) => {
+      updateQuantity: (id, quantity, optionName) => {
         if (quantity < 1) return;
         set({
           items: get().items.map((item) =>
-            item.id === id ? { ...item, quantity } : item
+            item.id === id && item.optionName === optionName ? { ...item, quantity } : item
           ),
         });
       },
@@ -74,7 +80,10 @@ export const useCartStore = create<CartState>()(
       setUserId: (id) => set({ userId: id }),
 
       getTotalPrice: () => {
-        const subtotal = get().items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+        const subtotal = get().items.reduce(
+          (sum, item) => sum + (item.price + (item.optionPrice || 0)) * item.quantity, 
+          0
+        );
         const shipping = get().getShippingFee();
         return subtotal + shipping;
       },
