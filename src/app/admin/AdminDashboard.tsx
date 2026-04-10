@@ -8,7 +8,7 @@ import {
   Package, Plus, LayoutDashboard, LogOut, Loader2, 
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
-  DollarSign, Save, CreditCard, Wallet, Image as ImageIcon,
+  DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
   CheckCircle2, AlertCircle, XCircle, Edit
 } from 'lucide-react';
 import Image from 'next/image';
@@ -16,6 +16,7 @@ import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import OrderDetailModal from '@/components/admin/OrderDetailModal';
+import ProductOptionModal from '@/components/admin/ProductOptionModal';
 
 // Recharts 관련 Prerendering 에러를 방지하기 위해 SalesChart를 클라이언트 사이드에서만 렌더링
 const SalesChart = dynamic(() => import('./SalesChart'), { 
@@ -116,6 +117,7 @@ export default function AdminDashboard() {
 
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
+  const [selectedOptionProduct, setSelectedOptionProduct] = useState<AdminProduct | null>(null);
 
   // New Product States
   const [newName, setNewName] = useState('');
@@ -630,7 +632,19 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td className="px-8 py-6 text-right"><span className={`px-2 py-1 rounded-full text-[10px] font-bold ${p.stock <= 0 ? 'bg-terracotta/10 text-terracotta' : p.stock <= 5 ? 'bg-orange-50 text-orange-600' : 'bg-charcoal/5 text-charcoal/60'}`}>{p.stock <= 0 ? '품절' : `${p.stock}개`}</span></td>
-                        <td className="px-8 py-6 text-center"><div className="flex justify-center gap-3"><button onClick={() => setEditingProduct(p)} className="p-2 hover:bg-deep-sage/10 rounded-full transition-all text-muted hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button><button onClick={() => handleDeleteProduct(p)} className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"><Trash2 className="w-4 h-4" /></button></div></td>
+                        <td className="px-8 py-6 text-center">
+                          <div className="flex justify-center gap-3">
+                            <button 
+                              onClick={() => setSelectedOptionProduct(p)} 
+                              className="p-2 hover:bg-amber-50 rounded-full transition-all text-muted hover:text-amber-600"
+                              title="옵션 관리"
+                            >
+                              <Settings className="w-4 h-4" />
+                            </button>
+                            <button onClick={() => setEditingProduct(p)} className="p-2 hover:bg-deep-sage/10 rounded-full transition-all text-muted hover:text-deep-sage"><Edit3 className="w-4 h-4" /></button>
+                            <button onClick={() => handleDeleteProduct(p)} className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"><Trash2 className="w-4 h-4" /></button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -762,6 +776,15 @@ export default function AdminDashboard() {
             onUpdate={(updated) => {
               setOrders(prev => prev.map(o => o.id === updated.id ? updated : o));
             }}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {selectedOptionProduct && (
+          <ProductOptionModal
+            product={selectedOptionProduct}
+            onClose={() => setSelectedOptionProduct(null)}
           />
         )}
       </AnimatePresence>
