@@ -41,8 +41,8 @@ export default function ProductDetailClient({
   product, 
   relatedProducts 
 }: { 
-  product: Product, 
-  relatedProducts: Product[] 
+  product: any, 
+  relatedProducts: any[] 
 }) {
   const router = useRouter();
   const { t } = useLanguageStore();
@@ -280,15 +280,23 @@ export default function ProductDetailClient({
             <div className="space-y-4 mb-12">
               <div className="grid grid-cols-3 text-sm py-2">
                 <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.origin || '원산지'}</span>
-                <span className="col-span-2 text-charcoal font-medium">{product.specs?.origin || '경기도 연천군'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.origin || '경기도 연천군'}</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.producer || '생산자'}</span>
-                <span className="col-span-2 text-charcoal font-medium">{product.specs?.producer || '농업회사법인 복이네농장(주)'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.producer || '제조사'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.producer || '농업회사법인 복이네농장(주)'}</span>
+              </div>
+              <div className="grid grid-cols-3 text-sm py-2">
+                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.admin?.distributor || '유통사'}</span>
+                <span className="col-span-2 text-charcoal font-medium">복이네농장</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2 border-b border-border-light/50 pb-4">
                 <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.shipping || '배송 안내'}</span>
-                <span className="col-span-2 text-charcoal font-medium">{Number(product.shipping_fee) === 0 ? (t?.shop?.freeShipping || '무료배송') : `₩${Number(product.shipping_fee).toLocaleString()}`}</span>
+                <span className="col-span-2 text-charcoal font-medium">
+                  {Number(product.shipping_fee) === 0 
+                    ? (t?.shop?.freeShipping || '무료배송') 
+                    : `₩${Number(product.shipping_fee).toLocaleString()}`}
+                </span>
               </div>
             </div>
 
@@ -459,7 +467,7 @@ export default function ProductDetailClient({
             <Link href="/shop" className="text-deep-sage hover:text-charcoal transition-all border-b border-current pb-1 text-xs uppercase tracking-[0.3em] font-bold">Explore All</Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
-            {relatedProducts.map((p) => <ProductCard key={p.id} product={p} />)}
+            {relatedProducts.map((p: any) => <ProductCard key={p.id} product={p} />)}
           </div>
         </div>
       </div>

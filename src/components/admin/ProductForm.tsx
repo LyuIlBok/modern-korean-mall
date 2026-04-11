@@ -11,6 +11,8 @@ import Image from 'next/image';
 import RichTextEditor from './RichTextEditor';
 import Link from 'next/link';
 
+import { useLanguageStore } from '@/store/useLanguageStore';
+
 interface AdminProduct {
   id?: string;
   name: string;
@@ -24,10 +26,8 @@ interface AdminProduct {
   reward_points?: number;
   discount_rate?: number;
   is_sold_out?: boolean;
-  specs?: {
-    origin?: string;
-    producer?: string;
-  };
+  origin?: string;
+  producer?: string;
 }
 
 interface ProductOption {
@@ -40,6 +40,7 @@ interface ProductOption {
 
 export default function ProductForm({ initialData }: { initialData?: AdminProduct }) {
   const router = useRouter();
+  const { t } = useLanguageStore();
   const [isLoading, setIsLoading] = useState(false);
   
   // Product State
@@ -53,7 +54,8 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e',
     reward_points: 0,
     discount_rate: 0,
-    specs: { origin: '경기도 연천군', producer: '농업회사법인 복이네농장(주)' }
+    origin: '경기도 연천군',
+    producer: '농업회사법인 복이네농장(주)'
   });
 
   const [mainImage, setMainImage] = useState<File | null>(null);
@@ -201,69 +203,69 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     <div className="space-y-12 pb-24">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
-          <Link href="/admin" className="text-xs text-muted flex items-center gap-1 hover:text-deep-sage transition-colors">
-            <ChevronLeft className="w-3 h-3" /> Back to List
+          <Link href="/admin" className="text-sm text-muted flex items-center gap-2 hover:text-deep-sage transition-colors font-bold uppercase tracking-widest">
+            <ChevronLeft className="w-4 h-4" /> {t?.admin?.backToList || '목록으로 돌아가기'}
           </Link>
-          <h1 className="font-serif text-4xl text-charcoal">{isEditMode ? '상품 및 옵션 수정' : '새 상품 등록'}</h1>
+          <h1 className="font-serif text-5xl text-charcoal font-bold tracking-tight">{isEditMode ? (t?.admin?.editTitle || '상품 및 옵션 수정') : (t?.admin?.newTitle || '새 상품 등록')}</h1>
         </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Left: Basic Info */}
-          <div className="lg:col-span-2 space-y-10 bg-white p-10 rounded-sm border border-border-light shadow-sm">
-            <div className="space-y-8">
-              <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label>
+          <div className="lg:col-span-2 space-y-12 bg-white p-12 rounded-sm border border-border-light shadow-sm">
+            <div className="space-y-10">
+              <div className="space-y-3">
+                <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.productName || '상품명'}</label>
                 <input 
                   required 
                   value={formData.name} 
                   onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="상품명을 입력해 주세요" 
-                  className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-xl font-serif bg-transparent" 
+                  placeholder={t?.admin?.productName || '상품명을 입력해 주세요'} 
+                  className="w-full border-b-2 border-border-light py-4 focus:outline-none focus:border-deep-sage text-2xl font-serif bg-transparent transition-colors" 
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-10">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Base Price (KRW)</label>
+              <div className="grid grid-cols-2 gap-12">
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.basePrice || '기본 판매가'} (KRW)</label>
                   <input 
                     required 
                     type="number" 
                     value={formData.price} 
                     onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent font-black text-xl" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Base Shipping Fee</label>
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.baseShippingFee || '기본 배송비'}</label>
                   <input 
                     required 
                     type="number" 
                     value={formData.shipping_fee} 
                     onChange={(e) => setFormData({...formData, shipping_fee: Number(e.target.value)})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
                   />
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-10">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Stock (Main)</label>
+              <div className="grid grid-cols-2 gap-12">
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.totalStock || '기본 재고'}</label>
                   <input 
                     required 
                     type="number" 
                     value={formData.stock} 
                     onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label>
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.category || '카테고리'}</label>
                   <select 
                     value={formData.category} 
                     onChange={(e) => setFormData({...formData, category: e.target.value})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-bold appearance-none cursor-pointer"
                   >
                     <option value="농산물">농산물</option>
                     <option value="농자재">농자재</option>
@@ -271,9 +273,32 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
                 </div>
               </div>
 
-              <div className="space-y-4">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold block">Detailed Description</label>
-                <div className="min-h-[400px] border border-border-light rounded-sm">
+              <div className="grid grid-cols-2 gap-12">
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.origin || '원산지'}</label>
+                  <input 
+                    required 
+                    value={formData.origin || ''} 
+                    onChange={(e) => setFormData({...formData, origin: e.target.value})} 
+                    placeholder="예: 경기도 연천군" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
+                  />
+                </div>
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.producer || '제조사'}</label>
+                  <input 
+                    required 
+                    value={formData.producer || ''} 
+                    onChange={(e) => setFormData({...formData, producer: e.target.value})} 
+                    placeholder="예: 복이네농장" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-6">
+                <label className="text-xs text-muted uppercase tracking-widest font-black ml-1 block">{t?.admin?.detailedDescription || '상세 설명'}</label>
+                <div className="min-h-[500px] border-2 border-border-light rounded-sm shadow-inner">
                   <RichTextEditor 
                     value={formData.description} 
                     onChange={(html) => setFormData({...formData, description: html})} 
@@ -284,45 +309,45 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
           </div>
 
           {/* Right: Main Image */}
-          <div className="space-y-10">
-            <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
-              <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">
-                <ImageIcon className="w-3 h-3" /> Main Listing Image
+          <div className="space-y-12">
+            <div className="bg-white p-10 rounded-sm border border-border-light shadow-sm space-y-8">
+              <label className="text-xs text-muted uppercase tracking-widest font-black flex items-center gap-3 ml-1">
+                <ImageIcon className="w-4 h-4" /> {t?.admin?.mainImage || '대표 이미지'}
               </label>
-              <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group cursor-pointer hover:border-deep-sage transition-colors">
+              <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border-2 border-border-light group cursor-pointer hover:border-deep-sage transition-all shadow-md">
                 <Image 
                   src={mainPreview || formData.imageUrl} 
                   alt="Main" 
                   fill 
-                  className="object-cover group-hover:scale-105 transition-transform duration-500" 
+                  className="object-cover group-hover:scale-105 transition-transform duration-700" 
                 />
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <Camera className="w-8 h-8 text-white" />
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera className="w-10 h-10 text-white" />
                 </div>
                 <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
               </div>
-              <p className="text-[10px] text-muted text-center italic">클릭하여 대표 이미지를 변경하세요.</p>
+              <p className="text-xs text-muted text-center italic font-medium opacity-60">클릭하여 대표 이미지를 변경하세요.</p>
             </div>
 
             {/* Reward & Discount */}
-            <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label>
+            <div className="bg-white p-10 rounded-sm border border-border-light shadow-sm space-y-8">
+              <div className="space-y-8">
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black text-deep-sage ml-1">{t?.admin?.rewardPoints || '적립금'} (₩)</label>
                   <input 
                     type="number"
                     value={formData.reward_points} 
                     onChange={(e) => setFormData({...formData, reward_points: Number(e.target.value)})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold text-deep-sage" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent font-black text-xl text-deep-sage" 
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label>
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black text-terracotta ml-1">{t?.admin?.discountRate || '할인율'} (%)</label>
                   <input 
                     type="number"
                     value={formData.discount_rate} 
                     onChange={(e) => setFormData({...formData, discount_rate: Number(e.target.value)})} 
-                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold text-terracotta" 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent font-black text-xl text-terracotta" 
                   />
                 </div>
               </div>
@@ -331,91 +356,91 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
         </div>
 
         {/* Dynamic Product Options Table */}
-        <div className="bg-white p-10 rounded-sm border border-border-light shadow-sm space-y-8">
+        <div className="bg-white p-12 rounded-sm border border-border-light shadow-sm space-y-10">
           <div className="flex justify-between items-center">
-            <div className="flex items-center gap-3">
-              <Settings className="w-6 h-6 text-amber-600" />
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-amber-50 rounded-full"><Settings className="w-8 h-8 text-amber-600" /></div>
               <div>
-                <h2 className="font-serif text-2xl text-charcoal">품목 옵션 관리</h2>
-                <p className="text-xs text-muted font-light mt-1">상품의 무게, 용량, 포장 방식별로 가격과 재고를 개별 관리합니다.</p>
+                <h2 className="font-serif text-3xl text-charcoal font-bold">{t?.admin?.optionsTitle || '품목 옵션 관리'}</h2>
+                <p className="text-sm text-muted font-medium mt-1 opacity-80">{t?.admin?.optionsDesc || '상품의 무게, 용량, 포장 방식별로 가격과 재고를 개별 관리합니다.'}</p>
               </div>
             </div>
             <button 
               type="button"
               onClick={addOptionRow}
-              className="bg-hanji-white border border-border-light px-6 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-all flex items-center gap-2"
+              className="bg-charcoal text-white px-8 py-4 rounded-sm text-xs font-black uppercase tracking-widest hover:bg-deep-sage transition-all flex items-center gap-3 shadow-xl"
             >
-              <Plus className="w-4 h-4" /> 옵션 추가
+              <Plus className="w-5 h-5" /> {t?.admin?.addOption || '옵션 추가'}
             </button>
           </div>
 
-          <div className="border border-border-light rounded-sm overflow-hidden">
+          <div className="border-2 border-border-light rounded-sm overflow-hidden shadow-inner">
             <table className="w-full text-left border-collapse">
-              <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
+              <thead className="bg-hanji-white text-xs uppercase tracking-[0.2em] text-muted border-b-2 border-border-light font-black">
                 <tr>
-                  <th className="px-6 py-4">옵션 명칭 (Option Name)</th>
-                  <th className="px-6 py-4 w-40 text-right">추가 금액 (Add Price)</th>
-                  <th className="px-6 py-4 w-32 text-right">재고 (Stock)</th>
-                  <th className="px-6 py-4 w-32 text-center">상태 (Status)</th>
-                  <th className="px-6 py-4 w-20 text-center">삭제</th>
+                  <th className="px-8 py-5">{t?.admin?.optionName || '옵션 명칭'}</th>
+                  <th className="px-8 py-5 w-48 text-right">{t?.admin?.addPrice || '추가 금액'}</th>
+                  <th className="px-8 py-5 w-40 text-right">{t?.admin?.stock || '재고'}</th>
+                  <th className="px-8 py-5 w-40 text-center">{t?.admin?.status || '상태'}</th>
+                  <th className="px-8 py-5 w-24 text-center">삭제</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border-light">
                 {options.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="px-6 py-16 text-center text-xs text-muted italic">
+                    <td colSpan={5} className="px-8 py-24 text-center text-sm text-muted italic font-medium">
                       등록된 옵션이 없습니다. 우측 상단의 '옵션 추가' 버튼을 눌러주세요.
                     </td>
                   </tr>
                 ) : (
                   options.map((opt, idx) => (
-                    <tr key={idx} className="hover:bg-hanji-white/30 transition-colors">
-                      <td className="px-6 py-4">
+                    <tr key={idx} className="hover:bg-hanji-white/50 transition-colors group">
+                      <td className="px-8 py-6">
                         <input 
                           required
                           value={opt.option_name}
                           onChange={(e) => updateOptionRow(idx, 'option_name', e.target.value)}
                           placeholder="예: 5kg 상급, 선물용 포장 등"
-                          className="w-full bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm font-medium py-1"
+                          className="w-full bg-transparent border-b-2 border-transparent focus:border-amber-500 outline-none text-base font-bold py-2 transition-colors"
                         />
                       </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center justify-end gap-1">
-                          <span className="text-[10px] text-muted font-bold">+</span>
+                      <td className="px-8 py-6">
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs text-muted font-black">+</span>
                           <input 
                             type="number"
                             value={opt.additional_price}
                             onChange={(e) => updateOptionRow(idx, 'additional_price', Number(e.target.value))}
-                            className="w-24 text-right bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm font-bold"
+                            className="w-28 text-right bg-transparent border-b-2 border-transparent focus:border-amber-500 outline-none text-lg font-black"
                           />
-                          <span className="text-[10px] text-muted">원</span>
+                          <span className="text-xs text-muted font-bold">원</span>
                         </div>
                       </td>
-                      <td className="px-6 py-4">
+                      <td className="px-8 py-6">
                         <input 
                           type="number"
                           value={opt.stock}
                           onChange={(e) => updateOptionRow(idx, 'stock', Number(e.target.value))}
-                          className="w-full text-right bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm"
+                          className="w-full text-right bg-transparent border-b-2 border-transparent focus:border-amber-500 outline-none text-base font-bold"
                         />
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-8 py-6 text-center">
                         <select 
                           value={opt.is_active ? 'active' : 'inactive'}
                           onChange={(e) => updateOptionRow(idx, 'is_active', e.target.value === 'active')}
-                          className="bg-transparent text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer"
+                          className="bg-transparent text-xs font-black uppercase tracking-widest outline-none cursor-pointer hover:text-amber-600 transition-colors"
                         >
-                          <option value="active" className="text-green-600">판매중</option>
-                          <option value="inactive" className="text-terracotta">품절/중지</option>
+                          <option value="active" className="text-green-600 font-bold">{t?.admin?.active || '판매중'}</option>
+                          <option value="inactive" className="text-terracotta font-bold">{t?.admin?.inactive || '품절/중지'}</option>
                         </select>
                       </td>
-                      <td className="px-6 py-4 text-center">
+                      <td className="px-8 py-6 text-center">
                         <button 
                           type="button"
                           onClick={() => removeOptionRow(idx)}
-                          className="p-2 text-muted hover:text-terracotta transition-colors"
+                          className="p-3 text-muted hover:text-terracotta transition-all hover:bg-hanji-white rounded-full group-hover:opacity-100 opacity-40"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </td>
                     </tr>
@@ -427,18 +452,18 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
         </div>
 
         {/* Global Save Button */}
-        <div className="flex justify-center">
+        <div className="flex justify-center pt-12">
           <button 
             type="submit" 
             disabled={isLoading} 
-            className="w-full max-w-xl bg-charcoal text-white py-8 rounded-sm hover:bg-deep-sage transition-all font-serif text-3xl flex items-center justify-center gap-6 shadow-2xl disabled:opacity-50 group"
+            className="w-full max-w-2xl bg-charcoal text-white py-10 rounded-sm hover:bg-deep-sage transition-all font-serif text-4xl flex items-center justify-center gap-8 shadow-2xl disabled:opacity-50 group font-bold tracking-tight"
           >
             {isLoading ? (
-              <Loader2 className="w-10 h-10 animate-spin" />
+              <Loader2 className="w-12 h-12 animate-spin" />
             ) : (
-              isEditMode ? <Save className="w-10 h-10 group-hover:scale-110 transition-transform" /> : <Package className="w-10 h-10 group-hover:scale-110 transition-transform" />
+              isEditMode ? <Save className="w-12 h-12 group-hover:scale-110 transition-transform" /> : <Package className="w-12 h-12 group-hover:scale-110 transition-transform" />
             )} 
-            {isEditMode ? '상품 및 옵션 정보 저장' : '새 상품 최종 등록'}
+            {isEditMode ? (t?.admin?.saveBtn || '상품 및 옵션 정보 저장') : (t?.admin?.addBtn || '새 상품 최종 등록')}
           </button>
         </div>
       </form>
