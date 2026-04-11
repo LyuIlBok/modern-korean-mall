@@ -150,11 +150,15 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
           await supabase.from('product_options').delete().in('id', deletedOptionIds);
         }
 
-        // 2b. Upsert remaining options
-        const optionsToUpsert = options.map(opt => ({
-          ...opt,
-          product_id: productId
-        }));
+        // 2b. Upsert remaining options (Strip invalid IDs for new entries)
+        const optionsToUpsert = options.map(opt => {
+          const { id, ...rest } = opt;
+          // If ID is null, undefined, empty string, or a temporary ID, omit it
+          if (!id || id === '' || id.startsWith('temp-')) {
+            return { ...rest, product_id: productId };
+          }
+          return { ...opt, product_id: productId };
+        });
 
         if (optionsToUpsert.length > 0) {
           const { error: upsertError } = await supabase

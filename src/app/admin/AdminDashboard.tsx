@@ -46,6 +46,7 @@ interface AdminProduct {
   reward_points: number;
   discount_rate: number;
   is_sold_out: boolean;
+  is_active?: boolean;
   created_at: string;
   specs?: {
     origin?: string;
