@@ -5,6 +5,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area 
 } from 'recharts';
 import { Loader2, TrendingUp, DollarSign, Package } from 'lucide-react';
+import { useLanguageStore } from '@/store/useLanguageStore';
 
 interface ChartData {
   date: string;
@@ -18,6 +19,7 @@ interface SummaryData {
 }
 
 export default function SalesChart() {
+  const { t, language } = useLanguageStore();
   const [data, setData] = useState<ChartData[]>([]);
   const [summary, setSummary] = useState<SummaryData>({ totalRevenue: 0, totalCount: 0 });
   const [loading, setLoading] = useState(true);
@@ -43,7 +45,7 @@ export default function SalesChart() {
   if (loading) return (
     <div className="h-[400px] flex flex-col items-center justify-center bg-white border border-border-light rounded-sm">
       <Loader2 className="w-8 h-8 animate-spin text-deep-sage mb-4" />
-      <p className="text-[10px] uppercase tracking-widest text-muted">통계 데이터 분석 중...</p>
+      <p className="text-[10px] uppercase tracking-widest text-muted">{t?.admin?.loadingStats || '통계 데이터 분석 중...'}</p>
     </div>
   );
 
@@ -53,7 +55,7 @@ export default function SalesChart() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="bg-white p-8 border border-border-light rounded-sm shadow-sm flex items-center justify-between group hover:border-deep-sage transition-all">
           <div className="space-y-2">
-            <p className="text-[10px] text-muted uppercase tracking-widest font-bold">최근 30일 누적 매출</p>
+            <p className="text-[10px] text-muted uppercase tracking-widest font-bold">{t?.admin?.revenue30Days || '최근 30일 누적 매출'}</p>
             <h4 className="font-serif text-3xl text-charcoal group-hover:text-deep-sage transition-colors">
               ₩{summary.totalRevenue.toLocaleString()}
             </h4>
@@ -64,7 +66,7 @@ export default function SalesChart() {
         </div>
         <div className="bg-white p-8 border border-border-light rounded-sm shadow-sm flex items-center justify-between group hover:border-terracotta transition-all">
           <div className="space-y-2">
-            <p className="text-[10px] text-muted uppercase tracking-widest font-bold">최근 30일 주문 건수</p>
+            <p className="text-[10px] text-muted uppercase tracking-widest font-bold">{t?.admin?.orders30Days || '최근 30일 주문 건수'}</p>
             <h4 className="font-serif text-3xl text-charcoal group-hover:text-terracotta transition-colors">
               {summary.totalCount.toLocaleString()}건
             </h4>
@@ -80,7 +82,7 @@ export default function SalesChart() {
         <div className="flex items-center justify-between mb-10">
           <div className="space-y-1">
             <h3 className="font-serif text-2xl text-charcoal flex items-center gap-3">
-              <TrendingUp className="w-6 h-6 text-deep-sage" /> 매출 트렌드
+              <TrendingUp className="w-6 h-6 text-deep-sage" /> {t?.admin?.revenueTrend || '매출 트렌드'}
             </h3>
             <p className="text-[10px] text-muted uppercase tracking-widest">Revenue Trend (Last 30 Days)</p>
           </div>
@@ -106,13 +108,13 @@ export default function SalesChart() {
                 axisLine={false} 
                 tickLine={false} 
                 tick={{ fontSize: 10, fill: '#999' }} 
-                tickFormatter={(val) => `₩${(val/10000).toLocaleString()}만`}
+                tickFormatter={(val) => language === 'ko' ? `₩${(val/10000).toLocaleString()}만` : `₩${(val/1000).toLocaleString()}k`}
               />
               <Tooltip 
                 contentStyle={{ borderRadius: '0px', border: '1px solid #f0f0f0', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}
                 labelStyle={{ fontSize: '10px', color: '#999', marginBottom: '4px' }}
                 itemStyle={{ fontSize: '12px', color: '#4A6741', fontWeight: 'bold' }}
-                formatter={(val) => [`₩${Number(val).toLocaleString()}`, '매출액']}
+                formatter={(val) => [`₩${Number(val).toLocaleString()}`, t?.admin?.revenueAmount || '매출액']}
               />
               <Area 
                 type="monotone" 

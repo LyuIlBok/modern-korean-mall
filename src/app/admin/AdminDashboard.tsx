@@ -14,6 +14,7 @@ import {
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
 import { CONFIG } from '@/lib/config';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import RichTextEditor from '@/components/admin/RichTextEditor';
 import OrderDetailModal from '@/components/admin/OrderDetailModal';
 
@@ -100,6 +101,7 @@ interface SidebarItem {
 }
 
 export default function AdminDashboard() {
+  const { t, language } = useLanguageStore();
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
@@ -264,12 +266,12 @@ export default function AdminDashboard() {
   const pendingOrdersCount = orders.filter(o => o.status === '결제완료' || o.status === '상품준비중').length;
 
   const sidebarItems: SidebarItem[] = [
-    { id: 'dashboard', label: '운영 현황', icon: TrendingUp },
-    { id: 'products', label: '상품 관리', icon: Package },
-    { id: 'orders', label: '주문 관리', icon: ShoppingCart },
-    { id: 'restock', label: '재입고 알림', icon: Bell },
-    { id: 'chat', label: '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
-    { id: 'members', label: '회원 관리', icon: Users, path: '/admin/members' },
+    { id: 'dashboard', label: t?.admin?.navDashboard || '운영 현황', icon: TrendingUp },
+    { id: 'products', label: t?.admin?.navProducts || '상품 관리', icon: Package },
+    { id: 'orders', label: t?.admin?.navOrders || '주문 관리', icon: ShoppingCart },
+    { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
+    { id: 'chat', label: t?.admin?.navChat || '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
+    { id: 'members', label: t?.admin?.navMembers || '회원 관리', icon: Users, path: '/admin/members' },
   ];
 
   return (
@@ -278,7 +280,7 @@ export default function AdminDashboard() {
       <aside className="w-64 border-r border-border-light bg-white flex flex-col p-8 sticky top-0 h-screen shadow-sm">
         <div className="flex items-center gap-3 mb-12">
           <div className="w-10 h-10 bg-deep-sage rounded-sm flex items-center justify-center text-white"><LayoutDashboard className="w-6 h-6" /></div>
-          <h2 className="font-serif text-xl text-charcoal">관리자 센터</h2>
+          <h2 className="font-serif text-xl text-charcoal">{t?.admin?.title || '관리자 센터'}</h2>
         </div>
         <nav className="space-y-4 flex-1">
           {sidebarItems.map((item) => (
@@ -291,7 +293,7 @@ export default function AdminDashboard() {
             </button>
           ))}
         </nav>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> 로그아웃</button>
+        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> {t?.common?.logout || '로그아웃'}</button>
       </aside>
 
       <main className="flex-1 p-12 overflow-y-auto">
@@ -300,8 +302,8 @@ export default function AdminDashboard() {
             <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-12">
               <div className="flex justify-between items-end">
                 <div className="space-y-4">
-                  <h1 className="font-serif text-4xl text-charcoal">운영 현황</h1>
-                  <p className="text-muted text-sm font-light">복이네농장의 실시간 비즈니스 성과를 분석합니다.</p>
+                  <h1 className="font-serif text-4xl text-charcoal">{t?.admin?.navDashboard || '운영 현황'}</h1>
+                  <p className="text-muted text-sm font-light">{t?.admin?.analyticsDesc || '복이네농장의 실시간 비즈니스 성과를 분석합니다.'}</p>
                 </div>
               </div>
 
@@ -309,21 +311,21 @@ export default function AdminDashboard() {
               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
                   <div className="space-y-2">
-                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Today Revenue</p>
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">{t?.admin?.todayRevenue || 'Today Revenue'}</p>
                     <h3 className="text-3xl font-serif text-charcoal">₩{stats.todaySales.toLocaleString()}</h3>
                   </div>
                   <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><DollarSign className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
                 </div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
                   <div className="space-y-2">
-                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">This Week</p>
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">{t?.admin?.weekRevenue || 'This Week'}</p>
                     <h3 className="text-3xl font-serif text-charcoal">₩{stats.weekSales.toLocaleString()}</h3>
                   </div>
                   <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><TrendingUp className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
                 </div>
                 <div className="bg-white p-10 rounded-sm shadow-sm border border-border-light flex justify-between items-center group hover:border-deep-sage transition-all">
                   <div className="space-y-2">
-                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Members</p>
+                    <p className="text-[10px] text-muted uppercase tracking-widest font-bold">{t?.admin?.totalMembers || 'Total Members'}</p>
                     <h3 className="text-3xl font-serif text-charcoal">{userCount.toLocaleString()}명</h3>
                   </div>
                   <div className="bg-deep-sage/5 p-4 rounded-full group-hover:bg-deep-sage group-hover:text-white transition-all"><Users className="w-8 h-8 opacity-40 group-hover:opacity-100" /></div>
@@ -334,7 +336,7 @@ export default function AdminDashboard() {
                 {/* Sales Chart */}
                 <div className="lg:col-span-2 space-y-6">
                   <div className="flex items-center justify-between">
-                    <h2 className="font-serif text-2xl">Sales Analytics</h2>
+                    <h2 className="font-serif text-2xl">{t?.admin?.salesAnalytics || 'Sales Analytics'}</h2>
                     <span className="text-[10px] uppercase tracking-widest text-muted font-bold">Last 7 Days</span>
                   </div>
                   <SalesChart />
@@ -342,7 +344,7 @@ export default function AdminDashboard() {
 
                 {/* 베스트셀러 TOP 3 */}
                 <div className="space-y-6">
-                  <h2 className="font-serif text-2xl">Bestsellers TOP 3</h2>
+                  <h2 className="font-serif text-2xl">{t?.admin?.bestsellers || 'Bestsellers TOP 3'}</h2>
                   <div className="bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
                     <div className="divide-y divide-border-light">
                       {stats.bestsellers.length > 0 ? stats.bestsellers.map((item, idx) => (
@@ -352,7 +354,7 @@ export default function AdminDashboard() {
                           </div>
                           <div className="flex-1 space-y-1">
                             <p className="text-sm font-bold text-charcoal line-clamp-1">{item.name}</p>
-                            <p className="text-[10px] text-muted uppercase tracking-widest">{item.quantity} units sold</p>
+                            <p className="text-[10px] text-muted uppercase tracking-widest">{item.quantity} {t?.admin?.unitsSold || 'units sold'}</p>
                           </div>
                           <div className={`w-8 h-8 rounded-full flex items-center justify-center font-serif italic border ${idx === 0 ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-hanji-white text-muted border-border-light'}`}>{idx + 1}</div>
                         </div>
@@ -367,8 +369,8 @@ export default function AdminDashboard() {
               {/* 최근 주문 내역 리스트 */}
               <div className="space-y-6">
                 <div className="flex justify-between items-end">
-                  <h2 className="font-serif text-2xl">Recent Orders</h2>
-                  <button onClick={() => setActiveTab('orders')} className="text-xs font-bold text-deep-sage border-b border-current pb-1 uppercase tracking-widest hover:text-charcoal transition-all">View All Orders</button>
+                  <h2 className="font-serif text-2xl">{t?.admin?.recentOrders || 'Recent Orders'}</h2>
+                  <button onClick={() => setActiveTab('orders')} className="text-xs font-bold text-deep-sage border-b border-current pb-1 uppercase tracking-widest hover:text-charcoal transition-all">{t?.admin?.viewAllOrders || 'View All Orders'}</button>
                 </div>
                 <div className="bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
                   <table className="w-full text-left border-collapse">
@@ -404,14 +406,14 @@ export default function AdminDashboard() {
             <motion.div key="products" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <div className="flex justify-between items-end">
                 <div className="space-y-4">
-                  <h1 className="font-serif text-4xl">상품 관리</h1>
+                  <h1 className="font-serif text-4xl">{t?.admin?.navProducts || '상품 관리'}</h1>
                   <p className="text-muted text-sm font-light">등록된 전체 상품 {products.length}개를 관리합니다.</p>
                 </div>
                 <button 
                   onClick={() => router.push('/admin/products/new')} 
                   className="bg-charcoal text-white px-8 py-3.5 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all shadow-lg font-medium"
                 >
-                  <Plus className="w-4 h-4" /> 새 상품 등록하기
+                  <Plus className="w-4 h-4" /> {t?.admin?.newTitle || '새 상품 등록하기'}
                 </button>
               </div>
 
@@ -467,7 +469,7 @@ export default function AdminDashboard() {
           {activeTab === 'orders' && (
             <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <div className="space-y-4">
-                <h1 className="font-serif text-4xl">주문 관리</h1>
+                <h1 className="font-serif text-4xl">{t?.admin?.navOrders || '주문 관리'}</h1>
                 <p className="text-muted text-sm font-light">전체 주문 {orders.length}건을 관리합니다.</p>
               </div>
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
@@ -510,7 +512,7 @@ export default function AdminDashboard() {
           {activeTab === 'restock' && (
             <motion.div key="restock" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <div className="space-y-4">
-                <h1 className="font-serif text-4xl">재입고 알림 신청</h1>
+                <h1 className="font-serif text-4xl">{t?.admin?.navRestock || '재입고 알림 신청'}</h1>
                 <p className="text-muted text-sm font-light">품절 상품에 대한 {restockAlerts.length}건의 알림 요청이 있습니다.</p>
               </div>
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
