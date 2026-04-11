@@ -274,7 +274,7 @@ export default function CheckoutInternal() {
             <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors text-sm uppercase tracking-widest font-bold">
               <ArrowLeft className="w-4 h-4" /> Back to Cart
             </Link>
-            <h1 className="font-serif text-5xl text-charcoal tracking-tight">{t.checkout.title}</h1>
+            <h1 className="font-serif text-5xl text-charcoal tracking-tight">{t.checkout.title || '주문서 작성'}</h1>
           </div>
           <div className="flex items-center gap-2 text-deep-sage font-bold text-xs uppercase tracking-[0.3em]">
             <ShieldCheck className="w-5 h-5" /> Secure Checkout
@@ -355,8 +355,8 @@ export default function CheckoutInternal() {
                 </div>
 
                 <div className="space-y-3 md:col-span-2 pt-4">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo}</label>
-                  <textarea rows={3} value={formData.memo} onChange={e => setProfileData({...formData, memo: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all resize-none" placeholder={t.checkout.memoPlaceholder} />
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo || '배송 요청사항'}</label>
+                  <textarea rows={3} value={formData.memo} onChange={e => setProfileData({...formData, memo: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all resize-none" placeholder={t.checkout.memoPlaceholder || '배송 시 요청사항이 있으시면 적어주세요.'} />
                 </div>
               </div>
             </section>
@@ -365,17 +365,17 @@ export default function CheckoutInternal() {
             <section className="space-y-8">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-charcoal text-white rounded-full flex items-center justify-center text-sm font-serif italic border-2 border-border-light">02</div>
-                <h2 className="font-serif text-3xl text-charcoal">{t.checkout.paymentMethod}</h2>
+                <h2 className="font-serif text-3xl text-charcoal">{t.checkout.paymentMethod || '결제 수단'}</h2>
               </div>
               
               <div className="grid grid-cols-2 gap-6">
                 <button type="button" onClick={() => setPaymentMethod('card')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'card' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'card' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><CreditCard className="w-8 h-8" /></div>
-                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard}</span>
+                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard || '신용카드'}</span>
                 </button>
                 <button type="button" onClick={() => setPaymentMethod('transfer')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'transfer' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'transfer' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><Wallet className="w-8 h-8" /></div>
-                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer}</span>
+                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer || '무통장 입금'}</span>
                 </button>
               </div>
             </section>
@@ -386,7 +386,7 @@ export default function CheckoutInternal() {
             <section className="sticky top-24 bg-charcoal text-white p-12 rounded-sm shadow-2xl space-y-12 overflow-hidden relative">
               <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle className="w-48 h-48" /></div>
               
-              <h2 className="font-serif text-4xl relative z-10">{t.checkout.summary}</h2>
+              <h2 className="font-serif text-4xl relative z-10">{t.checkout.summary || '주문 요약'}</h2>
               
               <div className="space-y-8 relative z-10 max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
                 {items.map((item) => (
@@ -396,7 +396,7 @@ export default function CheckoutInternal() {
 
               {/* Coupon Section */}
               <div className="pt-12 border-t border-white/10 space-y-6 relative z-10">
-                <p className="text-xs uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-4 h-4" /> {t.checkout.coupon}</p>
+                <p className="text-xs uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-4 h-4" /> {t.checkout.coupon || '쿠폰 할인'}</p>
                 <div className="flex gap-3">
                   <div className="relative flex-1">
                     <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
@@ -404,7 +404,7 @@ export default function CheckoutInternal() {
                       value={couponCode}
                       onChange={e => setCouponCode(e.target.value.toUpperCase())}
                       disabled={isCouponApplied}
-                      placeholder={t.checkout.couponPlaceholder} 
+                      placeholder={t.checkout.couponPlaceholder || '쿠폰 코드 입력'} 
                       className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 rounded-sm text-sm focus:border-white/30 outline-none transition-all placeholder:text-white/20 uppercase font-mono shadow-inner" 
                     />
                   </div>
@@ -414,7 +414,7 @@ export default function CheckoutInternal() {
                     onClick={handleApplyCoupon}
                     className="bg-white text-charcoal px-8 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all disabled:opacity-20 flex items-center gap-2 shadow-lg"
                   >
-                    {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCouponApplied ? <Check className="w-4 h-4" /> : t.checkout.apply}
+                    {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCouponApplied ? <Check className="w-4 h-4" /> : (t.checkout.apply || '적용')}
                   </button>
                 </div>
                 {couponError && <p className="text-xs text-terracotta italic font-medium">{couponError}</p>}
@@ -422,16 +422,16 @@ export default function CheckoutInternal() {
               </div>
 
               <div className="pt-12 border-t border-white/10 space-y-6 relative z-10 font-medium">
-                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.subtotal}</span><span>₩{subtotal.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.shipping}</span><span>{shipping === 0 ? t.checkout.free : `₩${shipping.toLocaleString()}`}</span></div>
+                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.subtotal || '상품 금액'}</span><span>₩{subtotal.toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.shipping || '배송비'}</span><span>{shipping === 0 ? (t.checkout.free || '무료') : `₩${shipping.toLocaleString()}`}</span></div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-terracotta font-bold italic">
-                    <span>{t.checkout.discount}</span>
+                    <span>{t.checkout.discount || '할인 금액'}</span>
                     <span>- ₩{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
                 <div className="flex justify-between items-end pt-8">
-                  <span className="font-serif text-xl">{t.checkout.total}</span>
+                  <span className="font-serif text-xl">{t.checkout.total || '총 결제 금액'}</span>
                   <span className="font-serif text-5xl text-white">₩{finalTotal.toLocaleString()}</span>
                 </div>
               </div>

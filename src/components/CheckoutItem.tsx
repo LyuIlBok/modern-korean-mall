@@ -105,7 +105,7 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
                 <Plus className="w-3 h-3" />
               </button>
             </div>
-            <span className="text-[10px] text-white/30 uppercase tracking-widest font-black">units</span>
+            <span className="text-[10px] text-white/30 uppercase tracking-widest font-black">{t?.checkout?.units || '개'}</span>
           </div>
         </div>
       </div>

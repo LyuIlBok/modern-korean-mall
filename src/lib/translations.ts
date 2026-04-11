@@ -87,7 +87,7 @@ export const translations = {
       units: '개',
       creditCard: '신용카드',
       bankTransfer: '무통장 입금',
-      memo: '배송 메모',
+      memo: '배송 요청사항',
       memoPlaceholder: '배송 시 요청사항이 있으시면 적어주세요.',
       savedAddress: '저장된 배송지',
       nameHelp: '실명을 입력해주시면 정확한 배송에 도움이 됩니다.',
