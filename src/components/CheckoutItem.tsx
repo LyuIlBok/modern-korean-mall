@@ -15,7 +15,7 @@ interface ProductOption {
 }
 
 export default function CheckoutItem({ item }: { item: CartItemType }) {
-  const { updateQuantity, updateOption } = useCartStore();
+  const { updateQuantity, updateOption, removeItem } = useCartStore();
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 
