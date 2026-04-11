@@ -9,7 +9,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { 
   ArrowLeft, ShoppingBag, CreditCard, Wallet, Truck, 
-  MapPin, User, Phone, CheckCircle, Loader2, ShieldCheck,
+  MapPin, User, Phone, Mail, CheckCircle, Loader2, ShieldCheck,
   Tag, Ticket, Percent, ChevronDown, Check
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
