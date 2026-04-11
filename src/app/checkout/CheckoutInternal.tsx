@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Script from 'next/script';
+import CheckoutItem from '@/components/CheckoutItem';
 
 export default function CheckoutInternal() {
   const router = useRouter();
@@ -69,13 +70,15 @@ export default function CheckoutInternal() {
     setCouponLoading(true);
     setCouponError('');
     
+    const currentSubtotal = items.reduce((sum, item) => sum + (item.price + (item.optionPrice || 0)) * item.quantity, 0);
+
     try {
       const res = await fetch('/api/coupons/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
           code: couponCode, 
-          amount: items.reduce((sum, item) => sum + item.price * item.quantity, 0)
+          amount: currentSubtotal
         })
       });
       
@@ -106,7 +109,7 @@ export default function CheckoutInternal() {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       
-      const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const subtotal = items.reduce((sum, item) => sum + (item.price + (item.optionPrice || 0)) * item.quantity, 0);
       const shipping = getShippingFee();
       const finalAmount = Math.max(0, subtotal + shipping - discountAmount);
 
@@ -133,7 +136,8 @@ export default function CheckoutInternal() {
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price
+        price: item.price + (item.optionPrice || 0),
+        option_name: item.optionName || null
       }));
 
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
@@ -203,7 +207,7 @@ export default function CheckoutInternal() {
     );
   }
 
-  const subtotal = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const subtotal = items.reduce((sum, item) => sum + (item.price + (item.optionPrice || 0)) * item.quantity, 0);
   const shipping = getShippingFee();
   const finalTotal = Math.max(0, subtotal + shipping - discountAmount);
 
@@ -214,7 +218,7 @@ export default function CheckoutInternal() {
         
         <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border-light pb-10">
           <div className="space-y-4">
-            <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors text-[10px] uppercase tracking-widest font-bold">
+            <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors text-[10px] uppercase tracking-widest font-bold">
               <ArrowLeft className="w-3.5 h-3.5" /> Back to Cart
             </Link>
             <h1 className="font-serif text-5xl text-charcoal tracking-tight">주문 / 결제</h1>
@@ -303,14 +307,7 @@ export default function CheckoutInternal() {
               
               <div className="space-y-6 relative z-10 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
                 {items.map((item) => (
-                  <div key={item.id} className="flex gap-6 items-center group">
-                    <div className="relative w-16 h-20 rounded-sm overflow-hidden flex-shrink-0 border border-white/10"><Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" /></div>
-                    <div className="flex-1 space-y-1">
-                      <p className="font-serif text-sm line-clamp-1">{item.name}</p>
-                      <p className="text-[10px] text-white/40 uppercase tracking-widest">{item.quantity} units / ₩{item.price.toLocaleString()}</p>
-                    </div>
-                    <p className="font-serif text-sm">₩{(item.price * item.quantity).toLocaleString()}</p>
-                  </div>
+                  <CheckoutItem key={`${item.id}-${item.optionName || 'base'}`} item={item} />
                 ))}
               </div>
 
@@ -338,7 +335,7 @@ export default function CheckoutInternal() {
                   </button>
                 </div>
                 {couponError && <p className="text-[10px] text-terracotta italic">{couponError}</p>}
-                {isCouponApplied && <p className="text-[10px] text-deep-sage flex items-center gap-1 font-bold"><CheckCircle className="w-3 h-3" /> WELCOME3000 쿠폰이 적용되었습니다.</p>}
+                {isCouponApplied && <p className="text-[10px] text-deep-sage flex items-center gap-1 font-bold"><CheckCircle className="w-3.5 h-3" /> WELCOME3000 쿠폰이 적용되었습니다.</p>}
               </div>
 
               <div className="pt-10 border-t border-white/10 space-y-4 relative z-10">
@@ -373,3 +370,4 @@ export default function CheckoutInternal() {
     </div>
   );
 }
+

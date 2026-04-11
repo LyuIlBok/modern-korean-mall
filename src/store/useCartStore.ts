@@ -21,6 +21,7 @@ interface CartState {
   addItem: (item: CartItem) => void;
   removeItem: (id: string, optionName?: string) => void;
   updateQuantity: (id: string, quantity: number, optionName?: string) => void;
+  updateOption: (id: string, oldOptionName: string | undefined, newOptionName: string, newOptionPrice: number) => void;
   clearCart: () => void;
   toggleCart: (open?: boolean) => void;
   setUserId: (id: string | null) => void;
@@ -71,7 +72,38 @@ export const useCartStore = create<CartState>()(
         });
       },
 
-      clearCart: () => set({ items: [] }),
+      updateOption: (id, oldOptionName, newOptionName, newOptionPrice) => {
+        const currentItems = get().items;
+        const targetItemIndex = currentItems.findIndex(
+          (item) => item.id === id && item.optionName === oldOptionName
+        );
+
+        if (targetItemIndex === -1) return;
+
+        const updatedItems = [...currentItems];
+        const targetItem = { ...updatedItems[targetItemIndex] };
+        
+        // Change the option
+        targetItem.optionName = newOptionName;
+        targetItem.optionPrice = newOptionPrice;
+
+        // Check if an item with the new option already exists (excluding the target itself)
+        const duplicateIndex = updatedItems.findIndex(
+          (item, idx) => idx !== targetItemIndex && item.id === id && item.optionName === newOptionName
+        );
+
+        if (duplicateIndex !== -1) {
+          // Merge quantities
+          updatedItems[duplicateIndex].quantity += targetItem.quantity;
+          // Remove the old row
+          updatedItems.splice(targetItemIndex, 1);
+        } else {
+          // Just update the target
+          updatedItems[targetItemIndex] = targetItem;
+        }
+
+        set({ items: updatedItems });
+      },
 
       toggleCart: (open) => set((state) => ({ 
         isOpen: open !== undefined ? open : !state.isOpen 
