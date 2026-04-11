@@ -80,6 +80,25 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Shipping / Refund Policy (PG Screening Requirement) */}
+        <div className="mb-12 p-8 bg-hanji-white border border-border-light rounded-sm">
+          <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6 border-b border-border-light pb-2">배송/교환/환불 규정 (Shipping & Refund Policy)</h4>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[11px] text-muted leading-relaxed">
+            <div className="space-y-2">
+              <p className="font-bold text-charcoal">배송 안내</p>
+              <p>결제 완료 후 평균 2~3일 이내 발송 (주말/공휴일 제외)</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-bold text-charcoal">교환/반품</p>
+              <p>상품 수령 후 7일 이내 고객센터 문의 (단, 농산물 특성상 단순 변심에 의한 교환/환불은 불가할 수 있습니다.)</p>
+            </div>
+            <div className="space-y-2">
+              <p className="font-bold text-charcoal">환불 안내</p>
+              <p>반품 상품 확인 후 3영업일 이내 결제 취소</p>
+            </div>
+          </div>
+        </div>
+
         {/* Escrow & Safety */}
         <div className="mb-12 p-6 bg-white/50 border border-border-light rounded-sm flex flex-col md:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-4">
