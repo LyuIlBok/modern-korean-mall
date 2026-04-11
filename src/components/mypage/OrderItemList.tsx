@@ -15,6 +15,8 @@ interface OrderItem {
   product_id: string;
   quantity: number;
   price: number;
+  product_name?: string;
+  product_price?: number;
   products: {
     id: string;
     name: string;
@@ -163,8 +165,8 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
                     )}
                   </div>
                   <div className="space-y-2 py-1 flex-1">
-                    <h4 className="text-xl font-serif text-charcoal tracking-tight leading-tight">{item.products?.name}</h4>
-                    <p className="text-sm text-muted font-light">{item.quantity}개 / ₩{item.price.toLocaleString()}</p>
+                    <h4 className="text-xl font-serif text-charcoal tracking-tight leading-tight">{item.product_name || item.products?.name}</h4>
+                    <p className="text-sm text-muted font-light">{item.quantity}개 / ₩{((item.product_price || item.price)).toLocaleString()}</p>
                     <div className="pt-4 flex gap-3">
                       {order.status === '배송완료' && (
                         <button 

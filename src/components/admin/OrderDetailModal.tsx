@@ -13,6 +13,8 @@ interface OrderItem {
   product_id: string;
   quantity: number;
   price: number;
+  product_name?: string;
+  product_price?: number;
   products: {
     name: string;
     imageUrl: string;
@@ -183,8 +185,8 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
                         )}
                       </div>
                       <div className="flex-1">
-                        <p className="text-sm font-serif text-charcoal line-clamp-1">{item.products?.name || '삭제된 상품'}</p>
-                        <p className="text-[10px] text-muted">{item.quantity}개 / ₩{(item.price * item.quantity).toLocaleString()}</p>
+                        <p className="text-sm font-serif text-charcoal line-clamp-1">{item.product_name || item.products?.name || '삭제된 상품'}</p>
+                        <p className="text-[10px] text-muted">{item.quantity}개 / ₩{((item.product_price || item.price) * item.quantity).toLocaleString()}</p>
                       </div>
                     </div>
                   ))}

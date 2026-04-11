@@ -41,7 +41,8 @@ async function ProductList({
   // 1. Supabase Query Build
   let query = supabase
     .from('products')
-    .select('*, reviews(rating)');
+    .select('*, reviews(rating)')
+    .eq('is_active', true);
 
   // 2. Filters
   if (category !== '전체') {

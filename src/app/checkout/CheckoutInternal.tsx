@@ -170,12 +170,14 @@ export default function CheckoutInternal() {
 
       if (orderError) throw orderError;
 
-      // 2. Create Order Items
+      // 2. Create Order Items (Snapshot product name and price)
       const orderItems = items.map(item => ({
         order_id: order.id,
         product_id: item.id,
         quantity: item.quantity,
-        price: item.price + (item.optionPrice || 0),
+        price: item.price + (item.optionPrice || 0), // Live calculation for current order
+        product_name: item.name, // Snapshot
+        product_price: item.price + (item.optionPrice || 0), // Snapshot price
         option_name: item.optionName || null
       }));
 

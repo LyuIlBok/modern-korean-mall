@@ -228,23 +228,21 @@ export default function AdminDashboard() {
   }, [products, searchTerm, categoryFilter]);
 
   const handleDeleteProduct = async (product: AdminProduct) => {
-    if (!confirm(`'${product.name}' 상품을 정말로 삭제하시겠습니까?`)) return;
+    if (!confirm(`'${product.name}' 상품을 비활성화(숨김) 하시겠습니까? 주문 내역 유지를 위해 데이터는 삭제되지 않습니다.`)) return;
     
     try {
-      if (product.imageUrl && product.imageUrl.includes('product-images')) {
-        const urlParts = product.imageUrl.split('product-images/');
-        if (urlParts.length > 1) {
-          const filePath = urlParts[1];
-          await supabase.storage.from('product-images').remove([filePath]);
-        }
-      }
-      const { error } = await supabase.from('products').delete().eq('id', product.id);
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: false })
+        .eq('id', product.id);
+        
       if (error) throw error;
-      setProducts(products.filter(p => p.id !== product.id));
-      alert('상품이 삭제되었습니다.');
+      
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_active: false } : p));
+      alert('상품이 비활성화되었습니다.');
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      alert(`삭제 실패: ${msg}`);
+      alert(`비활성화 실패: ${msg}`);
     }
   };
 
@@ -437,7 +435,22 @@ export default function AdminDashboard() {
                   <tbody className="divide-y divide-border-light">
                     {filteredProducts.map((p) => (
                       <tr key={p.id} className="hover:bg-hanji-white/30 transition-colors group">
-                        <td className="px-8 py-6"><div className="flex items-center gap-5"><div className="relative w-14 h-16 rounded-sm overflow-hidden border border-border-light bg-hanji-white"><Image src={p.imageUrl} alt={p.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" /></div><div className="space-y-1"><p className="font-serif text-lg text-charcoal">{p.name}</p><p className="text-[10px] text-muted font-mono">{p.id.slice(0,8).toUpperCase()}</p></div></div></td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-5">
+                            <div className="relative w-14 h-16 rounded-sm overflow-hidden border border-border-light bg-hanji-white">
+                              <Image src={p.imageUrl} alt={p.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                            </div>
+                            <div className="space-y-1">
+                              <div className="flex items-center gap-2">
+                                <p className="font-serif text-lg text-charcoal">{p.name}</p>
+                                {p.is_active === false && (
+                                  <span className="px-2 py-0.5 bg-terracotta text-white text-[8px] font-black rounded-sm uppercase tracking-widest shadow-sm">비활성 (Hidden)</span>
+                                )}
+                              </div>
+                              <p className="text-[10px] text-muted font-mono">{p.id.slice(0,8).toUpperCase()}</p>
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-8 py-6 text-xs font-bold text-deep-sage uppercase tracking-wider">{p.category}</td>
                         <td className="px-8 py-6 text-right">
                           <div className="space-y-1">
