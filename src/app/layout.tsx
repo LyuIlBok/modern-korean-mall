@@ -91,6 +91,12 @@ export default function RootLayout({
           `}
         </Script>
 
+        {/* PortOne V2 SDK */}
+        <Script 
+          src="https://cdn.portone.io/v2/browser-sdk.js" 
+          strategy="lazyOnload" 
+        />
+
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-hanji-white text-charcoal flex flex-col min-h-screen selection:bg-deep-sage selection:text-white`}>

@@ -161,8 +161,8 @@ export default function CheckoutInternal() {
         if (!PortOne) throw new Error('PortOne SDK not loaded');
 
         const payment = await PortOne.requestPayment({
-          storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID,
-          channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY,
+          storeId: process.env.NEXT_PUBLIC_PORTONE_STORE_ID || 'store-cfimyvvecsoqeicsjezo',
+          channelKey: process.env.NEXT_PUBLIC_PORTONE_CHANNEL_KEY || 'channel-key-test',
           paymentId: order.id,
           orderName: items.length > 1 ? `${items[0].name} 외 ${items.length - 1}건` : items[0].name,
           totalAmount: finalAmount,
@@ -178,11 +178,28 @@ export default function CheckoutInternal() {
 
         // V2는 redirectUrl 방식을 선호하지만, 팝업 방식일 경우 응답 처리
         if (payment.code != null) {
+          // Payment failed
+          console.error('Payment failure:', payment.message);
           alert('결제 실패: ' + payment.message);
           return;
         }
+
+        // Success (for popup mode)
+        const { error: updateError } = await supabase
+          .from('orders')
+          .update({ 
+            status: '결제완료', 
+            pg_tid: payment.paymentId 
+          })
+          .eq('id', order.id);
+
+        if (updateError) console.error('Order status sync error:', updateError);
+        
+        clearCart();
+        router.push(`/order-success?orderId=${order.id}`);
       } else {
         // 무통장 입금 등 다른 수단 처리
+        clearCart();
         router.push(`/order-success?orderId=${order.id}`);
       }
 
