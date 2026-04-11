@@ -150,12 +150,15 @@ export default function CheckoutInternal() {
       const finalAmount = Math.max(0, subtotal + shipping - discountAmount);
 
       // 1. Create Order in DB (Status: '결제대기')
+      const isGuest = !session?.user?.id;
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert([{
           user_id: session?.user?.id || null,
           customer_name: formData.name,
           customer_phone: formData.phone,
+          guest_email: isGuest ? formData.email : null,
+          guest_phone: isGuest ? formData.phone : null,
           address: `(${formData.postcode}) ${formData.address} ${formData.detailAddress}`,
           total_price: finalAmount,
           status: '결제대기',
@@ -340,7 +343,21 @@ export default function CheckoutInternal() {
 
                 <div className="space-y-3">
                   <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">Email</label>
-                  <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-5 rounded-sm text-base text-muted font-mono">{formData.email || 'guest@nature.com'}</div>
+                  {savedAddresses.length > 0 ? (
+                    <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-5 rounded-sm text-base text-muted font-mono">{formData.email}</div>
+                  ) : (
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
+                      <input 
+                        required 
+                        type="email"
+                        value={formData.email} 
+                        onChange={e => setProfileData({...formData, email: e.target.value})} 
+                        className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" 
+                        placeholder="example@email.com" 
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3 md:col-span-2 pt-4">
