@@ -85,9 +85,14 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
             <div className="flex items-center border border-white/10 rounded-sm bg-white/5">
               <button 
                 type="button"
-                onClick={() => updateQuantity(item.id, item.quantity - 1, item.optionName)} 
+                onClick={() => {
+                  if (item.quantity > 1) {
+                    updateQuantity(item.id, item.quantity - 1, item.optionName);
+                  } else {
+                    removeItem(item.id, item.optionName);
+                  }
+                }} 
                 className="p-1 hover:text-white transition-colors text-white/40"
-                disabled={item.quantity <= 1}
               >
                 <Minus className="w-2.5 h-2.5" />
               </button>

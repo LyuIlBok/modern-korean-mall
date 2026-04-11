@@ -96,9 +96,14 @@ export default function CartItem({ item }: { item: CartItemType }) {
           {/* Quantity Selector */}
           <div className="flex items-center border border-border-light rounded-sm bg-hanji-white">
             <button 
-              onClick={() => updateQuantity(item.id, item.quantity - 1, item.optionName)} 
+              onClick={() => {
+                if (item.quantity > 1) {
+                  updateQuantity(item.id, item.quantity - 1, item.optionName);
+                } else {
+                  removeItem(item.id, item.optionName);
+                }
+              }} 
               className="p-1.5 hover:text-deep-sage transition-colors"
-              disabled={item.quantity <= 1}
             >
               <Minus className="w-3 h-3" />
             </button>
