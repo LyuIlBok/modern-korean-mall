@@ -10,7 +10,7 @@ import CartItem from './CartItem';
 
 export default function CartSidebar() {
   const { items, isOpen, toggleCart } = useCartStore();
-  const { language } = useLanguageStore();
+  const { t } = useLanguageStore();
   const hasMounted = useHasMounted();
 
   if (!hasMounted) return null;
@@ -41,31 +41,31 @@ export default function CartSidebar() {
             className="fixed right-0 top-0 h-screen w-full max-w-md bg-white z-[101] shadow-2xl flex flex-col"
           >
             {/* Header */}
-            <div className="p-6 border-b border-border-light flex justify-between items-center bg-hanji-white">
-              <div className="flex items-center gap-3">
-                <ShoppingBag className="w-5 h-5 text-deep-sage" />
-                <h2 className="font-serif text-xl text-charcoal">
-                  {language === 'ko' ? '장바구니' : 'Your Cart'}
-                  <span className="ml-2 text-sm font-sans text-muted font-light">({items.length})</span>
+            <div className="p-8 border-b border-border-light flex justify-between items-center bg-hanji-white">
+              <div className="flex items-center gap-4">
+                <ShoppingBag className="w-6 h-6 text-deep-sage" />
+                <h2 className="font-serif text-2xl text-charcoal">
+                  {t.cart.title}
+                  <span className="ml-3 text-base font-sans text-muted font-light">({items.length})</span>
                 </h2>
               </div>
               <button 
                 onClick={() => toggleCart(false)}
-                className="p-2 hover:bg-white rounded-full transition-colors"
+                className="p-3 hover:bg-white rounded-full transition-colors"
               >
-                <X className="w-6 h-6 text-muted" />
+                <X className="w-8 h-8 text-muted" />
               </button>
             </div>
 
             {/* Item List */}
-            <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
+            <div className="flex-1 overflow-y-auto p-8 space-y-10 custom-scrollbar">
               {items.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-4 opacity-40">
-                  <ShoppingBag className="w-16 h-16 stroke-1" />
-                  <p className="font-serif text-lg italic">장바구니가 비어 있습니다.</p>
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-6 opacity-60 px-6">
+                  <ShoppingBag className="w-20 h-20 stroke-1 text-muted" />
+                  <p className="font-serif text-xl italic text-charcoal leading-relaxed">{t.cart.empty}</p>
                   <button 
                     onClick={() => toggleCart(false)}
-                    className="text-xs uppercase tracking-widest border-b border-charcoal pb-1"
+                    className="text-sm uppercase tracking-[0.2em] border-b-2 border-charcoal pb-1 font-bold hover:text-deep-sage hover:border-deep-sage transition-all"
                   >
                     Go Shopping
                   </button>
@@ -77,35 +77,30 @@ export default function CartSidebar() {
               )}
             </div>
 
-            {/* Footer */}
+            {/* Footer Summary */}
             {items.length > 0 && (
-              <div className="p-8 bg-hanji-white border-t border-border-light space-y-6">
-                <div className="space-y-3 text-sm">
-                  <div className="flex justify-between text-muted">
-                    <span>상품 금액</span>
+              <div className="p-10 border-t border-border-light bg-white space-y-8 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.05)]">
+                <div className="space-y-4">
+                  <div className="flex justify-between text-base text-muted font-medium italic">
+                    <span>{t.cart.subtotal}</span>
                     <span>₩{subtotal.toLocaleString()}</span>
                   </div>
-                  <div className="flex justify-between text-muted">
-                    <span>배송비</span>
-                    <span>{shippingFee === 0 ? '무료' : `₩${shippingFee.toLocaleString()}`}</span>
+                  <div className="flex justify-between text-base text-muted font-medium italic">
+                    <span>{t.cart.shipping}</span>
+                    <span>{shippingFee === 0 ? t.checkout.free : `₩${shippingFee.toLocaleString()}`}</span>
                   </div>
-                  {shippingFee > 0 && (
-                    <p className="text-[10px] text-deep-sage font-medium tracking-tight">
-                      * ₩{(50000 - subtotal).toLocaleString()}원 추가 시 무료배송
-                    </p>
-                  )}
-                  <div className="flex justify-between text-lg font-serif text-charcoal border-t border-border-light pt-4 mt-2">
-                    <span>총 결제 금액</span>
-                    <span className="text-2xl">₩{total.toLocaleString()}</span>
+                  <div className="flex justify-between items-end pt-4 border-t border-border-light/50">
+                    <span className="font-serif text-xl font-bold">{t.cart.total}</span>
+                    <span className="font-serif text-4xl text-charcoal font-black">₩{total.toLocaleString()}</span>
                   </div>
+                  <p className="text-xs text-center text-deep-sage bg-deep-sage/5 py-2 rounded-sm font-bold uppercase tracking-widest">{t.cart.freeShippingInfo}</p>
                 </div>
-
                 <Link 
                   href="/checkout" 
                   onClick={() => toggleCart(false)}
-                  className="w-full bg-charcoal text-white py-5 rounded-sm flex items-center justify-center gap-3 hover:bg-deep-sage transition-all shadow-xl group font-serif text-lg"
+                  className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-4 font-serif text-2xl shadow-xl group"
                 >
-                  주문하기 <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
+                  {t.cart.checkoutBtn} <ArrowRight className="w-6 h-6 group-hover:translate-x-2 transition-transform" />
                 </Link>
               </div>
             )}

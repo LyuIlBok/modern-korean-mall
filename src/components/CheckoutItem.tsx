@@ -44,45 +44,45 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
   const totalPrice = (item.price + (item.optionPrice || 0)) * item.quantity;
 
   return (
-    <div className="flex gap-6 items-center group">
-      <div className="relative w-16 h-20 rounded-sm overflow-hidden flex-shrink-0 border border-white/10">
-        <Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+    <div className="flex gap-8 items-center group">
+      <div className="relative w-20 h-24 rounded-sm overflow-hidden flex-shrink-0 border border-white/10 shadow-lg">
+        <Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
       </div>
-      <div className="flex-1 space-y-2">
-        <p className="font-serif text-sm line-clamp-1">{item.name}</p>
+      <div className="flex-1 space-y-3">
+        <p className="font-serif text-base font-medium leading-snug">{item.name}</p>
         
-        <div className="flex flex-col gap-2">
+        <div className="flex flex-col gap-3">
           {/* Option Selector */}
           {options.length > 0 ? (
-            <div className="relative inline-block w-full max-w-[180px]">
+            <div className="relative inline-block w-full max-w-[220px]">
               <select 
                 value={options.find(o => o.option_name === item.optionName)?.id || ''}
                 onChange={(e) => handleOptionChange(e.target.value)}
-                className="w-full bg-white/5 border border-white/10 pl-2 pr-6 py-1 rounded-sm text-[9px] font-bold text-white/60 appearance-none cursor-pointer hover:border-white/30 transition-colors focus:outline-none"
+                className="w-full bg-white/5 border border-white/10 pl-3 pr-8 py-2 rounded-sm text-xs font-bold text-white/70 appearance-none cursor-pointer hover:border-white/30 transition-all focus:outline-none shadow-inner"
               >
                 {options.map(opt => {
                   const isSoldOut = opt.stock <= 0 || !opt.is_active;
                   return (
-                    <option key={opt.id} value={opt.id} disabled={isSoldOut} className="bg-charcoal text-white">
+                    <option key={opt.id} value={opt.id} disabled={isSoldOut} className="bg-charcoal text-white text-sm">
                       {opt.option_name} (+₩{opt.additional_price.toLocaleString()}){isSoldOut ? ' (품절)' : ''}
                     </option>
                   );
                 })}
               </select>
-              <ChevronDown className="w-2.5 h-2.5 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" />
+              <ChevronDown className="w-4 h-4 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-white/40" />
             </div>
           ) : isLoadingOptions ? (
             <div className="flex items-center gap-2">
-              <Loader2 className="w-2.5 h-2.5 animate-spin text-white/20" />
-              <span className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Options...</span>
+              <Loader2 className="w-4 h-4 animate-spin text-white/20" />
+              <span className="text-xs text-white/20 uppercase tracking-widest font-bold">Options...</span>
             </div>
           ) : (
-            <p className="text-[9px] text-white/20 uppercase tracking-widest font-bold">Base Option</p>
+            <p className="text-[10px] text-white/30 uppercase tracking-[0.2em] font-black">Base Option</p>
           )}
 
           {/* Quantity Selector */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center border border-white/10 rounded-sm bg-white/5">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center border border-white/10 rounded-sm bg-white/5 overflow-hidden">
               <button 
                 type="button"
                 onClick={() => {
@@ -92,24 +92,24 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
                     removeItem(item.id, item.optionName);
                   }
                 }} 
-                className="p-1 hover:text-white transition-colors text-white/40"
+                className="p-2 hover:bg-white/10 transition-colors text-white/40 hover:text-white"
               >
-                <Minus className="w-2.5 h-2.5" />
+                <Minus className="w-3 h-3" />
               </button>
-              <span className="w-6 text-center text-[10px] font-serif">{item.quantity}</span>
+              <span className="w-8 text-center text-xs font-serif font-bold border-x border-white/5">{item.quantity}</span>
               <button 
                 type="button"
                 onClick={() => updateQuantity(item.id, item.quantity + 1, item.optionName)} 
-                className="p-1 hover:text-white transition-colors text-white/40"
+                className="p-2 hover:bg-white/10 transition-colors text-white/40 hover:text-white"
               >
-                <Plus className="w-2.5 h-2.5" />
+                <Plus className="w-3 h-3" />
               </button>
             </div>
-            <span className="text-[10px] text-white/40 uppercase tracking-widest font-medium">units</span>
+            <span className="text-[10px] text-white/30 uppercase tracking-widest font-black">units</span>
           </div>
         </div>
       </div>
-      <p className="font-serif text-sm">₩{totalPrice.toLocaleString()}</p>
+      <p className="font-serif text-lg font-bold text-white/90">₩{totalPrice.toLocaleString()}</p>
     </div>
   );
 }

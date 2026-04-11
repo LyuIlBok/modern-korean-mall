@@ -84,26 +84,29 @@ async function ProductList({
 
   if (displayProducts.length === 0) {
     return (
-      <div className="py-32 flex flex-col items-center justify-center text-center space-y-8 bg-white border border-border-light rounded-sm shadow-sm">
-        <div className="w-24 h-24 bg-hanji-white rounded-full flex items-center justify-center text-muted/30">
-          <SearchX className="w-12 h-12" />
+      <div className="py-40 flex flex-col items-center justify-center text-center space-y-10 bg-white border border-border-light rounded-sm shadow-lg max-w-4xl mx-auto">
+        <div className="w-32 h-32 bg-hanji-white rounded-full flex items-center justify-center text-muted/30 border border-border-light shadow-inner">
+          <SearchX className="w-16 h-16" />
         </div>
-        <div className="space-y-3">
-          <h3 className="font-serif text-3xl text-charcoal">찾으시는 상품이 없습니다</h3>
-          <p className="text-muted font-light">검색어나 필터 조건을 변경하여 다시 시도해 보세요.</p>
+        <div className="space-y-4 px-6">
+          <h3 className="font-serif text-4xl text-charcoal leading-tight">찾으시는 상품이 없습니다</h3>
+          <p className="text-muted font-medium text-xl leading-relaxed">
+            현재 등록된 상품이 없거나 검색 결과가 없습니다.<br/>
+            곧 신선한 상품으로 찾아뵙겠습니다.
+          </p>
         </div>
         <Link 
           href="/shop" 
-          className="group inline-flex items-center gap-3 px-10 py-4 bg-charcoal text-white rounded-sm hover:bg-deep-sage transition-all shadow-xl uppercase text-xs font-bold tracking-widest"
+          className="group inline-flex items-center gap-4 px-12 py-5 bg-charcoal text-white rounded-sm hover:bg-deep-sage transition-all shadow-2xl uppercase text-sm font-extrabold tracking-widest"
         >
-          전체 상품 보기 <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
+          전체 상품 보기 <ArrowRight className="w-5 h-5 group-hover:translate-x-2 transition-transform" />
         </Link>
       </div>
     );
   }
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-8 gap-y-16">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-x-10 gap-y-20">
       {displayProducts.map((product) => (
         <ProductCard key={product.id} product={product} />
       ))}
@@ -118,27 +121,27 @@ export default async function ShopPage(props: {
 
   return (
     <div className="bg-hanji-white min-h-screen">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <header className="mb-20 space-y-6">
-          <div className="flex items-center gap-4 text-deep-sage mb-2">
-            <div className="w-12 h-px bg-current"></div>
-            <span className="text-[10px] uppercase tracking-[0.5em] font-bold">Nature&apos;s Essence Market</span>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
+        <header className="mb-24 space-y-8">
+          <div className="flex items-center gap-6 text-deep-sage mb-2">
+            <div className="w-16 h-px bg-current opacity-40"></div>
+            <span className="text-xs uppercase tracking-[0.6em] font-black">Nature&apos;s Essence Market</span>
           </div>
-          <h1 className="font-serif text-5xl md:text-6xl text-charcoal tracking-tight">만물상</h1>
-          <p className="text-muted font-light text-lg max-w-2xl leading-relaxed">
+          <h1 className="font-serif text-6xl md:text-7xl text-charcoal tracking-tighter">만물상</h1>
+          <p className="text-muted font-medium text-2xl max-w-3xl leading-relaxed opacity-80">
             자연의 결이 엄선한 연천의 정직한 농산물과<br/>
             농사를 짓는 데 필요한 소중한 자재들을 한데 모았습니다.
           </p>
         </header>
 
-        <Suspense fallback={<div className="h-20 bg-white/50 animate-pulse rounded-sm mb-16" />}>
+        <Suspense fallback={<div className="h-24 bg-white/50 animate-pulse rounded-sm mb-20" />}>
           <ProductFilterBar />
         </Suspense>
 
         <Suspense fallback={
-          <div className="flex flex-col items-center justify-center py-40">
-            <Loader2 className="w-10 h-10 animate-spin text-deep-sage mb-4" />
-            <p className="text-[10px] uppercase tracking-widest text-muted">농산물을 불러오는 중입니다...</p>
+          <div className="flex flex-col items-center justify-center py-60">
+            <Loader2 className="w-12 h-12 animate-spin text-deep-sage mb-6" />
+            <p className="text-sm uppercase tracking-[0.3em] font-black text-muted animate-pulse">농산물을 불러오는 중입니다...</p>
           </div>
         }>
           <ProductList searchParams={searchParams} />

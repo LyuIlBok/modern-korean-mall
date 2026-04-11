@@ -271,13 +271,13 @@ export default function CheckoutInternal() {
         
         <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border-light pb-10">
           <div className="space-y-4">
-            <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors text-[10px] uppercase tracking-widest font-bold">
-              <ArrowLeft className="w-3.5 h-3.5" /> Back to Cart
+            <Link href="/cart" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors text-sm uppercase tracking-widest font-bold">
+              <ArrowLeft className="w-4 h-4" /> Back to Cart
             </Link>
             <h1 className="font-serif text-5xl text-charcoal tracking-tight">{t.checkout.title}</h1>
           </div>
-          <div className="flex items-center gap-2 text-deep-sage font-bold text-[10px] uppercase tracking-[0.3em]">
-            <ShieldCheck className="w-4 h-4" /> Secure Checkout
+          <div className="flex items-center gap-2 text-deep-sage font-bold text-xs uppercase tracking-[0.3em]">
+            <ShieldCheck className="w-5 h-5" /> Secure Checkout
           </div>
         </header>
 
@@ -288,30 +288,30 @@ export default function CheckoutInternal() {
             {/* Delivery Info */}
             <section className="space-y-8">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-charcoal text-white rounded-full flex items-center justify-center text-xs font-serif italic">01</div>
-                <h2 className="font-serif text-2xl text-charcoal">{t.checkout.shippingInfo}</h2>
+                <div className="w-10 h-10 bg-charcoal text-white rounded-full flex items-center justify-center text-sm font-serif italic border-2 border-border-light">01</div>
+                <h2 className="font-serif text-3xl text-charcoal">{t.checkout.shippingInfo}</h2>
               </div>
 
               {/* Saved Addresses */}
               {savedAddresses.length > 0 && (
                 <div className="space-y-4">
-                  <p className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.savedAddress}</p>
+                  <p className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.savedAddress}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {savedAddresses.map((addr) => (
                       <button
                         key={addr.id}
                         type="button"
                         onClick={() => selectAddress(addr)}
-                        className="text-left p-5 bg-white border border-border-light rounded-sm hover:border-deep-sage transition-all group relative overflow-hidden"
+                        className="text-left p-6 bg-white border border-border-light rounded-sm hover:border-deep-sage transition-all group relative overflow-hidden shadow-sm"
                       >
                         <div className="flex justify-between items-start mb-2">
-                          <span className="text-xs font-bold text-charcoal">{addr.address_name}</span>
-                          {addr.is_default && <span className="text-[8px] bg-deep-sage text-white px-1.5 py-0.5 rounded-full uppercase font-extrabold">{t.mypage.defaultAddress}</span>}
+                          <span className="text-sm font-bold text-charcoal">{addr.address_name}</span>
+                          {addr.is_default && <span className="text-[10px] bg-deep-sage text-white px-2 py-0.5 rounded-full uppercase font-extrabold">{t.mypage.defaultAddress}</span>}
                         </div>
-                        <p className="text-xs text-muted mb-1">{addr.receiver_name} | {addr.receiver_phone}</p>
-                        <p className="text-[10px] text-muted leading-relaxed line-clamp-1">({addr.postcode}) {addr.address} {addr.detail_address}</p>
-                        <div className="absolute bottom-0 right-0 p-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <CheckCircle className="w-4 h-4 text-deep-sage" />
+                        <p className="text-sm text-muted mb-1">{addr.receiver_name} | {addr.receiver_phone}</p>
+                        <p className="text-xs text-muted leading-relaxed line-clamp-1">({addr.postcode}) {addr.address} {addr.detail_address}</p>
+                        <div className="absolute bottom-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <CheckCircle className="w-5 h-5 text-deep-sage" />
                         </div>
                       </button>
                     ))}
@@ -319,41 +319,44 @@ export default function CheckoutInternal() {
                 </div>
               )}
               
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-10 rounded-sm border border-border-light shadow-sm">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.name}</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-10 rounded-sm border border-border-light shadow-sm">
+                <div className="space-y-3 md:col-span-2">
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.name}</label>
                   <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
-                    <input required value={formData.name} onChange={e => setProfileData({...formData, name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder={t.checkout.name} />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
+                    <input required value={formData.name} onChange={e => setProfileData({...formData, name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" placeholder={t.checkout.name} />
                   </div>
+                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>
                 </div>
                 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.phone}</label>
+                <div className="space-y-3">
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.phone}</label>
                   <div className="relative">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
-                    <input required value={formData.phone} onChange={e => setProfileData({...formData, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder="010-0000-0000" />
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
+                    <input required value={formData.phone} onChange={e => setProfileData({...formData, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" placeholder="01000000000" />
                   </div>
+                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">Email</label>
-                  <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-4 rounded-sm text-sm text-muted font-mono">{formData.email || 'guest@nature.com'}</div>
+                <div className="space-y-3">
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">Email</label>
+                  <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-5 rounded-sm text-base text-muted font-mono">{formData.email || 'guest@nature.com'}</div>
                 </div>
 
-                <div className="space-y-2 md:col-span-2 pt-4">
-                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.address}</label>
+                <div className="space-y-3 md:col-span-2 pt-4">
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.address}</label>
                   <div className="flex gap-2 mb-3">
-                    <input required value={formData.postcode} readOnly className="w-32 bg-hanji-white/50 border border-border-light px-4 py-4 rounded-sm text-sm font-mono" placeholder={t.checkout.postcode} />
-                    <button type="button" onClick={() => {}} className="bg-charcoal text-white px-6 py-4 rounded-sm text-[10px] uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
+                    <input required value={formData.postcode} readOnly className="w-40 bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base font-mono" placeholder={t.checkout.postcode} />
+                    <button type="button" onClick={() => {}} className="bg-charcoal text-white px-8 py-5 rounded-sm text-xs uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
                   </div>
-                  <input required value={formData.address} readOnly className="w-full bg-hanji-white/50 border border-border-light px-4 py-4 rounded-sm text-sm mb-3" placeholder={t.checkout.address} />
-                  <input required value={formData.detailAddress} onChange={e => setProfileData({...formData, detailAddress: e.target.value})} className="w-full border border-border-light px-4 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all" placeholder={t.checkout.detailAddress} />
+                  <input required value={formData.address} readOnly className="w-full bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base mb-3 shadow-inner" placeholder={t.checkout.address} />
+                  <input required value={formData.detailAddress} onChange={e => setProfileData({...formData, detailAddress: e.target.value})} className="w-full border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all shadow-sm" placeholder={t.checkout.detailAddress} />
+                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.addressHelp}</p>
                 </div>
 
-                <div className="space-y-2 md:col-span-2 pt-4">
-                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo}</label>
-                  <textarea rows={3} value={formData.memo} onChange={e => setProfileData({...formData, memo: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-4 rounded-sm text-sm focus:border-deep-sage outline-none transition-all resize-none" placeholder={t.checkout.memoPlaceholder} />
+                <div className="space-y-3 md:col-span-2 pt-4">
+                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo}</label>
+                  <textarea rows={3} value={formData.memo} onChange={e => setProfileData({...formData, memo: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all resize-none" placeholder={t.checkout.memoPlaceholder} />
                 </div>
               </div>
             </section>
@@ -361,18 +364,18 @@ export default function CheckoutInternal() {
             {/* Payment Method */}
             <section className="space-y-8">
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-charcoal text-white rounded-full flex items-center justify-center text-xs font-serif italic">02</div>
-                <h2 className="font-serif text-2xl text-charcoal">{t.checkout.paymentMethod}</h2>
+                <div className="w-10 h-10 bg-charcoal text-white rounded-full flex items-center justify-center text-sm font-serif italic border-2 border-border-light">02</div>
+                <h2 className="font-serif text-3xl text-charcoal">{t.checkout.paymentMethod}</h2>
               </div>
               
-              <div className="grid grid-cols-2 gap-4">
-                <button type="button" onClick={() => setPaymentMethod('card')} className={`p-8 border rounded-sm transition-all flex flex-col items-center gap-4 group ${paymentMethod === 'card' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'card' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><CreditCard className="w-6 h-6" /></div>
-                  <span className={`text-[10px] uppercase font-bold tracking-widest ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard}</span>
+              <div className="grid grid-cols-2 gap-6">
+                <button type="button" onClick={() => setPaymentMethod('card')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'card' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'card' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><CreditCard className="w-8 h-8" /></div>
+                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard}</span>
                 </button>
-                <button type="button" onClick={() => setPaymentMethod('transfer')} className={`p-8 border rounded-sm transition-all flex flex-col items-center gap-4 group ${paymentMethod === 'transfer' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'transfer' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><Wallet className="w-6 h-6" /></div>
-                  <span className={`text-[10px] uppercase font-bold tracking-widest ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer}</span>
+                <button type="button" onClick={() => setPaymentMethod('transfer')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'transfer' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
+                  <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'transfer' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><Wallet className="w-8 h-8" /></div>
+                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer}</span>
                 </button>
               </div>
             </section>
@@ -380,64 +383,64 @@ export default function CheckoutInternal() {
 
           {/* Right Column: Order Summary */}
           <div className="lg:col-span-5">
-            <section className="sticky top-24 bg-charcoal text-white p-10 rounded-sm shadow-2xl space-y-10 overflow-hidden relative">
-              <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle className="w-40 h-40" /></div>
+            <section className="sticky top-24 bg-charcoal text-white p-12 rounded-sm shadow-2xl space-y-12 overflow-hidden relative">
+              <div className="absolute top-0 right-0 p-4 opacity-5"><CheckCircle className="w-48 h-48" /></div>
               
-              <h2 className="font-serif text-3xl relative z-10">{t.checkout.summary}</h2>
+              <h2 className="font-serif text-4xl relative z-10">{t.checkout.summary}</h2>
               
-              <div className="space-y-6 relative z-10 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+              <div className="space-y-8 relative z-10 max-h-[400px] overflow-y-auto custom-scrollbar pr-4">
                 {items.map((item) => (
                   <CheckoutItem key={`${item.id}-${item.optionName || 'base'}`} item={item} />
                 ))}
               </div>
 
               {/* Coupon Section */}
-              <div className="pt-10 border-t border-white/10 space-y-4 relative z-10">
-                <p className="text-[10px] uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-3 h-3" /> {t.checkout.coupon}</p>
-                <div className="flex gap-2">
+              <div className="pt-12 border-t border-white/10 space-y-6 relative z-10">
+                <p className="text-xs uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-4 h-4" /> {t.checkout.coupon}</p>
+                <div className="flex gap-3">
                   <div className="relative flex-1">
-                    <Ticket className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+                    <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
                     <input 
                       value={couponCode}
                       onChange={e => setCouponCode(e.target.value.toUpperCase())}
                       disabled={isCouponApplied}
                       placeholder={t.checkout.couponPlaceholder} 
-                      className="w-full bg-white/5 border border-white/10 pl-10 pr-4 py-3 rounded-sm text-xs focus:border-white/30 outline-none transition-all placeholder:text-white/20 uppercase font-mono" 
+                      className="w-full bg-white/5 border border-white/10 pl-12 pr-4 py-4 rounded-sm text-sm focus:border-white/30 outline-none transition-all placeholder:text-white/20 uppercase font-mono shadow-inner" 
                     />
                   </div>
                   <button 
                     type="button"
                     disabled={isCouponApplied || couponLoading || !couponCode}
                     onClick={handleApplyCoupon}
-                    className="bg-white text-charcoal px-6 rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all disabled:opacity-20 flex items-center gap-2"
+                    className="bg-white text-charcoal px-8 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all disabled:opacity-20 flex items-center gap-2 shadow-lg"
                   >
-                    {couponLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : isCouponApplied ? <Check className="w-3.5 h-3.5" /> : t.checkout.apply}
+                    {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCouponApplied ? <Check className="w-4 h-4" /> : t.checkout.apply}
                   </button>
                 </div>
-                {couponError && <p className="text-[10px] text-terracotta italic">{couponError}</p>}
-                {isCouponApplied && <p className="text-[10px] text-deep-sage flex items-center gap-1 font-bold"><CheckCircle className="w-3.5 h-3" /> {t.checkout.coupon} {t.checkout.apply}되었습니다.</p>}
+                {couponError && <p className="text-xs text-terracotta italic font-medium">{couponError}</p>}
+                {isCouponApplied && <p className="text-sm text-deep-sage flex items-center gap-2 font-bold bg-white/5 p-3 rounded-sm border border-deep-sage/20"><CheckCircle className="w-4 h-4" /> {t.checkout.coupon} {t.checkout.apply}되었습니다.</p>}
               </div>
 
-              <div className="pt-10 border-t border-white/10 space-y-4 relative z-10">
-                <div className="flex justify-between text-xs text-white/60 font-light italic"><span>{t.checkout.subtotal}</span><span>₩{subtotal.toLocaleString()}</span></div>
-                <div className="flex justify-between text-xs text-white/60 font-light italic"><span>{t.checkout.shipping}</span><span>{shipping === 0 ? t.checkout.free : `₩${shipping.toLocaleString()}`}</span></div>
+              <div className="pt-12 border-t border-white/10 space-y-6 relative z-10 font-medium">
+                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.subtotal}</span><span>₩{subtotal.toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.shipping}</span><span>{shipping === 0 ? t.checkout.free : `₩${shipping.toLocaleString()}`}</span></div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-xs text-terracotta font-bold italic">
+                  <div className="flex justify-between text-sm text-terracotta font-bold italic">
                     <span>{t.checkout.discount}</span>
                     <span>- ₩{discountAmount.toLocaleString()}</span>
                   </div>
                 )}
-                <div className="flex justify-between items-end pt-6">
-                  <span className="font-serif text-lg">{t.checkout.total}</span>
-                  <span className="font-serif text-4xl text-white">₩{finalTotal.toLocaleString()}</span>
+                <div className="flex justify-between items-end pt-8">
+                  <span className="font-serif text-xl">{t.checkout.total}</span>
+                  <span className="font-serif text-5xl text-white">₩{finalTotal.toLocaleString()}</span>
                 </div>
               </div>
 
-              <button type="submit" disabled={isLoading} className="w-full bg-white text-charcoal py-6 rounded-sm hover:bg-deep-sage hover:text-white transition-all duration-500 font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl relative z-10 group disabled:opacity-50">
+              <button type="submit" disabled={isLoading} className="w-full bg-white text-charcoal py-8 rounded-sm hover:bg-deep-sage hover:text-white transition-all duration-500 font-serif text-3xl flex items-center justify-center gap-6 shadow-2xl relative z-10 group disabled:opacity-50">
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-8 h-8 animate-spin" />
-                    <span className="text-sm uppercase tracking-widest font-sans font-bold">Processing...</span>
+                    <Loader2 className="w-10 h-10 animate-spin" />
+                    <span className="text-base uppercase tracking-widest font-sans font-bold">Processing...</span>
                   </>
                 ) : (
                   <>₩{finalTotal.toLocaleString()} {t.checkout.payBtn}</>

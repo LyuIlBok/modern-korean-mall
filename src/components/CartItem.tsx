@@ -42,23 +42,23 @@ export default function CartItem({ item }: { item: CartItemType }) {
   };
 
   return (
-    <div className="flex gap-5 group">
-      <div className="relative w-24 h-28 bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0">
-        <Image src={item.imageUrl} alt={item.name} fill className="object-cover" />
+    <div className="flex gap-6 items-center group bg-hanji-white/30 p-4 rounded-sm border border-border-light/50 shadow-sm">
+      <div className="relative w-28 h-32 bg-white rounded-sm overflow-hidden border border-border-light flex-shrink-0 shadow-inner">
+        <Image src={item.imageUrl} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-700" />
       </div>
-      <div className="flex-1 flex flex-col justify-between py-1">
+      <div className="flex-1 flex flex-col justify-between py-1 min-h-[120px]">
         <div>
           <div className="flex justify-between items-start">
-            <div className="space-y-1.5 flex-1 pr-4">
-              <h3 className="font-serif text-lg text-charcoal leading-tight line-clamp-1">{item.name}</h3>
+            <div className="space-y-2 flex-1 pr-4">
+              <h3 className="font-serif text-xl text-charcoal leading-tight line-clamp-1">{item.name}</h3>
               
               {/* Option Selector */}
               {options.length > 0 ? (
-                <div className="relative inline-block min-w-[120px]">
+                <div className="relative inline-block min-w-[140px]">
                   <select 
                     value={options.find(o => o.option_name === item.optionName)?.id || ''}
                     onChange={(e) => handleOptionChange(e.target.value)}
-                    className="w-full bg-hanji-white border border-border-light pl-3 pr-8 py-1 rounded-full text-[10px] font-bold text-muted appearance-none cursor-pointer hover:border-deep-sage transition-colors focus:outline-none"
+                    className="w-full bg-white border border-border-light pl-4 pr-10 py-2 rounded-full text-xs font-bold text-muted appearance-none cursor-pointer hover:border-deep-sage transition-all focus:outline-none shadow-sm"
                   >
                     {options.map(opt => {
                       const isSoldOut = opt.stock <= 0 || !opt.is_active;
@@ -69,32 +69,32 @@ export default function CartItem({ item }: { item: CartItemType }) {
                       );
                     })}
                   </select>
-                  <ChevronDown className="w-3 h-3 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-muted" />
+                  <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-muted" />
                 </div>
               ) : isLoadingOptions ? (
                 <div className="flex items-center gap-2 py-1">
-                  <Loader2 className="w-3 h-3 animate-spin text-muted" />
-                  <span className="text-[10px] text-muted">옵션 불러오는 중...</span>
+                  <Loader2 className="w-4 h-4 animate-spin text-muted" />
+                  <span className="text-xs text-muted font-medium">옵션 불러오는 중...</span>
                 </div>
               ) : (
-                <p className="text-[10px] text-muted italic">기본 옵션</p>
+                <p className="text-xs text-muted italic font-medium opacity-60">기본 옵션</p>
               )}
             </div>
             <button 
               onClick={() => removeItem(item.id, item.optionName)}
-              className="text-muted hover:text-terracotta transition-colors p-1"
+              className="text-muted hover:text-terracotta transition-colors p-2 hover:bg-white rounded-full shadow-sm"
             >
-              <Trash2 className="w-4 h-4" />
+              <Trash2 className="w-5 h-5" />
             </button>
           </div>
-          <p className="text-sm font-medium text-charcoal/60 mt-1">
+          <p className="text-base font-bold text-charcoal/80 mt-2">
             ₩{(item.price + (item.optionPrice || 0)).toLocaleString()}
           </p>
         </div>
         
-        <div className="flex justify-between items-center mt-4">
+        <div className="flex justify-between items-center mt-6">
           {/* Quantity Selector */}
-          <div className="flex items-center border border-border-light rounded-sm bg-hanji-white">
+          <div className="flex items-center border border-border-light rounded-sm bg-white shadow-sm overflow-hidden">
             <button 
               onClick={() => {
                 if (item.quantity > 1) {
@@ -103,19 +103,19 @@ export default function CartItem({ item }: { item: CartItemType }) {
                   removeItem(item.id, item.optionName);
                 }
               }} 
-              className="p-1.5 hover:text-deep-sage transition-colors"
+              className="p-2.5 hover:bg-hanji-white hover:text-deep-sage transition-all border-r border-border-light"
             >
-              <Minus className="w-3 h-3" />
+              <Minus className="w-4 h-4" />
             </button>
-            <span className="w-8 text-center text-xs font-serif">{item.quantity}</span>
+            <span className="w-12 text-center text-lg font-serif font-bold">{item.quantity}</span>
             <button 
               onClick={() => updateQuantity(item.id, item.quantity + 1, item.optionName)} 
-              className="p-1.5 hover:text-deep-sage transition-colors"
+              className="p-2.5 hover:bg-hanji-white hover:text-deep-sage transition-all border-l border-border-light"
             >
-              <Plus className="w-3 h-3" />
+              <Plus className="w-4 h-4" />
             </button>
           </div>
-          <p className="text-sm font-bold text-charcoal">
+          <p className="text-xl font-black text-charcoal">
             ₩{((item.price + (item.optionPrice || 0)) * item.quantity).toLocaleString()}
           </p>
         </div>
