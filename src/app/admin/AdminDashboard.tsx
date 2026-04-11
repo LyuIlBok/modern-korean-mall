@@ -231,19 +231,26 @@ export default function AdminDashboard() {
   const handleDeleteProduct = async (product: AdminProduct) => {
     if (!confirm(`'${product.name}' 상품을 비활성화(숨김) 하시겠습니까? 주문 내역 유지를 위해 데이터는 삭제되지 않습니다.`)) return;
     
+    setIsLoading(true);
     try {
       const { error } = await supabase
         .from('products')
         .update({ is_active: false })
         .eq('id', product.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Soft delete error details:', error);
+        alert(`비활성화 실패: ${error.message} (${error.details || 'No additional details'})`);
+        return;
+      }
       
       setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_active: false } : p));
       alert('상품이 비활성화되었습니다.');
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : 'Unknown error';
-      alert(`비활성화 실패: ${msg}`);
+    } catch (err: any) {
+      console.error('System error during soft delete:', err);
+      alert(`시스템 오류: ${err.message || '알 수 없는 에러가 발생했습니다.'}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
