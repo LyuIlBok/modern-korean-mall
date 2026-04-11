@@ -33,6 +33,8 @@ interface ProductOption {
   id: string;
   option_name: string;
   additional_price: number;
+  stock: number;
+  is_active: boolean;
 }
 
 export default function ProductDetailClient({ 
@@ -79,7 +81,6 @@ export default function ProductDetailClient({
         .from('product_options')
         .select('*')
         .eq('product_id', product.id)
-        .eq('is_active', true)
         .order('created_at', { ascending: true });
       
       if (data) setOptions(data as ProductOption[]);
@@ -305,11 +306,15 @@ export default function ProductDetailClient({
                     className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none appearance-none cursor-pointer transition-all"
                   >
                     <option value="">옵션을 선택해 주세요 (필수)</option>
-                    {options.map(opt => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.option_name} {opt.additional_price > 0 ? `(+₩${opt.additional_price.toLocaleString()})` : ''}
-                      </option>
-                    ))}
+                    {options.map(opt => {
+                      const isSoldOut = opt.stock <= 0 || !opt.is_active;
+                      return (
+                        <option key={opt.id} value={opt.id} disabled={isSoldOut}>
+                          {opt.option_name} {opt.additional_price > 0 ? `(+₩${opt.additional_price.toLocaleString()})` : ''}
+                          {isSoldOut ? ' (품절/Sold Out)' : ''}
+                        </option>
+                      );
+                    })}
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
                     <ChevronDown className="w-4 h-4 text-muted" />

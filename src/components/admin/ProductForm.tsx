@@ -31,15 +31,16 @@ interface AdminProduct {
 }
 
 interface ProductOption {
-  id: string;
+  id?: string; // New options won't have an ID initially
   option_name: string;
   additional_price: number;
+  stock: number;
+  is_active: boolean;
 }
 
 export default function ProductForm({ initialData }: { initialData?: AdminProduct }) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
-  const [isOptionsLoading, setIsOptionsLoading] = useState(false);
   
   // Product State
   const [formData, setFormData] = useState<AdminProduct>(initialData || {
@@ -58,16 +59,14 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
 
-  // Options State
+  // Options State (Managed locally until submission)
   const [options, setOptions] = useState<ProductOption[]>([]);
-  const [newOptionName, setNewOptionName] = useState('');
-  const [newOptionPrice, setNewOptionPrice] = useState('');
+  const [deletedOptionIds, setDeletedOptionIds] = useState<string[]>([]);
 
   const isEditMode = !!initialData?.id;
 
   const fetchOptions = useCallback(async () => {
     if (!initialData?.id) return;
-    setIsOptionsLoading(true);
     const { data } = await supabase
       .from('product_options')
       .select('*')
@@ -75,7 +74,6 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
       .order('created_at', { ascending: true });
     
     if (data) setOptions(data);
-    setIsOptionsLoading(false);
   }, [initialData?.id]);
 
   useEffect(() => {
@@ -125,6 +123,7 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
         is_sold_out: Number(formData.stock) <= 0
       };
 
+      // 1. Submit Product
       const endpoint = '/api/admin/products';
       const method = isEditMode ? 'PATCH' : 'POST';
       const body = isEditMode 
@@ -140,245 +139,307 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
       
-      alert(isEditMode ? '상품이 수정되었습니다.' : '상품이 등록되었습니다.');
+      const productId = isEditMode ? initialData?.id : result.id;
+
+      // 2. Handle Options Synchronization
+      if (productId) {
+        // 2a. Delete removed options
+        if (deletedOptionIds.length > 0) {
+          await supabase.from('product_options').delete().in('id', deletedOptionIds);
+        }
+
+        // 2b. Upsert remaining options
+        const optionsToUpsert = options.map(opt => ({
+          ...opt,
+          product_id: productId
+        }));
+
+        if (optionsToUpsert.length > 0) {
+          const { error: upsertError } = await supabase
+            .from('product_options')
+            .upsert(optionsToUpsert, { onConflict: 'id' });
+          
+          if (upsertError) throw upsertError;
+        }
+      }
+      
+      alert(isEditMode ? '상품과 옵션이 수정되었습니다.' : '상품과 옵션이 등록되었습니다.');
       router.push('/admin');
       router.refresh();
     } catch (err: any) {
+      console.error('Submission failed:', err);
       alert(err.message || '처리 중 오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleAddOption = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newOptionName || !initialData?.id) return;
-
-    setIsOptionsLoading(true);
-    try {
-      const { error } = await supabase
-        .from('product_options')
-        .insert([{
-          product_id: initialData.id,
-          option_name: newOptionName,
-          additional_price: Number(newOptionPrice || 0)
-        }]);
-
-      if (error) throw error;
-      setNewOptionName('');
-      setNewOptionPrice('');
-      fetchOptions();
-    } catch (err) {
-      alert('옵션 추가 실패');
-    } finally {
-      setIsOptionsLoading(false);
-    }
+  const addOptionRow = () => {
+    setOptions([...options, { 
+      option_name: '', 
+      additional_price: 0, 
+      stock: 100, 
+      is_active: true 
+    }]);
   };
 
-  const handleDeleteOption = async (id: string) => {
-    if (!confirm('삭제하시겠습니까?')) return;
-    setIsOptionsLoading(true);
-    try {
-      await supabase.from('product_options').delete().eq('id', id);
-      fetchOptions();
-    } catch (err) {
-      alert('삭제 실패');
-    } finally {
-      setIsOptionsLoading(false);
+  const updateOptionRow = (index: number, field: keyof ProductOption, value: any) => {
+    const updated = [...options];
+    updated[index] = { ...updated[index], [field]: value };
+    setOptions(updated);
+  };
+
+  const removeOptionRow = (index: number) => {
+    const target = options[index];
+    if (target.id) {
+      setDeletedOptionIds([...deletedOptionIds, target.id]);
     }
+    setOptions(options.filter((_, i) => i !== index));
   };
 
   return (
-    <div className="space-y-12">
+    <div className="space-y-12 pb-24">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <Link href="/admin" className="text-xs text-muted flex items-center gap-1 hover:text-deep-sage transition-colors">
             <ChevronLeft className="w-3 h-3" /> Back to List
           </Link>
-          <h1 className="font-serif text-4xl text-charcoal">{isEditMode ? '상품 정보 수정' : '새 상품 등록'}</h1>
+          <h1 className="font-serif text-4xl text-charcoal">{isEditMode ? '상품 및 옵션 수정' : '새 상품 등록'}</h1>
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-12">
-        {/* Left: Basic Info */}
-        <div className="lg:col-span-2 space-y-10 bg-white p-10 rounded-sm border border-border-light shadow-sm">
-          <div className="space-y-8">
-            <div className="space-y-2">
-              <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label>
-              <input 
-                required 
-                value={formData.name} 
-                onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                placeholder="상품명을 입력해 주세요" 
-                className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-xl font-serif bg-transparent" 
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-10">
+      <form onSubmit={handleSubmit} className="space-y-12">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
+          {/* Left: Basic Info */}
+          <div className="lg:col-span-2 space-y-10 bg-white p-10 rounded-sm border border-border-light shadow-sm">
+            <div className="space-y-8">
               <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Price (KRW)</label>
+                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Name</label>
                 <input 
                   required 
-                  type="number" 
-                  value={formData.price} 
-                  onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} 
-                  className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  placeholder="상품명을 입력해 주세요" 
+                  className="w-full border-b border-border-light py-3 focus:outline-none focus:border-deep-sage text-xl font-serif bg-transparent" 
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Shipping Fee</label>
-                <input 
-                  required 
-                  type="number" 
-                  value={formData.shipping_fee} 
-                  onChange={(e) => setFormData({...formData, shipping_fee: Number(e.target.value)})} 
-                  className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
-                />
+
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Base Price (KRW)</label>
+                  <input 
+                    required 
+                    type="number" 
+                    value={formData.price} 
+                    onChange={(e) => setFormData({...formData, price: Number(e.target.value)})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Base Shipping Fee</label>
+                  <input 
+                    required 
+                    type="number" 
+                    value={formData.shipping_fee} 
+                    onChange={(e) => setFormData({...formData, shipping_fee: Number(e.target.value)})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-10">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Stock (Main)</label>
+                  <input 
+                    required 
+                    type="number" 
+                    value={formData.stock} 
+                    onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label>
+                  <select 
+                    value={formData.category} 
+                    onChange={(e) => setFormData({...formData, category: e.target.value})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"
+                  >
+                    <option value="농산물">농산물</option>
+                    <option value="농자재">농자재</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-[10px] text-muted uppercase tracking-widest font-bold block">Detailed Description</label>
+                <div className="min-h-[400px] border border-border-light rounded-sm">
+                  <RichTextEditor 
+                    value={formData.description} 
+                    onChange={(html) => setFormData({...formData, description: html})} 
+                  />
+                </div>
               </div>
             </div>
+          </div>
 
-            <div className="grid grid-cols-2 gap-10">
-              <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Stock</label>
-                <input 
-                  required 
-                  type="number" 
-                  value={formData.stock} 
-                  onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})} 
-                  className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent" 
+          {/* Right: Main Image */}
+          <div className="space-y-10">
+            <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
+              <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">
+                <ImageIcon className="w-3 h-3" /> Main Listing Image
+              </label>
+              <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group cursor-pointer hover:border-deep-sage transition-colors">
+                <Image 
+                  src={mainPreview || formData.imageUrl} 
+                  alt="Main" 
+                  fill 
+                  className="object-cover group-hover:scale-105 transition-transform duration-500" 
                 />
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Camera className="w-8 h-8 text-white" />
+                </div>
+                <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
               </div>
-              <div className="space-y-2">
-                <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Category</label>
-                <select 
-                  value={formData.category} 
-                  onChange={(e) => setFormData({...formData, category: e.target.value})} 
-                  className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent"
-                >
-                  <option value="농산물">농산물</option>
-                  <option value="농자재">농자재</option>
-                </select>
-              </div>
+              <p className="text-[10px] text-muted text-center italic">클릭하여 대표 이미지를 변경하세요.</p>
             </div>
 
-            <div className="space-y-4">
-              <label className="text-[10px] text-muted uppercase tracking-widest font-bold block">Description (Rich Text)</label>
-              <div className="min-h-[400px] border border-border-light rounded-sm">
-                <RichTextEditor 
-                  value={formData.description} 
-                  onChange={(html) => setFormData({...formData, description: html})} 
-                />
+            {/* Reward & Discount */}
+            <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold text-deep-sage">Reward Points (₩)</label>
+                  <input 
+                    type="number"
+                    value={formData.reward_points} 
+                    onChange={(e) => setFormData({...formData, reward_points: Number(e.target.value)})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold text-deep-sage" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] text-muted uppercase tracking-widest font-bold text-terracotta">Discount Rate (%)</label>
+                  <input 
+                    type="number"
+                    value={formData.discount_rate} 
+                    onChange={(e) => setFormData({...formData, discount_rate: Number(e.target.value)})} 
+                    className="w-full border-b border-border-light py-2 focus:outline-none bg-transparent font-bold text-terracotta" 
+                  />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Right: Images & Options */}
-        <div className="space-y-10">
-          {/* Main Image */}
-          <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
-            <label className="text-[10px] text-muted uppercase tracking-widest font-bold flex items-center gap-2">
-              <ImageIcon className="w-3 h-3" /> Main Image
-            </label>
-            <div className="relative aspect-square bg-hanji-white rounded-sm overflow-hidden border border-border-light group cursor-pointer hover:border-deep-sage transition-colors">
-              <Image 
-                src={mainPreview || formData.imageUrl} 
-                alt="Main" 
-                fill 
-                className="object-cover group-hover:scale-105 transition-transform duration-500" 
-              />
-              <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                <Camera className="w-8 h-8 text-white" />
+        {/* Dynamic Product Options Table */}
+        <div className="bg-white p-10 rounded-sm border border-border-light shadow-sm space-y-8">
+          <div className="flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <Settings className="w-6 h-6 text-amber-600" />
+              <div>
+                <h2 className="font-serif text-2xl text-charcoal">품목 옵션 관리</h2>
+                <p className="text-xs text-muted font-light mt-1">상품의 무게, 용량, 포장 방식별로 가격과 재고를 개별 관리합니다.</p>
               </div>
-              <input type="file" accept="image/*" onChange={handleImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
-            <p className="text-[10px] text-muted text-center italic">클릭하여 이미지를 변경할 수 있습니다.</p>
-          </div>
-
-          {/* Options Management (Only in Edit Mode) */}
-          <div className="bg-white p-8 rounded-sm border border-border-light shadow-sm space-y-6">
-            <div className="flex items-center gap-2">
-              <Settings className="w-4 h-4 text-amber-600" />
-              <label className="text-[10px] text-muted uppercase tracking-widest font-bold">Product Options</label>
-            </div>
-
-            {!isEditMode ? (
-              <div className="py-8 text-center bg-hanji-white rounded-sm border border-dashed border-border-light">
-                <p className="text-xs text-muted font-light px-4 italic leading-relaxed">
-                  상품을 먼저 등록하신 후<br/>옵션을 관리하실 수 있습니다.
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {/* Option Form */}
-                <div className="space-y-3 p-4 bg-hanji-white rounded-sm border border-border-light">
-                  <input 
-                    value={newOptionName}
-                    onChange={(e) => setNewOptionName(e.target.value)}
-                    placeholder="옵션명 (예: 5kg)"
-                    className="w-full bg-white border border-border-light px-3 py-2 text-xs focus:border-amber-500 outline-none"
-                  />
-                  <div className="flex gap-2">
-                    <div className="relative flex-1">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted">₩</span>
-                      <input 
-                        type="number"
-                        value={newOptionPrice}
-                        onChange={(e) => setNewOptionPrice(e.target.value)}
-                        placeholder="추가금"
-                        className="w-full bg-white border border-border-light pl-6 pr-2 py-2 text-xs focus:border-amber-500 outline-none"
-                      />
-                    </div>
-                    <button 
-                      onClick={handleAddOption}
-                      disabled={isOptionsLoading || !newOptionName}
-                      className="bg-amber-600 text-white px-4 py-2 rounded-sm text-xs font-bold hover:bg-amber-700 transition-colors disabled:opacity-50"
-                    >
-                      추가
-                    </button>
-                  </div>
-                </div>
-
-                {/* Option List */}
-                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1 custom-scrollbar">
-                  {options.length === 0 ? (
-                    <p className="text-xs text-muted text-center py-4 italic">등록된 옵션이 없습니다.</p>
-                  ) : (
-                    options.map((opt) => (
-                      <div key={opt.id} className="flex items-center justify-between p-3 bg-hanji-white rounded-sm border border-border-light group">
-                        <div className="space-y-0.5">
-                          <p className="text-xs font-bold text-charcoal">{opt.option_name}</p>
-                          <p className="text-[10px] text-muted">+₩{opt.additional_price.toLocaleString()}</p>
-                        </div>
-                        <button 
-                          onClick={() => handleDeleteOption(opt.id)}
-                          className="p-1 text-muted hover:text-terracotta transition-colors group-hover:opacity-100 opacity-0"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Action Buttons */}
-          <div className="pt-4">
             <button 
-              onClick={handleSubmit} 
-              disabled={isLoading} 
-              className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl disabled:opacity-50 group"
+              type="button"
+              onClick={addOptionRow}
+              className="bg-hanji-white border border-border-light px-6 py-2.5 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-all flex items-center gap-2"
             >
-              {isLoading ? (
-                <Loader2 className="w-8 h-8 animate-spin" />
-              ) : (
-                isEditMode ? <Save className="w-8 h-8 group-hover:scale-110 transition-transform" /> : <CheckCircle className="w-8 h-8 group-hover:scale-110 transition-transform" />
-              )} 
-              {isEditMode ? '수정 내용 저장' : '상품 등록 완료'}
+              <Plus className="w-4 h-4" /> 옵션 추가
             </button>
           </div>
+
+          <div className="border border-border-light rounded-sm overflow-hidden">
+            <table className="w-full text-left border-collapse">
+              <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
+                <tr>
+                  <th className="px-6 py-4">옵션 명칭 (Option Name)</th>
+                  <th className="px-6 py-4 w-40 text-right">추가 금액 (Add Price)</th>
+                  <th className="px-6 py-4 w-32 text-right">재고 (Stock)</th>
+                  <th className="px-6 py-4 w-32 text-center">상태 (Status)</th>
+                  <th className="px-6 py-4 w-20 text-center">삭제</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-light">
+                {options.length === 0 ? (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-16 text-center text-xs text-muted italic">
+                      등록된 옵션이 없습니다. 우측 상단의 '옵션 추가' 버튼을 눌러주세요.
+                    </td>
+                  </tr>
+                ) : (
+                  options.map((opt, idx) => (
+                    <tr key={idx} className="hover:bg-hanji-white/30 transition-colors">
+                      <td className="px-6 py-4">
+                        <input 
+                          required
+                          value={opt.option_name}
+                          onChange={(e) => updateOptionRow(idx, 'option_name', e.target.value)}
+                          placeholder="예: 5kg 상급, 선물용 포장 등"
+                          className="w-full bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm font-medium py-1"
+                        />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <span className="text-[10px] text-muted font-bold">+</span>
+                          <input 
+                            type="number"
+                            value={opt.additional_price}
+                            onChange={(e) => updateOptionRow(idx, 'additional_price', Number(e.target.value))}
+                            className="w-24 text-right bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm font-bold"
+                          />
+                          <span className="text-[10px] text-muted">원</span>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <input 
+                          type="number"
+                          value={opt.stock}
+                          onChange={(e) => updateOptionRow(idx, 'stock', Number(e.target.value))}
+                          className="w-full text-right bg-transparent border-b border-transparent focus:border-amber-500 outline-none text-sm"
+                        />
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <select 
+                          value={opt.is_active ? 'active' : 'inactive'}
+                          onChange={(e) => updateOptionRow(idx, 'is_active', e.target.value === 'active')}
+                          className="bg-transparent text-[10px] font-bold uppercase tracking-widest outline-none cursor-pointer"
+                        >
+                          <option value="active" className="text-green-600">판매중</option>
+                          <option value="inactive" className="text-terracotta">품절/중지</option>
+                        </select>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <button 
+                          type="button"
+                          onClick={() => removeOptionRow(idx)}
+                          className="p-2 text-muted hover:text-terracotta transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Global Save Button */}
+        <div className="flex justify-center">
+          <button 
+            type="submit" 
+            disabled={isLoading} 
+            className="w-full max-w-xl bg-charcoal text-white py-8 rounded-sm hover:bg-deep-sage transition-all font-serif text-3xl flex items-center justify-center gap-6 shadow-2xl disabled:opacity-50 group"
+          >
+            {isLoading ? (
+              <Loader2 className="w-10 h-10 animate-spin" />
+            ) : (
+              isEditMode ? <Save className="w-10 h-10 group-hover:scale-110 transition-transform" /> : <Package className="w-10 h-10 group-hover:scale-110 transition-transform" />
+            )} 
+            {isEditMode ? '상품 및 옵션 정보 저장' : '새 상품 최종 등록'}
+          </button>
         </div>
       </form>
     </div>
