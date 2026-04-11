@@ -48,6 +48,12 @@ export const translations = {
       origin: '원산지',
       producer: '생산자',
       storage: '보관방법',
+      shipping: '배송 안내',
+      optionSelection: '옵션 선택',
+      quantity: '수량',
+      totalAmount: '총 결제 금액',
+      reviews: '리뷰',
+      freeShipping: '무료배송',
     },
     cart: {
       title: '장바구니',
@@ -58,6 +64,7 @@ export const translations = {
       total: '최종 결제 금액',
       checkoutBtn: '주문하기',
       freeShippingInfo: '5만원 이상 구매 시 무료배송',
+      units: '개',
     },
     checkout: {
       title: '주문서 작성',
@@ -164,6 +171,12 @@ export const translations = {
       origin: 'Origin',
       producer: 'Producer',
       storage: 'Storage',
+      shipping: 'Shipping Info',
+      optionSelection: 'Option Selection',
+      quantity: 'Quantity',
+      totalAmount: 'Total Amount',
+      reviews: 'Reviews',
+      freeShipping: 'Free Shipping',
     },
     cart: {
       title: 'Cart',
@@ -174,6 +187,7 @@ export const translations = {
       total: 'Total Payment',
       checkoutBtn: 'Proceed to Checkout',
       freeShippingInfo: 'Free shipping on orders over ₩50,000',
+      units: 'units',
     },
     checkout: {
       title: 'Checkout',

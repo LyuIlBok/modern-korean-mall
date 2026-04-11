@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useCartStore, CartItem as CartItemType } from '@/store/useCartStore';
+import { useLanguageStore } from '@/store/useLanguageStore';
 import { Plus, Minus, ChevronDown, Loader2 } from 'lucide-react';
 import Image from 'next/image';
 
@@ -16,6 +17,7 @@ interface ProductOption {
 
 export default function CheckoutItem({ item }: { item: CartItemType }) {
   const { updateQuantity, updateOption, removeItem } = useCartStore();
+  const { t } = useLanguageStore();
   const [options, setOptions] = useState<ProductOption[]>([]);
   const [isLoadingOptions, setIsLoadingOptions] = useState(false);
 

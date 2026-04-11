@@ -279,23 +279,23 @@ export default function ProductDetailClient({
             {/* Product Specs */}
             <div className="space-y-4 mb-12">
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-[10px]">Origin</span>
-                <span className="col-span-2 text-charcoal">{product.specs?.origin || '경기도 연천군'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.origin || '원산지'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.specs?.origin || '경기도 연천군'}</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-[10px]">Producer</span>
-                <span className="col-span-2 text-charcoal">{product.specs?.producer || '농업회사법인 복이네농장(주)'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.producer || '생산자'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{product.specs?.producer || '농업회사법인 복이네농장(주)'}</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2 border-b border-border-light/50 pb-4">
-                <span className="text-muted uppercase tracking-widest font-bold text-[10px]">Shipping</span>
-                <span className="col-span-2 text-charcoal">{Number(product.shipping_fee) === 0 ? '무료배송' : `₩${Number(product.shipping_fee).toLocaleString()}`}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.shipping || '배송 안내'}</span>
+                <span className="col-span-2 text-charcoal font-medium">{Number(product.shipping_fee) === 0 ? (t?.shop?.freeShipping || '무료배송') : `₩${Number(product.shipping_fee).toLocaleString()}`}</span>
               </div>
             </div>
 
             {/* Options Selection */}
             {options.length > 0 && (
               <div className="space-y-4 mb-8">
-                <label className="text-[10px] text-muted uppercase tracking-[0.2em] font-bold ml-1">Option Selection</label>
+                <label className="text-xs text-muted uppercase tracking-[0.2em] font-bold ml-1">{t?.shop?.optionSelection || '옵션 선택'}</label>
                 <div className="relative">
                   <select 
                     value={selectedOption?.id || ''} 
@@ -303,21 +303,21 @@ export default function ProductDetailClient({
                       const opt = options.find(o => o.id === e.target.value);
                       setSelectedOption(opt || null);
                     }}
-                    className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-sm focus:border-deep-sage outline-none appearance-none cursor-pointer transition-all"
+                    className="w-full bg-hanji-white/50 border border-border-light px-6 py-4 rounded-sm text-base focus:border-deep-sage outline-none appearance-none cursor-pointer transition-all shadow-sm"
                   >
-                    <option value="">옵션을 선택해 주세요 (필수)</option>
+                    <option value="">{t?.shop?.optionSelection || '옵션을 선택해 주세요'} (필수)</option>
                     {options.map(opt => {
                       const isSoldOut = opt.stock <= 0 || !opt.is_active;
                       return (
                         <option key={opt.id} value={opt.id} disabled={isSoldOut}>
                           {opt.option_name} {opt.additional_price > 0 ? `(+₩${opt.additional_price.toLocaleString()})` : ''}
-                          {isSoldOut ? ' (품절/Sold Out)' : ''}
+                          {isSoldOut ? ` (${t?.common?.soldOut || '품절'})` : ''}
                         </option>
                       );
                     })}
                   </select>
                   <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <ChevronDown className="w-4 h-4 text-muted" />
+                    <ChevronDown className="w-5 h-5 text-muted" />
                   </div>
                 </div>
               </div>
@@ -325,36 +325,36 @@ export default function ProductDetailClient({
 
             {/* Quantity & Buttons */}
             <div className="space-y-8">
-              <div className="flex flex-col gap-4 bg-hanji-white border border-border-light p-6 rounded-sm">
+              <div className="flex flex-col gap-4 bg-hanji-white border border-border-light p-8 rounded-sm shadow-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-bold uppercase tracking-widest text-muted">Quantity</span>
-                  <div className="flex items-center gap-6">
-                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-1 hover:text-deep-sage transition-colors"><Minus className="w-4 h-4" /></button>
-                    <span className="font-serif text-xl w-8 text-center">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="p-1 hover:text-deep-sage transition-colors"><Plus className="w-4 h-4" /></button>
+                  <span className="text-sm font-bold uppercase tracking-widest text-muted">{t?.shop?.quantity || '수량'}</span>
+                  <div className="flex items-center gap-8 bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
+                    <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-hanji-white hover:text-deep-sage transition-all border-r border-border-light"><Minus className="w-5 h-5" /></button>
+                    <span className="font-serif text-2xl w-12 text-center font-bold">{quantity}</span>
+                    <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-hanji-white hover:text-deep-sage transition-all border-l border-border-light"><Plus className="w-5 h-5" /></button>
                   </div>
                 </div>
                 
-                <div className="pt-4 border-t border-border-light/50 flex justify-between items-end">
-                  <span className="text-[10px] text-muted uppercase tracking-widest font-bold">Total Amount</span>
-                  <p className="text-2xl font-serif text-charcoal font-bold">₩{totalPrice.toLocaleString()}</p>
+                <div className="pt-6 border-t border-border-light/50 flex justify-between items-end">
+                  <span className="text-xs text-muted uppercase tracking-widest font-black">{t?.shop?.totalAmount || '최종 결제 금액'}</span>
+                  <p className="text-4xl font-serif text-charcoal font-black tracking-tighter">₩{totalPrice.toLocaleString()}</p>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <button 
                   onClick={handleAddToCart}
                   disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
-                  className="flex items-center justify-center gap-3 py-5 bg-white border border-charcoal text-charcoal hover:bg-hanji-white transition-all font-serif text-lg rounded-sm disabled:opacity-50"
+                  className="flex items-center justify-center gap-4 py-6 bg-white border-2 border-charcoal text-charcoal hover:bg-hanji-white transition-all font-serif text-xl rounded-sm disabled:opacity-50 font-bold shadow-lg"
                 >
-                  <ShoppingBag className="w-5 h-5" /> 장바구니 담기
+                  <ShoppingBag className="w-6 h-6" /> {t?.common?.addToCart || '장바구니 담기'}
                 </button>
                 <button 
                   onClick={handleBuyNow}
                   disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
-                  className="flex items-center justify-center gap-3 py-5 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-lg rounded-sm shadow-xl disabled:opacity-50"
+                  className="flex items-center justify-center gap-4 py-6 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-xl rounded-sm shadow-2xl disabled:opacity-50 font-bold group"
                 >
-                  <CreditCard className="w-5 h-5" /> 바로 구매하기
+                  <CreditCard className="w-6 h-6 group-hover:scale-110 transition-transform" /> {t?.common?.buyNow || '바로 구매하기'}
                 </button>
               </div>
               
