@@ -18,33 +18,17 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
 import Breadcrumb from '@/components/ui/Breadcrumb';
-import { Product } from '@/data/mockData';
+import { Product, ProductOption, Review } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
-
-interface Review {
-  id: string;
-  user_name: string;
-  rating: number;
-  content: string;
-  image_url?: string;
-  created_at: string;
-}
-
-interface ProductOption {
-  id: string;
-  option_name: string;
-  additional_price: number;
-  stock: number;
-  is_active: boolean;
-}
+import { formatPrice } from '@/lib/utils';
 
 export default function ProductDetailClient({ 
   product, 
   relatedProducts,
   initialOptions = []
 }: { 
-  product: any, 
-  relatedProducts: any[],
+  product: Product, 
+  relatedProducts: Product[],
   initialOptions?: ProductOption[]
 }) {
   const router = useRouter();
@@ -285,18 +269,18 @@ export default function ProductDetailClient({
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
                       <span className="bg-terracotta text-white px-2 py-1 text-xs font-bold rounded-sm">{product.discount_rate}% OFF</span>
-                      <p className="text-muted line-through decoration-muted/50 text-xl font-light">₩{Number(product.price).toLocaleString()}</p>
+                      <p className="text-muted line-through decoration-muted/50 text-xl font-light">{formatPrice(Number(product.price))}</p>
                     </div>
-                    <p className="text-4xl font-serif text-terracotta font-extrabold">₩{Math.floor(product.price * (1 - (product.discount_rate || 0) / 100)).toLocaleString()}</p>
+                    <p className="text-4xl font-serif text-terracotta font-extrabold">{formatPrice(Math.floor(product.price * (1 - (product.discount_rate || 0) / 100)))}</p>
                   </div>
                 ) : (
-                  <p className="text-4xl font-serif text-charcoal">₩{Number(product.price).toLocaleString()}</p>
+                  <p className="text-4xl font-serif text-charcoal">{formatPrice(Number(product.price))}</p>
                 )}
                 
                 {Number(product.reward_points || 0) > 0 && (
                   <div className="mt-4 inline-flex items-center gap-2 bg-deep-sage/5 border border-deep-sage/20 px-4 py-2 rounded-full">
                     <Plus className="w-4 h-4 text-deep-sage" />
-                    <span className="text-sm font-medium text-deep-sage">구매 시 <span className="font-bold">{Number(product.reward_points).toLocaleString()}원</span> 적립</span>
+                    <span className="text-sm font-medium text-deep-sage">구매 시 <span className="font-bold">{formatPrice(Number(product.reward_points))}</span> 적립</span>
                   </div>
                 )}
               </div>
@@ -327,7 +311,7 @@ export default function ProductDetailClient({
                 <span className="col-span-2 text-charcoal font-medium">
                   {Number(product.shipping_fee) === 0 
                     ? (t?.shop?.freeShipping || '무료배송') 
-                    : `₩${Number(product.shipping_fee).toLocaleString()}`}
+                    : formatPrice(Number(product.shipping_fee))}
                 </span>
               </div>
             </div>
@@ -355,7 +339,7 @@ export default function ProductDetailClient({
                       const isSoldOut = opt.stock <= 0 || !opt.is_active;
                       return (
                         <option key={opt.id} value={opt.id} disabled={isSoldOut}>
-                          {opt.option_name} {opt.additional_price > 0 ? `(+₩${opt.additional_price.toLocaleString()})` : ''}
+                          {opt.option_name} {opt.additional_price > 0 ? `(+${formatPrice(opt.additional_price)})` : ''}
                           {isSoldOut ? ` (${t?.common?.soldOut || '품절'})` : ''}
                         </option>
                       );
@@ -382,7 +366,7 @@ export default function ProductDetailClient({
                 
                 <div className="pt-6 border-t border-border-light/50 flex justify-between items-end">
                   <span className="text-xs text-muted uppercase tracking-widest font-black">{t?.shop?.totalAmount || '최종 결제 금액'}</span>
-                  <p className="text-4xl font-serif text-charcoal font-black tracking-tighter">₩{totalPrice.toLocaleString()}</p>
+                  <p className="text-4xl font-serif text-charcoal font-black tracking-tighter">{formatPrice(totalPrice)}</p>
                 </div>
               </div>
 

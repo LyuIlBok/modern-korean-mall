@@ -10,13 +10,16 @@ import {
 import Link from 'next/link';
 import Image from 'next/image';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { Order, OrderItem } from '@/types';
+import { formatPrice } from '@/lib/utils';
+import Button from '@/components/ui/Button';
 
 function GuestOrderContent() {
   const { t } = useLanguageStore();
   const [orderNumber, setOrderNumber] = useState('');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [error, setError] = useState('');
 
   const handleSearch = async (e: React.FormEvent) => {
@@ -114,13 +117,15 @@ function GuestOrderContent() {
                 </div>
               )}
 
-              <button 
+              <Button 
                 type="submit" 
-                disabled={isLoading}
-                className="w-full bg-charcoal text-white py-6 rounded-sm hover:bg-deep-sage transition-all font-bold uppercase tracking-widest flex items-center justify-center gap-3 shadow-lg disabled:opacity-50"
+                isLoading={isLoading}
+                size="xl"
+                className="w-full"
+                leftIcon={<Search className="w-5 h-5" />}
               >
-                {isLoading ? <Loader2 className="w-6 h-6 animate-spin" /> : <><Search className="w-5 h-5" /> 주문 조회하기</>}
-              </button>
+                주문 조회하기
+              </Button>
             </form>
           </motion.div>
         ) : (
@@ -149,22 +154,22 @@ function GuestOrderContent() {
                 </h3>
               </div>
               <div className="divide-y divide-border-light">
-                {order.order_items.map((item: any) => (
+                {order.order_items?.map((item: OrderItem) => (
                   <div key={item.id} className="p-8 flex items-center justify-between group">
                     <div className="space-y-1">
                       <p className="font-serif text-lg text-charcoal group-hover:text-deep-sage transition-colors">{item.product_name}</p>
                       {item.option_name && <p className="text-xs text-muted">Option: {item.option_name}</p>}
-                      <p className="text-xs text-muted font-medium">{item.quantity}개 | ₩{item.price.toLocaleString()}</p>
+                      <p className="text-xs text-muted font-medium">{item.quantity}개 | {formatPrice(item.price)}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-serif text-xl font-bold">₩{(item.price * item.quantity).toLocaleString()}</p>
+                      <p className="font-serif text-xl font-bold">{formatPrice(item.price * item.quantity)}</p>
                     </div>
                   </div>
                 ))}
               </div>
               <div className="p-8 bg-hanji-white/30 flex justify-between items-center">
                 <span className="text-sm font-bold text-muted uppercase tracking-widest">Total Amount</span>
-                <span className="font-serif text-3xl font-black text-charcoal">₩{order.total_price.toLocaleString()}</span>
+                <span className="font-serif text-3xl font-black text-charcoal">{formatPrice(order.total_price)}</span>
               </div>
             </div>
 
@@ -207,7 +212,7 @@ function GuestOrderContent() {
                   </div>
                   <div className="grid grid-cols-3 text-xs">
                     <span className="text-muted font-bold">결제금액</span>
-                    <span className="col-span-2 text-charcoal font-bold">₩{order.total_price.toLocaleString()}</span>
+                    <span className="col-span-2 text-charcoal font-bold">{formatPrice(order.total_price)}</span>
                   </div>
                   <div className="grid grid-cols-3 text-xs">
                     <span className="text-muted font-bold">결제상태</span>
@@ -217,12 +222,14 @@ function GuestOrderContent() {
               </div>
             </div>
 
-            <button 
+            <Button 
               onClick={() => setOrder(null)}
-              className="w-full py-6 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-xs font-bold uppercase tracking-widest rounded-sm"
+              variant="outline"
+              size="lg"
+              className="w-full"
             >
               다른 주문 조회하기
-            </button>
+            </Button>
           </motion.div>
         )}
       </div>

@@ -1,25 +1,4 @@
-export type Category = '농산물' | '농자재';
-
-export interface Product {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  category: Category;
-  imageUrl: string;
-  shipping_fee: number;
-  images?: string[];
-  detail_content_images?: string[];
-  stock: number;
-  is_sold_out: boolean;
-  discount_rate?: number; // 추가
-  reward_points?: number; // 추가
-  specs?: {
-    origin?: string;
-    producer?: string;
-    [key: string]: any;
-  };
-}
+import { Category, Product } from '@/types';
 
 export const products: Product[] = [
   {
