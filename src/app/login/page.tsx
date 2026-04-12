@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle, User, Phone, Check } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle, User, Phone, Check, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { Provider } from '@supabase/supabase-js';
@@ -20,7 +20,9 @@ function LoginContent() {
   const [isForgotPassword, setIsForgotPassword] = useState(false);
   const [isFindId, setIsFindId] = useState(false);
   const [resetSent, setResetSent] = useState(false);
-  const [foundEmail, setFoundEmail] = useState<string | null>(null);
+  const [foundEmailMasked, setFoundEmailMasked] = useState<string | null>(null);
+  const [foundEmailFull, setFoundEmailFull] = useState<string | null>(null);
+  const [emailSent, setEmailSent] = useState(false);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -113,7 +115,8 @@ function LoginContent() {
     if (!fullName || !phone) return;
     setIsLoading(true);
     setErrorMsg('');
-    setFoundEmail(null);
+    setFoundEmailMasked(null);
+    setFoundEmailFull(null);
 
     try {
       const res = await fetch('/api/auth/find-id', {
@@ -124,12 +127,40 @@ function LoginContent() {
 
       const result = await res.json();
       if (res.ok) {
-        setFoundEmail(result.email);
+        // 실제 API는 마스킹된 것만 주지만, 고도화를 위해 unmaskedEmail을 받는다고 가정하거나 
+        // 또는 보안상 마스킹된 것만 보여주고 '이메일로 받기'는 서버에서 처리
+        setFoundEmailMasked(result.email);
+        // Note: For real production, the server should handle unmasked email internally
+        // result.fullEmail would only be sent if the API is configured to return it securely
+        setFoundEmailFull(result.fullEmail || null); 
       } else {
         setErrorMsg(result.error || '일치하는 회원 정보가 없습니다.');
       }
     } catch (err) {
       setErrorMsg('아이디 찾기 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSendFullIdEmail = async () => {
+    if (!fullName || !phone || emailSent) return;
+    setIsLoading(true);
+    try {
+      const res = await fetch('/api/auth/send-id-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, phone: phone.replace(/[^0-9]/g, '') }),
+      });
+      if (res.ok) {
+        setEmailSent(true);
+        alert('가입하신 이메일로 전체 아이디가 발송되었습니다.');
+      } else {
+        const result = await res.json();
+        alert(result.error || '발송 실패');
+      }
+    } catch (err) {
+      alert('오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -237,7 +268,7 @@ function LoginContent() {
                     <div className="flex gap-3">
                       <button 
                         type="button" 
-                        onClick={() => setIsFindId(true)}
+                        onClick={() => { setIsFindId(true); setErrorMsg(''); }}
                         className="text-[10px] text-muted hover:text-charcoal hover:underline"
                       >
                         아이디 찾기
@@ -245,7 +276,7 @@ function LoginContent() {
                       <span className="text-[10px] text-border-light">|</span>
                       <button 
                         type="button" 
-                        onClick={() => setIsForgotPassword(true)}
+                        onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
                         className="text-[10px] text-deep-sage hover:underline"
                       >
                         비밀번호 찾기
@@ -325,8 +356,8 @@ function LoginContent() {
             </>
           ) : isFindId ? (
             <div className="space-y-6">
-              {foundEmail ? (
-                <div className="text-center py-8 space-y-6">
+              {foundEmailMasked ? (
+                <div className="text-center py-8 space-y-8">
                   <div className="w-16 h-16 bg-deep-sage/10 rounded-full flex items-center justify-center mx-auto">
                     <User className="w-8 h-8 text-deep-sage" />
                   </div>
@@ -334,15 +365,26 @@ function LoginContent() {
                     <h3 className="font-serif text-xl text-charcoal font-bold">아이디를 찾았습니다</h3>
                     <p className="text-sm text-muted leading-relaxed">
                       회원님의 아이디(이메일)는<br/>
-                      <strong className="text-deep-sage text-lg">{foundEmail}</strong> 입니다.
+                      <strong className="text-deep-sage text-lg">{foundEmailMasked}</strong> 입니다.
                     </p>
                   </div>
-                  <button 
-                    onClick={() => { setIsFindId(false); setFoundEmail(null); setEmail(foundEmail.replace(/\*/g, '')); }}
-                    className="text-sm text-deep-sage font-bold border-b border-deep-sage pb-0.5 hover:text-charcoal hover:border-charcoal transition-colors"
-                  >
-                    로그인 화면으로 돌아가기
-                  </button>
+                  
+                  <div className="space-y-3">
+                    <button 
+                      onClick={() => { setIsFindId(false); setFoundEmailMasked(null); setEmail(foundEmailMasked.replace(/\*/g, '')); }}
+                      className="w-full bg-charcoal text-white py-4 rounded-xl font-bold hover:bg-deep-sage transition-all shadow-lg text-sm"
+                    >
+                      로그인하러 가기
+                    </button>
+                    <button 
+                      disabled={emailSent || isLoading}
+                      onClick={handleSendFullIdEmail}
+                      className="w-full flex items-center justify-center gap-2 text-xs text-muted font-bold py-2 hover:text-charcoal transition-colors disabled:opacity-50"
+                    >
+                      {emailSent ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
+                      {emailSent ? '발송 완료' : '전체 아이디 이메일로 받기'}
+                    </button>
+                  </div>
                 </div>
               ) : (
                 <form onSubmit={handleFindId} className="space-y-8">
