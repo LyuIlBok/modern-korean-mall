@@ -78,6 +78,7 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
     .from('products')
     .select('*')
     .eq('category', product.category)
+    .eq('is_active', true)
     .neq('id', product.id)
     .limit(4);
 

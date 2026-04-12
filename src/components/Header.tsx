@@ -28,9 +28,35 @@ export default function Header() {
   const itemCount = hasMounted ? items.reduce((total, item) => total + item.quantity, 0) : 0;
   const wishCount = hasMounted ? wishItems.length : 0;
 
-  const popularKeywords = language === 'ko' 
-    ? ['연천 오대쌀', '꿀고구마', '무쇠 가마솥', '햅쌀', '유기농']
-    : ['Rice', 'Sweet Potato', 'Iron Pot', 'Organic', 'New Harvest'];
+  const [dynamicKeywords, setDynamicKeywords] = useState<string[]>([]);
+
+  useEffect(() => {
+    const fetchKeywords = async () => {
+      try {
+        const { data } = await supabase
+          .from('products')
+          .select('name, category')
+          .eq('is_active', true)
+          .limit(10);
+        
+        if (data) {
+          // Extract unique names and categories, then take top 6
+          const allTags = data.flatMap(p => [p.name, p.category]);
+          const uniqueTags = Array.from(new Set(allTags)).filter(Boolean).slice(0, 6);
+          setDynamicKeywords(uniqueTags);
+        }
+      } catch (err) {
+        console.error('Error fetching keywords:', err);
+      }
+    };
+    fetchKeywords();
+  }, []);
+
+  const popularKeywords = dynamicKeywords.length > 0 ? dynamicKeywords : (
+    language === 'ko' 
+      ? ['연천 오대쌀', '꿀고구마', '무쇠 가마솥', '햅쌀', '유기농']
+      : ['Rice', 'Sweet Potato', 'Iron Pot', 'Organic', 'New Harvest']
+  );
 
   useEffect(() => {
     const getSession = async () => {
