@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
+import Breadcrumb from '@/components/ui/Breadcrumb';
 import { Product } from '@/data/mockData';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -180,13 +181,22 @@ export default function ProductDetailClient({
     <div className={`animate-pulse bg-charcoal/5 rounded-sm ${className}`} />
   );
 
+  const breadcrumbItems = [
+    { label: t?.common?.shop || 'SHOP', href: '/shop' },
+    { label: product.category, href: `/shop?category=${product.category}` },
+    { label: product.name }
+  ];
+
   return (
     <div className="bg-hanji-white min-h-screen flex flex-col">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-1">
         {/* Navigation */}
-        <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-12 group text-xs uppercase tracking-widest">
-          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> {t?.common?.shop || 'Back to Shop'}
-        </Link>
+        <div className="flex flex-col gap-2 mb-12">
+          <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors group text-xs uppercase tracking-widest w-fit">
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> {t?.common?.shop || 'Back to Shop'}
+          </Link>
+          <Breadcrumb items={breadcrumbItems} />
+        </div>
 
         {/* 1. Purchase Area (Top Section) */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 xl:gap-24 mb-32">

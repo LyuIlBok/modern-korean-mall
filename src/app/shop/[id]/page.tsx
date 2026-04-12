@@ -9,35 +9,46 @@ export const revalidate = 0;
 
 export async function generateMetadata(props: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const params = await props.params;
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-korean-mall.vercel.app';
+  const canonicalUrl = `${siteUrl}/shop/${params.id}`;
+
   const { data: product } = await supabase.from('products').select('*').eq('id', params.id).single();
 
   if (!product) {
     const mock = mockProducts.find(p => p.id === params.id);
     if (!mock) return { title: '상품을 찾을 수 없습니다' };
+    
     return {
       title: mock.name,
       description: mock.description,
+      alternates: { canonical: canonicalUrl },
       openGraph: {
         title: `${mock.name} | 자연의 결`,
-        description: `${mock.price.toLocaleString()}원 - ${mock.description}`,
+        description: `${mock.price.toLocaleString()}원 - ${mock.description.substring(0, 160)}`,
         images: [{ url: mock.imageUrl }],
+        url: canonicalUrl,
+        type: 'website',
       }
     };
   }
 
+  const plainDescription = product.description.replace(/<[^>]*>?/gm, '').substring(0, 160);
+
   return {
     title: product.name,
-    description: product.description,
+    description: plainDescription,
+    alternates: { canonical: canonicalUrl },
     openGraph: {
       title: `${product.name} | 자연의 결`,
-      description: `${product.price.toLocaleString()}원 - ${product.description}`,
+      description: `${product.price.toLocaleString()}원 - ${plainDescription}`,
       images: [{ url: product.imageUrl }],
-      type: 'article',
+      url: canonicalUrl,
+      type: 'website',
     },
     twitter: {
       card: 'summary_large_image',
       title: product.name,
-      description: product.description,
+      description: plainDescription,
       images: [product.imageUrl],
     },
   };
@@ -70,10 +81,37 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
     .neq('id', product.id)
     .limit(4);
 
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://modern-korean-mall.vercel.app';
+  const jsonLd = {
+    '@context': 'https://schema.org/',
+    '@type': 'Product',
+    name: product.name,
+    image: [product.imageUrl],
+    description: product.description.replace(/<[^>]*>?/gm, '').substring(0, 160),
+    sku: product.id,
+    brand: {
+      '@type': 'Brand',
+      name: '자연의 결'
+    },
+    offers: {
+      '@type': 'Offer',
+      url: `${siteUrl}/shop/${product.id}`,
+      priceCurrency: 'KRW',
+      price: product.price,
+      availability: product.is_sold_out ? 'https://schema.org/OutOfStock' : 'https://schema.org/InStock'
+    }
+  };
+
   return (
-    <ProductDetailClient 
-      product={product} 
-      relatedProducts={relatedProducts || []} 
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <ProductDetailClient 
+        product={product} 
+        relatedProducts={relatedProducts || []} 
+      />
+    </>
   );
 }
