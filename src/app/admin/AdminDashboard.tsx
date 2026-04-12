@@ -9,7 +9,7 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -58,6 +58,8 @@ interface AdminOrderItem {
   product_id: string;
   quantity: number;
   price: number;
+  product_name?: string;
+  product_price?: number;
   products: {
     name: string;
     imageUrl: string;
@@ -254,6 +256,31 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleRestoreProduct = async (product: AdminProduct) => {
+    if (!confirm(`'${product.name}' 상품을 다시 활성화(노출) 하시겠습니까?`)) return;
+    
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ is_active: true })
+        .eq('id', product.id);
+        
+      if (error) {
+        console.error('Restore error details:', error);
+        alert(`활성화 실패: ${error.message} (${error.details || 'No additional details'})`);
+        return;
+      }
+      
+      setProducts(prev => prev.map(p => p.id === product.id ? { ...p, is_active: true } : p));
+      alert('상품이 다시 활성화되었습니다.');
+    } catch (err: any) {
+      alert(`시스템 오류: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case '결제완료': return 'bg-blue-50 text-blue-600 border-blue-100';
@@ -267,9 +294,6 @@ export default function AdminDashboard() {
 
   if (isCheckingAuth) return <div className="min-h-screen flex items-center justify-center bg-hanji-white text-deep-sage uppercase text-xs">Loading Dashboard...</div>;
   if (!isAdmin) return null;
-
-  const totalSales = orders.reduce((sum, o) => sum + (Number(o.total_price) || 0), 0);
-  const pendingOrdersCount = orders.filter(o => o.status === '결제완료' || o.status === '상품준비중').length;
 
   const sidebarItems: SidebarItem[] = [
     { id: 'dashboard', label: t?.admin?.navDashboard || '운영 현황', icon: TrendingUp },
@@ -476,7 +500,23 @@ export default function AdminDashboard() {
                             >
                               <Edit3 className="w-4 h-4" />
                             </button>
-                            <button onClick={() => handleDeleteProduct(p)} className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"><Trash2 className="w-4 h-4" /></button>
+                            {p.is_active === false ? (
+                              <button 
+                                onClick={() => handleRestoreProduct(p)} 
+                                className="p-2 hover:bg-green-50 rounded-full transition-all text-muted hover:text-green-600"
+                                title="상품 복구(노출)"
+                              >
+                                <RefreshCw className="w-4 h-4" />
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => handleDeleteProduct(p)} 
+                                className="p-2 hover:bg-terracotta/10 rounded-full transition-all text-muted hover:text-terracotta"
+                                title="상품 비활성화(숨김)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            )}
                           </div>
                         </td>
                       </tr>

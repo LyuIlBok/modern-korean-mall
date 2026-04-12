@@ -26,6 +26,7 @@ interface AdminProduct {
   reward_points?: number;
   discount_rate?: number;
   is_sold_out?: boolean;
+  is_active?: boolean;
   origin?: string;
   producer?: string;
 }
@@ -54,8 +55,10 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     imageUrl: 'https://images.unsplash.com/photo-1542838132-92c53300491e',
     reward_points: 0,
     discount_rate: 0,
+    is_active: true,
     origin: '경기도 연천군',
     producer: '농업회사법인 복이네농장(주)'
+  });
   });
 
   const [mainImage, setMainImage] = useState<File | null>(null);
@@ -260,14 +263,15 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
 
               <div className="grid grid-cols-2 gap-12">
                 <div className="space-y-3">
-                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.totalStock || '기본 재고'}</label>
-                  <input 
-                    required 
-                    type="number" 
-                    value={formData.stock} 
-                    onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})} 
-                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
-                  />
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.status || '노출 상태'}</label>
+                  <select 
+                    value={formData.is_active === false ? 'inactive' : 'active'} 
+                    onChange={(e) => setFormData({...formData, is_active: e.target.value === 'active'})} 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-bold appearance-none cursor-pointer"
+                  >
+                    <option value="active" className="text-green-600 font-bold">{t?.admin?.active || '노출 (Active)'}</option>
+                    <option value="inactive" className="text-terracotta font-bold">{t?.admin?.inactive || '숨김 (Hidden)'}</option>
+                  </select>
                 </div>
                 <div className="space-y-3">
                   <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.category || '카테고리'}</label>
