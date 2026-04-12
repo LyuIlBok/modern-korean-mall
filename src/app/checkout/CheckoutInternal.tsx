@@ -47,6 +47,41 @@ export default function CheckoutInternal() {
     memo: ''
   });
 
+  const [errors, setErrors] = useState({
+    name: '',
+    email: '',
+    phone: ''
+  });
+
+  const validateName = (name: string) => {
+    if (!name.trim()) return '성함을 입력해 주세요.';
+    if (name.trim().length < 2) return '성함을 2자 이상 입력해 주세요.';
+    return '';
+  };
+
+  const validateEmail = (email: string) => {
+    if (!email.trim()) return '이메일을 입력해 주세요.';
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) return '올바른 이메일 형식을 입력해 주세요.';
+    return '';
+  };
+
+  const validatePhone = (phone: string) => {
+    const cleanPhone = phone.replace(/[^0-9]/g, '');
+    if (!cleanPhone) return '연락처를 입력해 주세요.';
+    if (cleanPhone.length < 10 || cleanPhone.length > 11) return '올바른 연락처 형식을 입력해 주세요 (10~11자).';
+    return '';
+  };
+
+  const handleBlur = (field: 'name' | 'email' | 'phone') => {
+    let error = '';
+    if (field === 'name') error = validateName(formData.name);
+    if (field === 'email') error = validateEmail(formData.email);
+    if (field === 'phone') error = validatePhone(formData.phone);
+    
+    setErrors(prev => ({ ...prev, [field]: error }));
+  };
+
   const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
   const [addressLoading, setAddressLoading] = useState(false);
 
@@ -160,8 +195,19 @@ export default function CheckoutInternal() {
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.address || !formData.phone) {
-      alert('배송 정보를 모두 입력해 주세요.');
+    
+    // Final validation before payment
+    const nameErr = validateName(formData.name);
+    const emailErr = validateEmail(formData.email);
+    const phoneErr = validatePhone(formData.phone);
+    
+    if (nameErr || emailErr || phoneErr || !formData.address) {
+      setErrors({
+        name: nameErr,
+        email: emailErr,
+        phone: phoneErr
+      });
+      alert('입력 정보를 다시 확인해 주세요.');
       return;
     }
 
@@ -422,23 +468,39 @@ export default function CheckoutInternal() {
                   <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.name}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
-                    <input required value={formData.name} onChange={e => setProfileData({...formData, name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" placeholder={t.checkout.name} />
+                    <input 
+                      required 
+                      value={formData.name} 
+                      onChange={e => setProfileData({...formData, name: e.target.value})} 
+                      onBlur={() => handleBlur('name')}
+                      className={`w-full bg-hanji-white/30 border ${errors.name ? 'border-terracotta' : 'border-border-light'} pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all`} 
+                      placeholder={t.checkout.name} 
+                    />
                   </div>
-                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>
+                  {errors.name && <p className="text-xs text-terracotta font-medium ml-1">{errors.name}</p>}
+                  {!errors.name && <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>}
                 </div>
                 
                 <div className="space-y-3">
                   <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.phone}</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
-                    <input required value={formData.phone} onChange={e => setProfileData({...formData, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" placeholder="01000000000" />
+                    <input 
+                      required 
+                      value={formData.phone} 
+                      onChange={e => setProfileData({...formData, phone: e.target.value})} 
+                      onBlur={() => handleBlur('phone')}
+                      className={`w-full bg-hanji-white/30 border ${errors.phone ? 'border-terracotta' : 'border-border-light'} pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all`} 
+                      placeholder="010-0000-0000" 
+                    />
                   </div>
-                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>
+                  {errors.phone && <p className="text-xs text-terracotta font-medium ml-1">{errors.phone}</p>}
+                  {!errors.phone && <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>}
                 </div>
 
                 <div className="space-y-3">
                   <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">Email</label>
-                  {savedAddresses.length > 0 ? (
+                  {savedAddresses.length > 0 && formData.email ? (
                     <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-5 rounded-sm text-base text-muted font-mono">{formData.email}</div>
                   ) : (
                     <div className="relative">
@@ -448,11 +510,13 @@ export default function CheckoutInternal() {
                         type="email"
                         value={formData.email} 
                         onChange={e => setProfileData({...formData, email: e.target.value})} 
-                        className="w-full bg-hanji-white/30 border border-border-light pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all" 
+                        onBlur={() => handleBlur('email')}
+                        className={`w-full bg-hanji-white/30 border ${errors.email ? 'border-terracotta' : 'border-border-light'} pl-12 pr-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all`} 
                         placeholder="example@email.com" 
                       />
                     </div>
                   )}
+                  {errors.email && <p className="text-xs text-terracotta font-medium ml-1">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-3 md:col-span-2 pt-4">

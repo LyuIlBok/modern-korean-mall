@@ -58,6 +58,7 @@ export default function ProductDetailClient({
   const [loadingReviews, setLoadingReviews] = useState(true);
 
   const [options, setOptions] = useState<ProductOption[]>([]);
+  const [loadingOptions, setLoadingOptions] = useState(true);
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
 
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
@@ -66,6 +67,7 @@ export default function ProductDetailClient({
 
   useEffect(() => {
     const fetchReviews = async () => {
+      setLoadingReviews(true);
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
@@ -77,6 +79,7 @@ export default function ProductDetailClient({
     };
     
     const fetchOptions = async () => {
+      setLoadingOptions(true);
       const { data, error } = await supabase
         .from('product_options')
         .select('*')
@@ -84,6 +87,7 @@ export default function ProductDetailClient({
         .order('created_at', { ascending: true });
       
       if (data) setOptions(data as ProductOption[]);
+      setLoadingOptions(false);
     };
 
     fetchReviews();
@@ -171,6 +175,10 @@ export default function ProductDetailClient({
       <Star key={i} className={`w-3 h-3 ${i < Math.floor(rating) ? 'text-amber-400 fill-current' : 'text-border-light'}`} />
     ));
   };
+
+  const Skeleton = ({ className }: { className: string }) => (
+    <div className={`animate-pulse bg-charcoal/5 rounded-sm ${className}`} />
+  );
 
   return (
     <div className="bg-hanji-white min-h-screen flex flex-col">
@@ -309,7 +317,12 @@ export default function ProductDetailClient({
             </div>
 
             {/* Options Selection */}
-            {options.length > 0 && (
+            {loadingOptions ? (
+              <div className="space-y-4 mb-8">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-[58px] w-full" />
+              </div>
+            ) : options.length > 0 && (
               <div className="space-y-4 mb-8">
                 <label className="text-xs text-muted uppercase tracking-[0.2em] font-bold ml-1">{t?.shop?.optionSelection || '옵션 선택'}</label>
                 <div className="relative">
@@ -406,7 +419,32 @@ export default function ProductDetailClient({
             </div>
           </div>
 
-          {reviews.length === 0 ? (
+          {loadingReviews ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {[1, 2].map((i) => (
+                <div key={i} className="bg-white p-10 border border-border-light rounded-sm shadow-sm space-y-6">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-3">
+                      <Skeleton className="w-10 h-10 rounded-full" />
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-20" />
+                        <Skeleton className="h-3 w-16" />
+                      </div>
+                    </div>
+                    <Skeleton className="h-4 w-24" />
+                  </div>
+                  <div className="flex gap-6">
+                    <Skeleton className="w-24 h-24 flex-shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-[90%]" />
+                      <Skeleton className="h-4 w-[40%]" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : reviews.length === 0 ? (
             <div className="py-24 text-center bg-white border border-dashed border-border-light rounded-sm">
               <MessageCircle className="w-10 h-10 text-muted/30 mx-auto mb-4" />
               <p className="text-muted italic font-light">아직 작성된 리뷰가 없습니다.</p>
