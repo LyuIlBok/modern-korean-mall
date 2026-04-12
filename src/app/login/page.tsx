@@ -8,6 +8,8 @@ import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle, Us
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { Provider } from '@supabase/supabase-js';
+import { useCartStore } from '@/store/useCartStore';
+import { useWishlistStore } from '@/store/useWishlistStore';
 
 function LoginContent() {
   const [email, setEmail] = useState('');
@@ -65,7 +67,7 @@ function LoginContent() {
     setErrorMsg('');
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
@@ -75,6 +77,10 @@ function LoginContent() {
         return;
       }
       
+      if (data.session?.user) {
+        await syncGuestData(data.session.user.id);
+      }
+
       router.refresh();
       router.push(redirectedFrom || '/');
     } catch (err: unknown) {
@@ -82,6 +88,53 @@ function LoginContent() {
       setErrorMsg(getErrorMessage(msg));
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const syncGuestData = async (userId: string) => {
+    try {
+      // 1. Cart Sync
+      const cartStore = useCartStore.getState();
+      if (cartStore.items.length > 0) {
+        const cartItemsToInsert = cartStore.items.map(item => ({
+          user_id: userId,
+          product_id: item.id,
+          quantity: item.quantity,
+          option_name: item.optionName || null,
+          option_price: item.optionPrice || 0
+        }));
+
+        // Insert into Supabase (Upsert or handle duplicates if needed)
+        // For simplicity using upsert if table has unique constraint on (user_id, product_id, option_name)
+        await supabase.from('cart_items').upsert(cartItemsToInsert, { 
+          onConflict: 'user_id, product_id, option_name' 
+        });
+        
+        // No clearCart here yet, we'll probably re-fetch server cart later
+      }
+
+      // 2. Wishlist Sync
+      const wishlistStore = useWishlistStore.getState();
+      if (wishlistStore.items.length > 0) {
+        const wishlistToInsert = wishlistStore.items.map(p => ({
+          user_id: userId,
+          product_id: p.id
+        }));
+
+        await supabase.from('wishlists').upsert(wishlistToInsert, {
+          onConflict: 'user_id, product_id'
+        });
+      }
+
+      // 3. Clear Local and Alert
+      if (cartStore.items.length > 0 || wishlistStore.items.length > 0) {
+        cartStore.clearCart();
+        // Wishlist is synced automatically on setUserId in most cases, but we explicitly moved it here
+        // so we ensure local state reflects DB.
+        alert('장바구니와 관심상품이 계정으로 안전하게 옮겨졌습니다.');
+      }
+    } catch (err) {
+      console.error('Migration error:', err);
     }
   };
 

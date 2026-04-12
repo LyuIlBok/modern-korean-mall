@@ -102,6 +102,10 @@ export default function ProductDetailClient({
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (options.length > 0 && !selectedOption) {
+      alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
+      return;
+    }
     addItem({ 
       id: product.id, 
       name: product.name, 
@@ -119,6 +123,10 @@ export default function ProductDetailClient({
 
   const handleBuyNow = () => {
     if (!product) return;
+    if (options.length > 0 && !selectedOption) {
+      alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
+      return;
+    }
     addItem({ 
       id: product.id, 
       name: product.name, 
@@ -352,14 +360,14 @@ export default function ProductDetailClient({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <button 
                   onClick={handleAddToCart}
-                  disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
+                  disabled={product.is_sold_out}
                   className="flex items-center justify-center gap-4 py-6 bg-white border-2 border-charcoal text-charcoal hover:bg-hanji-white transition-all font-serif text-xl rounded-sm disabled:opacity-50 font-bold shadow-lg"
                 >
                   <ShoppingBag className="w-6 h-6" /> {t?.common?.addToCart || '장바구니 담기'}
                 </button>
                 <button 
                   onClick={handleBuyNow}
-                  disabled={product.is_sold_out || (options.length > 0 && !selectedOption)}
+                  disabled={product.is_sold_out}
                   className="flex items-center justify-center gap-4 py-6 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-xl rounded-sm shadow-2xl disabled:opacity-50 font-bold group"
                 >
                   <CreditCard className="w-6 h-6 group-hover:scale-110 transition-transform" /> {t?.common?.buyNow || '바로 구매하기'}

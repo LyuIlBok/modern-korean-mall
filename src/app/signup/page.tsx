@@ -87,8 +87,8 @@ export default function SignupPage() {
   const isFormValid = fullName && email && !isEmailDuplicate && isEmailChecked && password.length >= 6 && isPasswordMatch && agreements.terms && agreements.privacy && phone.length >= 12;
 
   const getErrorMessage = (message: string) => {
-    if (message.includes('User already registered')) {
-      return '이미 가입된 이메일입니다. 로그인이나 비밀번호 찾기를 이용해 주세요.';
+    if (message.includes('User already registered') || message.includes('already_exists')) {
+      return '이미 가입된 이메일입니다. (간편 로그인을 이용하셨다면 해당 소셜 계정으로 로그인해 주세요.)';
     }
     if (message.includes('Password is too short')) {
       return '비밀번호는 최소 6자 이상이어야 합니다.';

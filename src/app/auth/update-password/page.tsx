@@ -36,16 +36,26 @@ function UpdatePasswordContent() {
       });
 
       if (error) {
-        setErrorMsg(error.message);
+        if (error.message.includes('New password should be different')) {
+          setErrorMsg('기존 비밀번호와 다른 비밀번호를 입력해 주세요.');
+        } else if (error.message.includes('weak_password')) {
+          setErrorMsg('비밀번호 보안 수준이 낮습니다. 더 복잡한 비밀번호를 사용해 주세요.');
+        } else {
+          setErrorMsg('비밀번호 변경 중 오류가 발생했습니다: ' + error.message);
+        }
         return;
       }
 
+      alert('비밀번호가 성공적으로 변경되었습니다. 새 비밀번호로 다시 로그인해 주세요.');
+      
+      // 로그아웃 처리 후 로그인 페이지로 이동
+      await supabase.auth.signOut();
       setIsSuccess(true);
       setTimeout(() => {
         router.push('/login');
-      }, 3000);
+      }, 2000);
     } catch (err: any) {
-      setErrorMsg(err.message || '오류가 발생했습니다.');
+      setErrorMsg('문제가 발생했습니다. 잠시 후 다시 시도해 주세요.');
     } finally {
       setIsLoading(false);
     }
