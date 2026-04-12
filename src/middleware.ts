@@ -61,7 +61,6 @@ export async function middleware(request: NextRequest) {
 
   // 1. 보호된 경로 리다이렉트 처리
   const isProtectedRoute = pathname.startsWith('/admin') || 
-                           pathname.startsWith('/checkout') || 
                            pathname.startsWith('/mypage')
 
   if (isProtectedRoute && !user) {
