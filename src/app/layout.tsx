@@ -8,6 +8,7 @@ import ChatWidget from "@/components/ChatWidget";
 import AnnouncementPopup from "@/components/layout/AnnouncementPopup";
 import Script from "next/script";
 import { Metadata } from 'next';
+import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
 
 const notoSerif = Noto_Serif_KR({
   subsets: ["latin"],
@@ -66,31 +67,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ko">
+      <GoogleTagManager gtmId="GTM-KM6X382D" />
+      <GoogleAnalytics gaId="G-13W7B0K2Y1" />
       <head>
-        {/* Google Tag Manager (GTM) */}
-        <Script id="gtm-script" strategy="afterInteractive">
-          {`(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
-          new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
-          j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
-          'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
-          })(window,document,'script','dataLayer','GTM-KM6X382D');`}
-        </Script>
-
-        {/* Google Analytics (GA4) */}
-        <Script 
-          async 
-          src="https://www.googletagmanager.com/gtag/js?id=G-13W7B0K2Y1" 
-          strategy="afterInteractive" 
-        />
-        <Script id="google-analytics" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-13W7B0K2Y1');
-          `}
-        </Script>
-
         {/* PortOne V2 SDK */}
         <Script 
           src="https://cdn.portone.io/v2/browser-sdk.js" 
@@ -100,15 +79,6 @@ export default function RootLayout({
         <link rel="icon" href="/favicon.ico" />
       </head>
       <body className={`${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-hanji-white text-charcoal flex flex-col min-h-screen selection:bg-deep-sage selection:text-white`}>
-        <noscript>
-          <iframe 
-            src="https://www.googletagmanager.com/ns.html?id=GTM-KM6X382D"
-            height="0" 
-            width="0" 
-            style={{ display: 'none', visibility: 'hidden' }}
-          ></iframe>
-        </noscript>
-
         <AnnouncementPopup />
         <Header />
         <main className="flex-1 flex flex-col">

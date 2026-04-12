@@ -40,10 +40,12 @@ interface ProductOption {
 
 export default function ProductDetailClient({ 
   product, 
-  relatedProducts 
+  relatedProducts,
+  initialOptions = []
 }: { 
   product: any, 
-  relatedProducts: any[] 
+  relatedProducts: any[],
+  initialOptions?: ProductOption[]
 }) {
   const router = useRouter();
   const { t, language } = useLanguageStore();
@@ -58,8 +60,8 @@ export default function ProductDetailClient({
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loadingReviews, setLoadingReviews] = useState(true);
 
-  const [options, setOptions] = useState<ProductOption[]>([]);
-  const [loadingOptions, setLoadingOptions] = useState(true);
+  const [options, setOptions] = useState<ProductOption[]>(initialOptions);
+  const [loadingOptions, setLoadingOptions] = useState(initialOptions.length === 0);
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
 
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
@@ -80,6 +82,10 @@ export default function ProductDetailClient({
     };
     
     const fetchOptions = async () => {
+      if (initialOptions.length > 0) {
+        setLoadingOptions(false);
+        return;
+      }
       setLoadingOptions(true);
       const { data, error } = await supabase
         .from('product_options')
@@ -93,7 +99,7 @@ export default function ProductDetailClient({
 
     fetchReviews();
     fetchOptions();
-  }, [product.id]);
+  }, [product.id, initialOptions]);
 
   const avgRating = reviews.length > 0 
     ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)

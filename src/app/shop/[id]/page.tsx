@@ -61,7 +61,7 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
   // Supabase에서 상품 정보 가져오기 (images, detail_content_images, specs 포함)
   const { data: product, error } = await supabase
     .from('products')
-    .select('*, reviews(rating)')
+    .select('*, reviews(rating), product_options(*)')
     .eq('id', productId)
     .single();
 
@@ -112,6 +112,7 @@ export default async function ProductDetailPage(props: { params: Promise<{ id: s
       <ProductDetailClient 
         product={product} 
         relatedProducts={relatedProducts || []} 
+        initialOptions={product.product_options || []}
       />
     </>
   );
