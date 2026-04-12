@@ -2,18 +2,12 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useCartStore, CartItem as CartItemType } from '@/store/useCartStore';
+import { useCartStore } from '@/store/useCartStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { CartItem as CartItemType, ProductOption } from '@/types';
+import { formatPrice } from '@/lib/utils';
 import { Plus, Minus, ChevronDown, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-
-interface ProductOption {
-  id: string;
-  option_name: string;
-  additional_price: number;
-  stock: number;
-  is_active: boolean;
-}
 
 export default function CheckoutItem({ item }: { item: CartItemType }) {
   const { updateQuantity, updateOption, removeItem } = useCartStore();
@@ -66,7 +60,7 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
                   const isSoldOut = opt.stock <= 0 || !opt.is_active;
                   return (
                     <option key={opt.id} value={opt.id} disabled={isSoldOut} className="bg-charcoal text-white text-sm">
-                      {opt.option_name} (+₩{opt.additional_price.toLocaleString()}){isSoldOut ? ' (품절)' : ''}
+                      {opt.option_name} (+{formatPrice(opt.additional_price)}){isSoldOut ? ' (품절)' : ''}
                     </option>
                   );
                 })}
@@ -111,7 +105,7 @@ export default function CheckoutItem({ item }: { item: CartItemType }) {
           </div>
         </div>
       </div>
-      <p className="font-serif text-lg font-bold text-white/90">₩{totalPrice.toLocaleString()}</p>
+      <p className="font-serif text-lg font-bold text-white/90">{formatPrice(totalPrice)}</p>
     </div>
   );
 }

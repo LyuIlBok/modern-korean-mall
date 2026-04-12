@@ -2,17 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { useCartStore, CartItem as CartItemType } from '@/store/useCartStore';
+import { useCartStore } from '@/store/useCartStore';
+import { CartItem as CartItemType, ProductOption } from '@/types';
+import { formatPrice } from '@/lib/utils';
 import { Trash2, Plus, Minus, ChevronDown, Loader2 } from 'lucide-react';
 import Image from 'next/image';
-
-interface ProductOption {
-  id: string;
-  option_name: string;
-  additional_price: number;
-  stock: number;
-  is_active: boolean;
-}
 
 export default function CartItem({ item }: { item: CartItemType }) {
   const { updateQuantity, updateOption, removeItem } = useCartStore();
@@ -64,7 +58,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
                       const isSoldOut = opt.stock <= 0 || !opt.is_active;
                       return (
                         <option key={opt.id} value={opt.id} disabled={isSoldOut}>
-                          {opt.option_name} (+₩{opt.additional_price.toLocaleString()}){isSoldOut ? ' (품절)' : ''}
+                          {opt.option_name} (+{formatPrice(opt.additional_price)}){isSoldOut ? ' (품절)' : ''}
                         </option>
                       );
                     })}
@@ -88,7 +82,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
             </button>
           </div>
           <p className="text-base font-bold text-charcoal/80 mt-2">
-            ₩{(item.price + (item.optionPrice || 0)).toLocaleString()}
+            {formatPrice(item.price + (item.optionPrice || 0))}
           </p>
         </div>
         
@@ -116,7 +110,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
             </button>
           </div>
           <p className="text-xl font-black text-charcoal">
-            ₩{((item.price + (item.optionPrice || 0)) * item.quantity).toLocaleString()}
+            {formatPrice((item.price + (item.optionPrice || 0)) * item.quantity)}
           </p>
         </div>
       </div>
