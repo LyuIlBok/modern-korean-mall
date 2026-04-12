@@ -3,8 +3,8 @@
 import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
-import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle, User, Phone, Check } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
 import { Provider } from '@supabase/supabase-js';
@@ -12,11 +12,15 @@ import { Provider } from '@supabase/supabase-js';
 function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [phone, setPhone] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isFindId, setIsFindId] = useState(false);
   const [resetSent, setResetSent] = useState(false);
+  const [foundEmail, setFoundEmail] = useState<string | null>(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -104,6 +108,44 @@ function LoginContent() {
     }
   };
 
+  const handleFindId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName || !phone) return;
+    setIsLoading(true);
+    setErrorMsg('');
+    setFoundEmail(null);
+
+    try {
+      const res = await fetch('/api/auth/find-id', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fullName, phone: phone.replace(/[^0-9]/g, '') }),
+      });
+
+      const result = await res.json();
+      if (res.ok) {
+        setFoundEmail(result.email);
+      } else {
+        setErrorMsg(result.error || '일치하는 회원 정보가 없습니다.');
+      }
+    } catch (err) {
+      setErrorMsg('아이디 찾기 중 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, '');
+    let formatted = value;
+    if (value.length > 3 && value.length <= 7) {
+      formatted = `${value.slice(0, 3)}-${value.slice(3)}`;
+    } else if (value.length > 7) {
+      formatted = `${value.slice(0, 3)}-${value.slice(3, 7)}-${value.slice(7, 11)}`;
+    }
+    setPhone(formatted);
+  };
+
   const handleSocialLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao' | 'naver') => {
     e.preventDefault();
     if (socialLoading) return;
@@ -162,15 +204,15 @@ function LoginContent() {
             </div>
           </Link>
           <h1 className="font-serif text-2xl text-charcoal mb-2">
-            {isForgotPassword ? '비밀번호를 잊으셨나요?' : '다시 만나서 반가워요'}
+            {isForgotPassword ? '비밀번호를 잊으셨나요?' : isFindId ? '아이디가 생각나지 않으세요?' : '다시 만나서 반가워요'}
           </h1>
           <p className="text-sm text-muted">
-            {isForgotPassword ? '가입하신 이메일로 재설정 링크를 보내드립니다.' : '당신의 일상에 자연의 결을 더해보세요.'}
+            {isForgotPassword ? '가입하신 이메일로 재설정 링크를 보내드립니다.' : isFindId ? '가입 시 입력한 이름과 연락처로 찾을 수 있습니다.' : '당신의 일상에 자연의 결을 더해보세요.'}
           </p>
         </div>
 
         <div className="bg-white p-10 border border-border-light rounded-sm shadow-sm">
-          {!isForgotPassword ? (
+          {!isForgotPassword && !isFindId ? (
             <>
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
@@ -192,13 +234,23 @@ function LoginContent() {
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
                     <label className="text-[10px] uppercase tracking-widest text-muted">Password</label>
-                    <button 
-                      type="button" 
-                      onClick={() => setIsForgotPassword(true)}
-                      className="text-[10px] text-deep-sage hover:underline"
-                    >
-                      비밀번호 찾기
-                    </button>
+                    <div className="flex gap-3">
+                      <button 
+                        type="button" 
+                        onClick={() => setIsFindId(true)}
+                        className="text-[10px] text-muted hover:text-charcoal hover:underline"
+                      >
+                        아이디 찾기
+                      </button>
+                      <span className="text-[10px] text-border-light">|</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setIsForgotPassword(true)}
+                        className="text-[10px] text-deep-sage hover:underline"
+                      >
+                        비밀번호 찾기
+                      </button>
+                    </div>
                   </div>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
@@ -271,6 +323,95 @@ function LoginContent() {
                 </button>
               </div>
             </>
+          ) : isFindId ? (
+            <div className="space-y-6">
+              {foundEmail ? (
+                <div className="text-center py-8 space-y-6">
+                  <div className="w-16 h-16 bg-deep-sage/10 rounded-full flex items-center justify-center mx-auto">
+                    <User className="w-8 h-8 text-deep-sage" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-serif text-xl text-charcoal font-bold">아이디를 찾았습니다</h3>
+                    <p className="text-sm text-muted leading-relaxed">
+                      회원님의 아이디(이메일)는<br/>
+                      <strong className="text-deep-sage text-lg">{foundEmail}</strong> 입니다.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => { setIsFindId(false); setFoundEmail(null); setEmail(foundEmail.replace(/\*/g, '')); }}
+                    className="text-sm text-deep-sage font-bold border-b border-deep-sage pb-0.5 hover:text-charcoal hover:border-charcoal transition-colors"
+                  >
+                    로그인 화면으로 돌아가기
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleFindId} className="space-y-8">
+                  <div className="space-y-6">
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Full Name</label>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                        <input 
+                          required
+                          type="text" 
+                          disabled={isLoading}
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          placeholder="성함"
+                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                        />
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Phone Number</label>
+                      <div className="relative">
+                        <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                        <input 
+                          required
+                          type="tel" 
+                          disabled={isLoading}
+                          value={phone}
+                          onChange={handlePhoneChange}
+                          placeholder="010-0000-0000"
+                          maxLength={13}
+                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm font-mono"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -5 }} 
+                      animate={{ opacity: 1, x: 0 }} 
+                      className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
+                    >
+                      <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
+                      <p className="text-xs text-terracotta font-medium leading-relaxed">
+                        {errorMsg}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-4">
+                    <button 
+                      type="submit" 
+                      disabled={isLoading || !fullName || phone.length < 12}
+                      className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>아이디 찾기 <ArrowRight className="w-4 h-4" /></>}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setIsFindId(false)}
+                      className="w-full text-xs text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                </form>
+              )}
+            </div>
           ) : (
             <div className="space-y-6">
               {resetSent ? (

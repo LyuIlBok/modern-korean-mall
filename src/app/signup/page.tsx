@@ -86,6 +86,19 @@ export default function SignupPage() {
   const isPasswordMatch = password && confirmPassword && password === confirmPassword;
   const isFormValid = fullName && email && !isEmailDuplicate && isEmailChecked && password.length >= 6 && isPasswordMatch && agreements.terms && agreements.privacy && phone.length >= 12;
 
+  const getErrorMessage = (message: string) => {
+    if (message.includes('User already registered')) {
+      return '이미 가입된 이메일입니다. 로그인이나 비밀번호 찾기를 이용해 주세요.';
+    }
+    if (message.includes('Password is too short')) {
+      return '비밀번호는 최소 6자 이상이어야 합니다.';
+    }
+    if (message.includes('Signup is disabled')) {
+      return '현재 회원가입이 비활성화되어 있습니다.';
+    }
+    return '회원가입 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+  };
+
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!isFormValid) return;
@@ -93,25 +106,30 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName,
-            phone: phone,
+            phone: phone.replace(/[^0-9]/g, ''),
             marketing_consent: agreements.marketing
           },
         },
       });
 
-      if (error) throw error;
+      if (error) {
+        setErrorMsg(getErrorMessage(error.message));
+        return;
+      }
       
-      setIsSuccess(true);
-      setTimeout(() => router.push('/login'), 4000);
+      if (data.user) {
+        setIsSuccess(true);
+        setTimeout(() => router.push('/login'), 4000);
+      }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
-      setErrorMsg(msg);
+      setErrorMsg(getErrorMessage(msg));
     } finally {
       setIsLoading(false);
     }
