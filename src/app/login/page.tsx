@@ -168,7 +168,6 @@ function LoginContent() {
     setIsLoading(true);
     setErrorMsg('');
     setFoundEmailMasked(null);
-    setFoundEmailFull(null);
 
     try {
       const res = await fetch('/api/auth/find-id', {
@@ -182,9 +181,6 @@ function LoginContent() {
         // 실제 API는 마스킹된 것만 주지만, 고도화를 위해 unmaskedEmail을 받는다고 가정하거나 
         // 또는 보안상 마스킹된 것만 보여주고 '이메일로 받기'는 서버에서 처리
         setFoundEmailMasked(result.email);
-        // Note: For real production, the server should handle unmasked email internally
-        // result.fullEmail would only be sent if the API is configured to return it securely
-        setFoundEmailFull(result.fullEmail || null); 
       } else {
         setErrorMsg(result.error || '일치하는 회원 정보가 없습니다.');
       }
@@ -196,13 +192,13 @@ function LoginContent() {
   };
 
   const handleSendFullIdEmail = async () => {
-    if (!foundEmailFull || emailSent) return;
+    if (emailSent) return;
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/send-id-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: foundEmailFull, fullName }),
+        body: JSON.stringify({ fullName, phone: phone.replace(/[^0-9]/g, '') }),
       });
       if (res.ok) {
         setEmailSent(true);
