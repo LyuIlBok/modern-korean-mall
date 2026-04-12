@@ -1,18 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  imageUrl: string;
-  category: string;
-  description?: string | null;
-  quantity: number;
-  shipping_fee: number;
-  optionName?: string;
-  optionPrice?: number;
-}
+import { CartItem } from '@/types';
 
 interface CartState {
   items: CartItem[];

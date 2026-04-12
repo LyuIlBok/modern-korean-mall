@@ -1,4 +1,5 @@
 export type Category = '농산물' | '농자재';
+export type Language = 'ko' | 'en';
 
 export interface Product {
   id: string;
@@ -83,4 +84,20 @@ export interface Review {
   content: string;
   image_url?: string;
   created_at: string;
+}
+
+export interface InquiryProduct {
+  id: string;
+  name: string;
+  imageUrl: string;
+  orderId?: string;
+  price?: number;
+}
+
+export type ToastType = 'success' | 'error' | 'info';
+
+export interface Toast {
+  id: string;
+  message: string;
+  type: ToastType;
 }

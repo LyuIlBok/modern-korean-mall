@@ -1,12 +1,5 @@
 import { create } from 'zustand';
-
-export interface InquiryProduct {
-  id: string;
-  name: string;
-  imageUrl: string;
-  orderId?: string;
-  price?: number;
-}
+import { InquiryProduct } from '@/types';
 
 interface ChatState {
   isOpen: boolean;

@@ -1,7 +1,8 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Language, translations } from '../lib/translations';
+import { translations } from '../lib/translations';
 import { ko } from '../lib/translations/ko'; // Import ko by default for initial state
+import { Language } from '@/types';
 
 interface LanguageState {
   language: Language;

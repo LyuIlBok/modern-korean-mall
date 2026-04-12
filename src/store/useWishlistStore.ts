@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
-import { Product } from '../data/mockData';
+import { Product } from '@/types';
 import { supabase } from '../lib/supabaseClient';
 
 interface WishlistState {

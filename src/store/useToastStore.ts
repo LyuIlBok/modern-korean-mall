@@ -1,12 +1,5 @@
 import { create } from 'zustand';
-
-export type ToastType = 'success' | 'error' | 'info';
-
-interface Toast {
-  id: string;
-  message: string;
-  type: ToastType;
-}
+import { Toast, ToastType } from '@/types';
 
 interface ToastState {
   toasts: Toast[];

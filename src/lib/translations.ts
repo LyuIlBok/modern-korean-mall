@@ -1,4 +1,4 @@
-export type Language = 'ko' | 'en';
+import { Language } from '@/types';
 
 export const translations = {
   ko: () => import('./translations/ko').then(m => m.ko),
