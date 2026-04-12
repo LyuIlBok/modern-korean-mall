@@ -26,8 +26,9 @@ export const en = {
     termsOfService: 'Terms of Service',
   },
   home: {
-    heroTitle: 'The Inherent Value\nof Nature',
-    heroDesc: 'We offer pure gifts from nature and honest agricultural products.',
+    heroSubtitle: 'Premium brand of Boki Farm Agricultural Corporation',
+    heroTitle: 'Honest products from the right land, Nature Texture',
+    heroDesc: 'Contains the persistence and philosophy of Boki Farm Agricultural Corporation. We propose the purest agricultural products and right agricultural materials grown in the fertile soil and clear water of Yeoncheon, Gyeonggi-do, to your daily life.',
     exploreBtn: 'Explore Collection',
     featuredTitle: 'Crafted with Sincerity',
     featuredDesc: 'The most precious products selected by Nature Texture this season.',

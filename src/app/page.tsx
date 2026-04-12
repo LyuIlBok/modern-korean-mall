@@ -67,16 +67,15 @@ export default async function Home() {
         <div className="relative z-10 text-center px-4 space-y-8 max-w-5xl">
           <div className="flex justify-center mb-6">
             <span className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-deep-sage/20 backdrop-blur-xl border border-white/30 text-[12px] text-white uppercase tracking-[0.5em] font-bold">
-              <Leaf className="w-4 h-4 text-deep-sage" /> Agricultural Corp. Boki
+              <Leaf className="w-4 h-4 text-deep-sage" /> 농업회사법인 복이네농장의 프리미엄 브랜드
             </span>
           </div>
           <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.1] tracking-tighter drop-shadow-2xl">
-            연천의 자연을 그대로,<br/>
-            <span className="text-deep-sage-light">복이네농장</span>
+            바른 땅이 내어준 정직한 산물,<br/>
+            <span className="text-deep-sage-light">자연의 결</span>
           </h1>
           <p className="text-xl md:text-2xl text-white/90 font-light tracking-wide max-w-3xl mx-auto leading-relaxed drop-shadow-lg">
-            경기도 연천의 비옥한 토양과 맑은 물이 키워낸 정직한 결실.<br/>
-            우리는 땅의 정직함을 믿으며, 자연 본연의 맛을 식탁까지 전합니다.
+            농업회사법인 복이네농장의 뚝심과 철학을 담았습니다. 경기도 연천의 비옥한 토양과 맑은 물이 키워낸 가장 순수한 농산물과 바른 농자재를 당신의 일상에 제안합니다.
           </p>
           
           <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-6">

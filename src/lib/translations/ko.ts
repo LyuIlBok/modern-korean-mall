@@ -26,8 +26,9 @@ export const ko = {
     termsOfService: '이용약관',
   },
   home: {
-    heroTitle: '자연이 빚은\n본연의 가치',
-    heroDesc: '꾸밈없는 자연의 산물과 정직한 농산물을 제안합니다.',
+    heroSubtitle: '농업회사법인 복이네농장의 프리미엄 브랜드',
+    heroTitle: '바른 땅이 내어준 정직한 산물, 자연의 결',
+    heroDesc: '농업회사법인 복이네농장의 뚝심과 철학을 담았습니다. 경기도 연천의 비옥한 토양과 맑은 물이 키워낸 가장 순수한 농산물과 바른 농자재를 당신의 일상에 제안합니다.',
     exploreBtn: '만물상 탐색하기',
     featuredTitle: '정성을 담은 산물',
     featuredDesc: '이 계절, 자연의 결이 선별한 가장 귀한 제품들입니다.',
