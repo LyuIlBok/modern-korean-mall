@@ -23,7 +23,6 @@ function LoginContent() {
   const [isFindId, setIsFindId] = useState(false);
   const [resetSent, setResetSent] = useState(false);
   const [foundEmailMasked, setFoundEmailMasked] = useState<string | null>(null);
-  const [foundEmailFull, setFoundEmailFull] = useState<string | null>(null);
   const [emailSent, setEmailSent] = useState(false);
   
   const router = useRouter();

@@ -72,10 +72,10 @@ export async function middleware(request: NextRequest) {
 
   // 2. 관리자 권한 추가 검증 (/admin 경로 접근 시)
   if (pathname.startsWith('/admin') && user) {
-    // 최고 관리자 화이트리스트 (Email 기반)
-    const SUPER_ADMIN_EMAIL = process.env.NEXT_PUBLIC_ADMIN_EMAIL || 'grow930706@gmail.com';
+    // 최고 관리자 화이트리스트 (Email 기반) - 환경 변수로 관리
+    const SUPER_ADMIN_EMAIL = process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL;
     
-    if (user.email === SUPER_ADMIN_EMAIL) {
+    if (SUPER_ADMIN_EMAIL && user.email === SUPER_ADMIN_EMAIL) {
       // 화이트리스트 이메일이면 DB 조회 없이 통과
       return response;
     }

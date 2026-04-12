@@ -1,22 +1,45 @@
 import { Resend } from 'resend';
 import { NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+const resend = new Resend(process.env.RESEND_API_KEY || 're_dummy_key_for_build');
+
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: Request) {
   try {
-    const { email, fullName } = await request.json();
+    const { fullName, phone } = await request.json();
 
-    if (!email || !fullName) {
-      return NextResponse.json(
-        { error: '이메일과 성함 정보가 필요합니다.' },
-        { status: 400 }
-      );
+    if (!fullName || !phone) {
+      return NextResponse.json({ error: '이름과 연락처 정보가 필요합니다.' }, { status: 400 });
+    }
+
+    // 보안 강화: 클라이언트가 보낸 이메일을 믿지 않고, 서버에서 직접 DB 조회
+    const { data: profile, error: fetchError } = await supabaseAdmin
+      .from('profiles')
+      .select('email')
+      .eq('full_name', fullName)
+      .eq('phone', phone.replace(/[^0-9]/g, ''))
+      .maybeSingle();
+
+    if (fetchError || !profile) {
+      return NextResponse.json({ error: '일치하는 회원 정보가 없습니다.' }, { status: 404 });
+    }
+
+    const email = profile.email;
+
+    // Safety check for missing API Key
+    if (!process.env.RESEND_API_KEY || process.env.RESEND_API_KEY.startsWith('re_dummy')) {
+      console.warn('Missing Resend API Key. Skipping email send.');
+      return NextResponse.json({ success: true, message: 'Mock email sent (API key missing)' });
     }
 
     // Resend를 통한 실제 이메일 발송
     const { data, error } = await resend.emails.send({
-      from: '자연의 결 <onboarding@resend.dev>', // 실제 도메인 연결 전까지는 onboarding 계정 사용
+      from: '자연의 결 <onboarding@resend.dev>',
       to: [email],
       subject: '[자연의 결] 요청하신 아이디(이메일) 안내입니다.',
       html: `
@@ -48,7 +71,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
-    console.error('Send Email Catch Error:', err);
+    console.error('Send ID Email API Catch Error:', err);
     return NextResponse.json({ error: '서버 오류가 발생했습니다.' }, { status: 500 });
   }
 }
