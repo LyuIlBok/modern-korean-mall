@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { ArrowRight, Leaf, Sparkles, TrendingUp, ShieldCheck, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard from '@/components/ProductCard';
-import { Category } from '@/data/mockData';
+import { Category } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
