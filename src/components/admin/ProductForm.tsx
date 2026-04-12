@@ -59,7 +59,6 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     origin: '경기도 연천군',
     producer: '농업회사법인 복이네농장(주)'
   });
-  });
 
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [mainPreview, setMainPreview] = useState<string | null>(null);
@@ -283,6 +282,19 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
                     <option value="농산물">농산물</option>
                     <option value="농자재">농자재</option>
                   </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-12">
+                <div className="space-y-3">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black ml-1">{t?.admin?.totalStock || '기본 재고'}</label>
+                  <input 
+                    required 
+                    type="number" 
+                    value={formData.stock} 
+                    onChange={(e) => setFormData({...formData, stock: Number(e.target.value)})} 
+                    className="w-full border-b-2 border-border-light py-3 focus:outline-none bg-transparent text-xl font-medium" 
+                  />
                 </div>
               </div>
 
