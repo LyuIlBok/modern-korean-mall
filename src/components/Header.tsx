@@ -139,14 +139,14 @@ export default function Header() {
             </button>
             
             <div className="hidden lg:flex items-center ml-4 bg-white border border-border-light rounded-full p-0.5 shadow-sm">
-              <button onClick={() => setLanguage('ko')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}>KO</button>
-              <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`}>EN</button>
+              <button onClick={() => setLanguage('ko')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="한국어 변경">KO</button>
+              <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="Change to English">EN</button>
             </div>
           </div>
 
-          <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0">
+          <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0" aria-label="홈으로 이동">
             <div className="relative h-16 w-72 sm:w-80">
-              <Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" priority quality={100} unoptimized={true} />
+              <Image src="/logo_main.png" alt="자연의 결 로고" fill className="object-contain" priority quality={100} unoptimized={true} />
             </div>
           </Link>
 
@@ -159,18 +159,18 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-4">
-            <Link href="/mypage?tab=wishlist" className="relative p-2 text-charcoal/60 hover:text-terracotta transition-colors" title="관심 상품">
+            <Link href="/mypage?tab=wishlist" className="relative p-2 text-charcoal/60 hover:text-terracotta transition-colors" title="관심 상품 목록" aria-label="관심 상품">
               <Heart className="w-5 h-5" />
               {wishCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full shadow-sm" />}
             </Link>
 
             {user ? (
               <div className="flex items-center gap-1 sm:gap-3">
-                <Link href="/mypage" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="마이페이지"><User className="w-5 h-5" /></Link>
-                <button onClick={handleLogout} className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter">{t?.common?.logout || 'Logout'}</button>
+                <Link href="/mypage" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="마이페이지" aria-label="마이페이지"><User className="w-5 h-5" /></Link>
+                <button onClick={handleLogout} className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter" aria-label="로그아웃">{t?.common?.logout || 'Logout'}</button>
               </div>
             ) : (
-              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest">{t?.common?.login || 'Login'}</Link>
+              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest" aria-label="로그인">{t?.common?.login || 'Login'}</Link>
             )}
             
             <button onClick={() => toggleCart(true)} className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors" aria-label="장바구니 열기">
@@ -199,9 +199,10 @@ export default function Header() {
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     placeholder={t?.common?.searchPlaceholder || 'Search...'}
+                    aria-label="검색어 입력"
                     className="w-full bg-transparent border-b-2 border-border-light focus:border-deep-sage transition-colors text-2xl md:text-5xl font-serif py-6 pr-12 focus:outline-none placeholder:text-muted/20"
                   />
-                  <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-deep-sage hover:scale-110 transition-transform">
+                  <button type="submit" className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-deep-sage hover:scale-110 transition-transform" aria-label="검색 실행">
                     <Search className="w-10 h-10" />
                   </button>
                 </form>
@@ -240,7 +241,7 @@ export default function Header() {
                   </div>
                 </div>
               </div>
-              <button onClick={() => setIsSearchOpen(false)} className="absolute top-8 right-8 p-2 text-muted hover:text-charcoal hover:rotate-90 transition-all duration-300">
+              <button onClick={() => setIsSearchOpen(false)} className="absolute top-8 right-8 p-2 text-muted hover:text-charcoal hover:rotate-90 transition-all duration-300" aria-label="검색 닫기">
                 <X className="w-6 h-6" />
               </button>
             </motion.div>
@@ -255,10 +256,10 @@ export default function Header() {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMenuOpen(false)} className="absolute inset-0 bg-charcoal/40 backdrop-blur-sm" />
             <motion.div initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="absolute inset-y-0 left-0 w-[280px] bg-hanji-white shadow-2xl flex flex-col">
               <div className="flex items-center justify-between px-6 py-6 border-b border-border-light">
-                <Link href="/" onClick={() => setIsMenuOpen(false)}>
-                  <div className="relative h-8 w-32"><Image src="/logo_main.png" alt="자연의 결" fill className="object-contain" unoptimized={true} /></div>
+                <Link href="/" onClick={() => setIsMenuOpen(false)} aria-label="홈으로 이동">
+                  <div className="relative h-8 w-32"><Image src="/logo_main.png" alt="자연의 결 로고" fill className="object-contain" unoptimized={true} /></div>
                 </Link>
-                <button onClick={() => setIsMenuOpen(false)} className="p-2 text-muted hover:text-charcoal"><X className="w-6 h-6" /></button>
+                <button onClick={() => setIsMenuOpen(false)} className="p-2 text-muted hover:text-charcoal" aria-label="메뉴 닫기"><X className="w-6 h-6" /></button>
               </div>
               <nav className="flex-1 px-6 py-12 space-y-8">
                 {navLinks.map((link) => (

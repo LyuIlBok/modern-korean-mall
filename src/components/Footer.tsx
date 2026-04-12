@@ -17,21 +17,23 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="space-y-6">
             <div className="relative h-10 w-40">
-              <Image 
-                src="/logo_horizontal.jfif" 
-                alt="자연의 결" 
-                fill 
-                className="object-contain filter grayscale"
-                unoptimized={true}
-              />
+              <Link href="/" aria-label="홈으로 이동">
+                <Image 
+                  src="/logo_horizontal.jfif" 
+                  alt="자연의 결 로고" 
+                  fill 
+                  className="object-contain filter grayscale"
+                  unoptimized={true}
+                />
+              </Link>
             </div>
             <p className="text-sm text-muted leading-relaxed max-w-xs">
               {t.common.footerDesc}
             </p>
             <div className="flex gap-4">
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Instagram className="w-5 h-5" /></Link>
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Youtube className="w-5 h-5" /></Link>
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors"><Facebook className="w-5 h-5" /></Link>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="인스타그램 바로가기"><Instagram className="w-5 h-5" /></Link>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="유튜브 바로가기"><Youtube className="w-5 h-5" /></Link>
+              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="페이스북 바로가기"><Facebook className="w-5 h-5" /></Link>
             </div>
           </div>
 

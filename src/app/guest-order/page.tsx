@@ -150,11 +150,11 @@ function GuestOrderContent() {
             <div className="bg-white rounded-sm border border-border-light shadow-sm overflow-hidden">
               <div className="p-8 border-b border-border-light bg-hanji-white/50">
                 <h3 className="font-serif text-2xl text-charcoal flex items-center gap-3">
-                  <Package className="w-6 h-6 text-deep-sage" /> 주문 상품 ({order.order_items.length})
+                  <Package className="w-6 h-6 text-deep-sage" /> 주문 상품 ({order.order_items?.length || 0})
                 </h3>
               </div>
               <div className="divide-y divide-border-light">
-                {order.order_items?.map((item: OrderItem) => (
+                {(order.order_items || []).map((item: OrderItem) => (
                   <div key={item.id} className="p-8 flex items-center justify-between group">
                     <div className="space-y-1">
                       <p className="font-serif text-lg text-charcoal group-hover:text-deep-sage transition-colors">{item.product_name}</p>
