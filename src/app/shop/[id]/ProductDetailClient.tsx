@@ -45,7 +45,7 @@ export default function ProductDetailClient({
   relatedProducts: any[] 
 }) {
   const router = useRouter();
-  const { t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
   const { addItem, toggleCart } = useCartStore();
   const { setInquiryProduct, toggleChat, triggerAutoSend } = useChatStore();
