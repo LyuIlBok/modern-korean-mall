@@ -10,11 +10,13 @@ import Link from 'next/link';
 import { 
   ArrowLeft, ShoppingBag, CreditCard, Wallet, Truck, 
   MapPin, User, Phone, Mail, CheckCircle, Loader2, ShieldCheck,
-  Tag, Ticket, Percent, ChevronDown, Check
+  Tag, Ticket, Percent, ChevronDown, Check, X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Script from 'next/script';
 import CheckoutItem from '@/components/CheckoutItem';
+import DaumPostcode from 'react-daum-postcode';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface Address {
   id: string;
@@ -29,11 +31,12 @@ interface Address {
 
 export default function CheckoutInternal() {
   const router = useRouter();
-  const { t } = useLanguageStore();
+  const { t, language } = useLanguageStore();
   const { items, getTotalPrice, getShippingFee, clearCart } = useCartStore();
   const hasMounted = useHasMounted();
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [formData, setProfileData] = useState({
     name: '',
     email: '',
@@ -99,6 +102,28 @@ export default function CheckoutInternal() {
       address: addr.address,
       detailAddress: addr.detail_address || ''
     }));
+  };
+
+  const handleAddressComplete = (data: any) => {
+    let fullAddress = data.address;
+    let extraAddress = '';
+
+    if (data.addressType === 'R') {
+      if (data.bname !== '') {
+        extraAddress += data.bname;
+      }
+      if (data.buildingName !== '') {
+        extraAddress += extraAddress !== '' ? `, ${data.buildingName}` : data.buildingName;
+      }
+      fullAddress += extraAddress !== '' ? ` (${extraAddress})` : '';
+    }
+
+    setProfileData(prev => ({
+      ...prev,
+      postcode: data.zonecode,
+      address: fullAddress
+    }));
+    setIsAddressModalOpen(false);
   };
 
   const handleApplyCoupon = async () => {
@@ -272,6 +297,38 @@ export default function CheckoutInternal() {
   return (
     <div className="bg-hanji-white min-h-screen py-20 px-4 sm:px-6 lg:px-8">
       <Script src="https://cdn.portone.io/v2/browser-sdk.js" />
+      
+      {/* Daum Postcode Modal */}
+      <AnimatePresence>
+        {isAddressModalOpen && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setIsAddressModalOpen(false)}
+              className="absolute inset-0 bg-charcoal/60 backdrop-blur-sm" 
+            />
+            <motion.div 
+              initial={{ scale: 0.95, opacity: 0 }} 
+              animate={{ scale: 1, opacity: 1 }} 
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="relative bg-white w-full max-w-lg rounded-sm shadow-2xl overflow-hidden"
+            >
+              <div className="bg-hanji-white p-6 border-b border-border-light flex justify-between items-center">
+                <h3 className="font-serif text-xl text-charcoal">{t.checkout.searchAddress}</h3>
+                <button type="button" onClick={() => setIsAddressModalOpen(false)} className="p-2 hover:bg-white rounded-full transition-colors">
+                  <X className="w-6 h-6 text-muted" />
+                </button>
+              </div>
+              <div className="p-2">
+                <DaumPostcode onComplete={handleAddressComplete} />
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-7xl mx-auto">
         
         <header className="mb-16 flex flex-col md:flex-row md:items-end justify-between gap-6 border-b border-border-light pb-10">
@@ -366,7 +423,7 @@ export default function CheckoutInternal() {
                   <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.address}</label>
                   <div className="flex gap-2 mb-3">
                     <input required value={formData.postcode} readOnly className="w-40 bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base font-mono" placeholder={t.checkout.postcode} />
-                    <button type="button" onClick={() => {}} className="bg-charcoal text-white px-8 py-5 rounded-sm text-xs uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
+                    <button type="button" onClick={() => setIsAddressModalOpen(true)} className="bg-charcoal text-white px-8 py-5 rounded-sm text-xs uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
                   </div>
                   <input required value={formData.address} readOnly className="w-full bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base mb-3 shadow-inner" placeholder={t.checkout.address} />
                   <input required value={formData.detailAddress} onChange={e => setProfileData({...formData, detailAddress: e.target.value})} className="w-full border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all shadow-sm" placeholder={t.checkout.detailAddress} />
