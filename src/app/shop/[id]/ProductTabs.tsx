@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
-import { Product } from '@/data/mockData';
+import { Product } from '@/types';
 import { Star, MessageSquare, Info, Loader2, User, X, Edit3, Trash2, Check, Filter, Camera, ArrowRight } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';

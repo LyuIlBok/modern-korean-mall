@@ -4,7 +4,7 @@ import ProductCard from '@/components/ProductCard';
 import ProductFilterBar from '@/components/ProductFilterBar';
 import { SearchX, ArrowRight, Loader2 } from 'lucide-react';
 import { Suspense } from 'react';
-import { Category } from '@/data/mockData';
+import { Category } from '@/types';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Product } from '@/data/mockData';
+import { Product } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useToastStore } from '@/store/useToastStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
