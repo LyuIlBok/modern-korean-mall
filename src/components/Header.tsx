@@ -66,12 +66,12 @@ export default function Header() {
       console.error('Logout error:', error);
       alert(language === 'ko' ? '로그아웃 중 오류가 발생했습니다.' : 'Error during logout.');
     } else {
+      localStorage.removeItem('boki_chat_session');
       alert(language === 'ko' ? '로그아웃 되었습니다.' : 'Logged out successfully.');
       router.push('/');
       router.refresh();
     }
   };
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {

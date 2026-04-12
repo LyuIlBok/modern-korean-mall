@@ -6,11 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   MessageCircle, X, Send, Loader2, User, Sparkles, 
   BellRing, ShoppingBag, ExternalLink, ChevronRight,
-  PackageCheck
+  PackageCheck, Lock
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 interface ChatMessage {
   id: string;
@@ -35,10 +36,15 @@ export default function ChatWidget() {
   const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
 
   const fetchMessages = useCallback(async (uid: string) => {
+    if (!uid || uid.startsWith('guest_')) return;
+
     const { data } = await supabase
       .from('support_messages')
       .select('*')
@@ -61,6 +67,8 @@ export default function ChatWidget() {
   }, []);
 
   const subscribeToMessages = useCallback((uid: string) => {
+    if (!uid || uid.startsWith('guest_')) return () => {};
+
     const channel = supabase
       .channel(`chat-${uid}`)
       .on(
@@ -77,7 +85,6 @@ export default function ChatWidget() {
           if (eventType === 'INSERT') {
             const msg = newMsg as ChatMessage;
             setMessages((prev) => {
-              // 옵티미스틱 메시지 제거 및 실제 메시지 추가
               const filtered = prev.filter(m => !m.isOptimistic);
               if (filtered.find(m => m.id === msg.id)) return filtered;
               return [...filtered, msg];
@@ -108,23 +115,18 @@ export default function ChatWidget() {
   useEffect(() => {
     const initChat = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      let userId = session?.user?.id;
+      const userId = session?.user?.id;
 
-      if (!userId) {
-        const storedId = localStorage.getItem('boki_chat_session');
-        if (storedId) {
-          userId = storedId;
-        } else {
-          const newId = `guest_${Math.random().toString(36).substring(2, 11)}_${Date.now()}`;
-          localStorage.setItem('boki_chat_session', newId);
-          userId = newId;
-        }
+      if (userId) {
+        setIsLoggedIn(true);
+        setChatUserId(userId);
+        fetchMessages(userId);
+        return subscribeToMessages(userId);
+      } else {
+        setIsLoggedIn(false);
+        const guestId = `guest_${Math.random().toString(36).substring(2, 11)}`;
+        setChatUserId(guestId);
       }
-
-      setChatUserId(userId);
-      fetchMessages(userId);
-      const unsubscribe = subscribeToMessages(userId);
-      return unsubscribe;
     };
     initChat();
   }, [fetchMessages, subscribeToMessages]);
@@ -134,7 +136,7 @@ export default function ChatWidget() {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
     
-    if (isOpen && messages.length > 0) {
+    if (isOpen && isLoggedIn && messages.length > 0) {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg.is_admin && !lastMsg.is_read) {
         const timer = setTimeout(() => {
@@ -144,26 +146,25 @@ export default function ChatWidget() {
         return () => clearTimeout(timer);
       }
     }
-  }, [messages, isOpen, markAsRead]);
+  }, [messages, isOpen, markAsRead, isLoggedIn]);
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isLoggedIn) {
       const timer = setTimeout(() => {
         setUnreadCount(0);
         if (inputRef.current) inputRef.current.focus();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [isOpen]);
+  }, [isOpen, isLoggedIn]);
 
   // 자동 메시지 전송 로직 (옵티미스틱 UI 적용)
   useEffect(() => {
-    if (isOpen && autoSendMessage && chatUserId) {
+    if (isOpen && isLoggedIn && autoSendMessage && chatUserId) {
       const sendAutoMessage = async () => {
         const content = autoSendMessage;
         const metadata = autoSendMessageMetadata;
         
-        // 1. 옵티미스틱 메시지 즉시 추가
         const optimisticMsg: ChatMessage = {
           id: `opt_${Date.now()}`,
           user_id: chatUserId,
@@ -178,7 +179,6 @@ export default function ChatWidget() {
 
         triggerAutoSend(null, null); // 상태 초기화
         
-        // 2. DB 저장
         const payload: any = {
           user_id: chatUserId,
           content,
@@ -200,16 +200,15 @@ export default function ChatWidget() {
           console.error('Auto-send error details:', error.message, error.details);
         }
         
-        // 초기화 완료 플래그 리셋
         resetInitializing();
       };
       sendAutoMessage();
     }
-  }, [isOpen, autoSendMessage, autoSendMessageMetadata, chatUserId, triggerAutoSend, resetInitializing]);
+  }, [isOpen, isLoggedIn, autoSendMessage, autoSendMessageMetadata, chatUserId, triggerAutoSend, resetInitializing]);
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || !chatUserId) return;
+    if (!input.trim() || !chatUserId || !isLoggedIn) return;
 
     const content = input.trim();
     const currentMetadata = inquiryProduct ? {
@@ -222,7 +221,6 @@ export default function ChatWidget() {
     setInput('');
     setLoading(true);
 
-    // 옵티미스틱 UI
     const optimisticMsg: ChatMessage = {
       id: `opt_${Date.now()}`,
       user_id: chatUserId,
@@ -262,16 +260,18 @@ export default function ChatWidget() {
     setLoading(false);
   };
 
-  /**
-   * 리치 카드 렌더링 (레이스 컨디션 방지를 위한 Fallback 적용)
-   */
+  const handleToggleChat = () => {
+    if (!isLoggedIn) {
+      setShowLoginModal(true);
+      return;
+    }
+    toggleChat(!isOpen);
+  };
+
   const renderRichMessage = (msg: ChatMessage, index: number) => {
     const { content, metadata } = msg;
-    
-    // 1. 메시지 자체에 메타데이터가 있는 경우 (정상 상황)
     let cardData = metadata;
 
-    // 2. [Fallback] 메타데이터가 없는데 첫 문의 메시지이고 스토어에 데이터가 있는 경우 (레이스 컨디션)
     if (!cardData?.productId && index === messages.length - 1 && isInitializing && inquiryProduct) {
       cardData = {
         productId: inquiryProduct.id,
@@ -330,7 +330,50 @@ export default function ChatWidget() {
   return (
     <div className="fixed bottom-8 right-8 z-[9999] font-sans">
       <AnimatePresence>
-        {isOpen && (
+        {showLoginModal && (
+          <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setShowLoginModal(false)}
+              className="absolute inset-0 bg-charcoal/60 backdrop-blur-md" 
+            />
+            <motion.div 
+              initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+              animate={{ scale: 1, opacity: 1, y: 0 }} 
+              exit={{ scale: 0.9, opacity: 0, y: 20 }}
+              className="relative bg-white p-10 rounded-2xl shadow-2xl max-w-sm w-full text-center"
+            >
+              <div className="w-20 h-20 bg-deep-sage/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Lock className="w-10 h-10 text-deep-sage" />
+              </div>
+              <h3 className="font-serif text-2xl text-charcoal mb-4 tracking-tight">회원 전용 서비스</h3>
+              <p className="text-muted text-base leading-relaxed mb-10 font-light">
+                1:1 상담은 회원님들께만 제공되는 서비스입니다.<br/>
+                로그인 후 더 자세한 상담을 받아보세요.
+              </p>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => { setShowLoginModal(false); router.push('/login'); }}
+                  className="w-full bg-charcoal text-white py-4 rounded-xl font-bold hover:bg-deep-sage transition-all shadow-lg"
+                >
+                  로그인하러 가기
+                </button>
+                <button 
+                  onClick={() => setShowLoginModal(false)}
+                  className="w-full text-sm text-muted font-medium py-2 hover:text-charcoal transition-colors"
+                >
+                  나중에 하기
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {isOpen && isLoggedIn && (
           <motion.div
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -468,18 +511,18 @@ export default function ChatWidget() {
       <motion.button
         whileHover={{ scale: 1.05 }}
         whileTap={{ scale: 0.95 }}
-        onClick={() => toggleChat(!isOpen)}
+        onClick={handleToggleChat}
         className="w-16 h-16 bg-charcoal text-white rounded-full flex items-center justify-center shadow-[0_10px_40px_rgba(0,0,0,0.25)] hover:bg-deep-sage transition-all group relative"
       >
         <AnimatePresence mode="wait">
-          {isOpen ? (
+          {isOpen && isLoggedIn ? (
             <motion.div key="close" initial={{ rotate: -90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: 90, opacity: 0 }}>
               <X className="w-7 h-7" />
             </motion.div>
           ) : (
             <motion.div key="chat" className="relative" initial={{ rotate: 90, opacity: 0 }} animate={{ rotate: 0, opacity: 1 }} exit={{ rotate: -90, opacity: 0 }}>
               <MessageCircle className="w-8 h-8" />
-              {unreadCount > 0 && (
+              {isLoggedIn && unreadCount > 0 && (
                 <motion.div 
                   initial={{ scale: 0 }} 
                   animate={{ scale: 1 }} 
@@ -488,14 +531,14 @@ export default function ChatWidget() {
                   {unreadCount > 9 ? '9+' : unreadCount}
                 </motion.div>
               )}
-              {unreadCount === 0 && (
+              {isLoggedIn && unreadCount === 0 && (
                 <span className="absolute -top-0.5 -right-0.5 w-3.5 h-3.5 bg-green-500 rounded-full border-2 border-white shadow-sm" />
               )}
             </motion.div>
           )}
         </AnimatePresence>
         
-        {!isOpen && unreadCount > 0 && (
+        {!isOpen && isLoggedIn && unreadCount > 0 && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}

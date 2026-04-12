@@ -323,7 +323,16 @@ export default function AdminDashboard() {
             </button>
           ))}
         </nav>
-        <button onClick={async () => { await supabase.auth.signOut(); router.push('/'); }} className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"><LogOut className="w-4 h-4" /> {t?.common?.logout || '로그아웃'}</button>
+        <button 
+          onClick={async () => { 
+            await supabase.auth.signOut(); 
+            localStorage.removeItem('boki_chat_session');
+            router.push('/'); 
+          }} 
+          className="flex items-center gap-3 text-muted hover:text-terracotta pt-6 font-medium text-sm border-t border-border-light"
+        >
+          <LogOut className="w-4 h-4" /> {t?.common?.logout || '로그아웃'}
+        </button>
       </aside>
 
       <main className="flex-1 p-12 overflow-y-auto">

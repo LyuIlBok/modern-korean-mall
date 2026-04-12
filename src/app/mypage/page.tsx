@@ -306,8 +306,11 @@ function MyPageContent() {
     finally { setIsSaving(false); }
   };
 
-  const handleLogout = async () => { await supabase.auth.signOut(); router.push('/'); };
-
+  const handleLogout = async () => { 
+    await supabase.auth.signOut(); 
+    localStorage.removeItem('boki_chat_session');
+    router.push('/'); 
+  };
   if (loading) return (
     <div className="flex-1 flex flex-col items-center justify-center bg-hanji-white h-screen space-y-6">
       <Loader2 className="w-12 h-12 animate-spin text-deep-sage" />
