@@ -31,10 +31,11 @@ interface ProductWithReviews {
  * - 모든 사용자에게 버튼이 항상 보이도록 수정됨
  */
 export default async function Home() {
-  // 1. Supabase에서 모든 상품 데이터 불러오기
+  // 1. Supabase에서 활성화된 상품 데이터 불러오기
   const { data: products, error } = await supabase
     .from('products')
     .select('*, reviews(rating)')
+    .eq('is_active', true)
     .order('created_at', { ascending: false });
 
   if (error) {

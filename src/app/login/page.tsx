@@ -15,6 +15,9 @@ function LoginContent() {
   const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [resetSent, setResetSent] = useState(false);
+  
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectedFrom = searchParams.get('redirectedFrom');
@@ -46,7 +49,7 @@ function LoginContent() {
     if (message.includes('Rate limit exceeded')) {
       return '너무 많은 로그인 시도가 있었습니다. 잠시 후 다시 시도해 주세요.';
     }
-    return '로그인 중 문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
+    return '문제가 발생했습니다. 잠시 후 다시 시도해 주세요.';
   };
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -71,6 +74,31 @@ function LoginContent() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       setErrorMsg(getErrorMessage(msg));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email) return;
+    setIsLoading(true);
+    setErrorMsg('');
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/update-password`,
+      });
+
+      if (error) {
+        setErrorMsg(getErrorMessage(error.message));
+        return;
+      }
+
+      setResetSent(true);
+      alert('비밀번호 재설정 링크가 이메일로 발송되었습니다. (스팸함을 확인해주세요.)');
+    } catch (err: any) {
+      setErrorMsg(err.message || '오류가 발생했습니다.');
     } finally {
       setIsLoading(false);
     }
@@ -133,103 +161,188 @@ function LoginContent() {
               />
             </div>
           </Link>
-          <h1 className="font-serif text-2xl text-charcoal mb-2">다시 만나서 반가워요</h1>
-          <p className="text-sm text-muted">당신의 일상에 자연의 결을 더해보세요.</p>
+          <h1 className="font-serif text-2xl text-charcoal mb-2">
+            {isForgotPassword ? '비밀번호를 잊으셨나요?' : '다시 만나서 반가워요'}
+          </h1>
+          <p className="text-sm text-muted">
+            {isForgotPassword ? '가입하신 이메일로 재설정 링크를 보내드립니다.' : '당신의 일상에 자연의 결을 더해보세요.'}
+          </p>
         </div>
 
         <div className="bg-white p-10 border border-border-light rounded-sm shadow-sm">
-          <form onSubmit={handleLogin} className="space-y-6">
-            <div className="space-y-2">
-              <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-                <input 
-                  required
-                  type="email" 
+          {!isForgotPassword ? (
+            <>
+              <form onSubmit={handleLogin} className="space-y-6">
+                <div className="space-y-2">
+                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                    <input 
+                      required
+                      type="email" 
+                      disabled={isAnyLoading}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      placeholder="example@email.com"
+                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="text-[10px] uppercase tracking-widest text-muted">Password</label>
+                    <button 
+                      type="button" 
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-[10px] text-deep-sage hover:underline"
+                    >
+                      비밀번호 찾기
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                    <input 
+                      required
+                      type="password" 
+                      disabled={isAnyLoading}
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                    />
+                  </div>
+                </div>
+
+                {errorMsg && (
+                  <motion.div 
+                    initial={{ opacity: 0, x: -5 }} 
+                    animate={{ opacity: 1, x: 0 }} 
+                    className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
+                  >
+                    <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
+                    <p className="text-xs text-terracotta font-medium leading-relaxed">
+                      {errorMsg}
+                    </p>
+                  </motion.div>
+                )}
+
+                <button 
+                  type="submit" 
                   disabled={isAnyLoading}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="example@email.com"
-                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
-                />
-              </div>
-            </div>
+                  className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                >
+                  {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>로그인하기 <ArrowRight className="w-4 h-4" /></>}
+                </button>
+              </form>
 
-            <div className="space-y-2">
-              <div className="flex justify-between items-center px-1">
-                <label className="text-[10px] uppercase tracking-widest text-muted">Password</label>
-                <Link href="#" className="text-[10px] text-deep-sage hover:underline">비밀번호 찾기</Link>
+              <div className="relative my-10 text-center">
+                <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-light"></div></div>
+                <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
               </div>
-              <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-                <input 
-                  required
-                  type="password" 
+
+              <div className="grid grid-cols-3 gap-3">
+                <button 
+                  type="button"
                   disabled={isAnyLoading}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
-                />
+                  onClick={(e) => handleSocialLogin(e, 'google')}
+                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
+                >
+                  {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
+                  Google
+                </button>
+                <button 
+                  type="button"
+                  disabled={isAnyLoading}
+                  onClick={(e) => handleSocialLogin(e, 'kakao')}
+                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
+                >
+                  {socialLoading === 'kakao' ? <Loader2 className="w-5 h-5 animate-spin text-[#3C1E1E]" /> : <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" />}
+                  Kakao
+                </button>
+                <button 
+                  type="button"
+                  disabled={isAnyLoading}
+                  onClick={(e) => handleSocialLogin(e, 'naver')}
+                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
+                >
+                  {socialLoading === 'naver' ? <Loader2 className="w-5 h-5 animate-spin text-[#03C75A]" /> : <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div>}
+                  Naver
+                </button>
               </div>
+            </>
+          ) : (
+            <div className="space-y-6">
+              {resetSent ? (
+                <div className="text-center py-8 space-y-6">
+                  <div className="w-16 h-16 bg-deep-sage/10 rounded-full flex items-center justify-center mx-auto">
+                    <Mail className="w-8 h-8 text-deep-sage" />
+                  </div>
+                  <div className="space-y-2">
+                    <h3 className="font-serif text-xl text-charcoal font-bold">이메일을 확인해주세요</h3>
+                    <p className="text-sm text-muted leading-relaxed">
+                      비밀번호 재설정 링크를 <strong>{email}</strong> 주소로 보냈습니다.<br/>
+                      메일이 오지 않았다면 스팸함을 확인해 보세요.
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => { setIsForgotPassword(false); setResetSent(false); }}
+                    className="text-sm text-deep-sage font-bold border-b border-deep-sage pb-0.5 hover:text-charcoal hover:border-charcoal transition-colors"
+                  >
+                    로그인 화면으로 돌아가기
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handlePasswordReset} className="space-y-8">
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                    <div className="relative">
+                      <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
+                      <input 
+                        required
+                        type="email" 
+                        disabled={isLoading}
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="example@email.com"
+                        className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                      />
+                    </div>
+                  </div>
+
+                  {errorMsg && (
+                    <motion.div 
+                      initial={{ opacity: 0, x: -5 }} 
+                      animate={{ opacity: 1, x: 0 }} 
+                      className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
+                    >
+                      <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
+                      <p className="text-xs text-terracotta font-medium leading-relaxed">
+                        {errorMsg}
+                      </p>
+                    </motion.div>
+                  )}
+
+                  <div className="space-y-4">
+                    <button 
+                      type="submit" 
+                      disabled={isLoading || !email}
+                      className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>재설정 링크 보내기 <ArrowRight className="w-4 h-4" /></>}
+                    </button>
+                    <button 
+                      type="button"
+                      onClick={() => setIsForgotPassword(false)}
+                      className="w-full text-xs text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
+                    >
+                      Back to Login
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
-
-            {errorMsg && (
-              <motion.div 
-                initial={{ opacity: 0, x: -5 }} 
-                animate={{ opacity: 1, x: 0 }} 
-                className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
-              >
-                <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
-                <p className="text-xs text-terracotta font-medium leading-relaxed">
-                  {errorMsg}
-                </p>
-              </motion.div>
-            )}
-
-            <button 
-              type="submit" 
-              disabled={isAnyLoading}
-              className="w-full bg-charcoal text-white py-4 rounded-sm hover:bg-deep-sage transition-all duration-300 font-medium flex items-center justify-center gap-2 shadow-lg active:scale-[0.98] disabled:opacity-50"
-            >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>로그인하기 <ArrowRight className="w-4 h-4" /></>}
-            </button>
-          </form>
-
-          <div className="relative my-10 text-center">
-            <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-light"></div></div>
-            <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
-          </div>
-
-          <div className="grid grid-cols-3 gap-3">
-            <button 
-              type="button"
-              disabled={isAnyLoading}
-              onClick={(e) => handleSocialLogin(e, 'google')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-            >
-              {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
-              Google
-            </button>
-            <button 
-              type="button"
-              disabled={isAnyLoading}
-              onClick={(e) => handleSocialLogin(e, 'kakao')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-            >
-              {socialLoading === 'kakao' ? <Loader2 className="w-5 h-5 animate-spin text-[#3C1E1E]" /> : <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" />}
-              Kakao
-            </button>
-            <button 
-              type="button"
-              disabled={isAnyLoading}
-              onClick={(e) => handleSocialLogin(e, 'naver')}
-              className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-            >
-              {socialLoading === 'naver' ? <Loader2 className="w-5 h-5 animate-spin text-[#03C75A]" /> : <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div>}
-              Naver
-            </button>
-          </div>
+          )}
         </div>
 
         <div className="text-center mt-10">
