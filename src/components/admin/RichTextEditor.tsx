@@ -6,9 +6,10 @@ import Image from '@tiptap/extension-image';
 import Youtube from '@tiptap/extension-youtube';
 import { 
   Bold, Italic, List, ListOrdered, Image as ImageIcon, 
-  Youtube as YoutubeIcon, Undo, Redo, Heading1, Heading2 
+  Youtube as YoutubeIcon, Undo, Redo, Heading1, Heading2, Loader2 
 } from 'lucide-react';
-import { useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { supabase } from '@/lib/supabaseClient';
 
 interface RichTextEditorProps {
   value: string;
@@ -19,18 +20,21 @@ const MenuButton = ({
   onClick, 
   active, 
   children, 
-  title 
+  title,
+  disabled
 }: { 
   onClick: () => void; 
   active?: boolean; 
   children: React.ReactNode;
   title: string;
+  disabled?: boolean;
 }) => (
   <button
     type="button"
     onClick={onClick}
     title={title}
-    className={`p-2 rounded-sm transition-colors ${
+    disabled={disabled}
+    className={`p-2 rounded-sm transition-colors disabled:opacity-50 ${
       active ? 'bg-charcoal text-white' : 'bg-hanji-white text-muted hover:bg-deep-sage/10'
     }`}
   >
@@ -39,6 +43,9 @@ const MenuButton = ({
 );
 
 export default function RichTextEditor({ value, onChange }: RichTextEditorProps) {
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -76,10 +83,33 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
 
   if (!editor) return null;
 
-  const addImage = () => {
-    const url = window.prompt('이미지 URL을 입력하세요:');
-    if (url) {
-      editor.chain().focus().setImage({ src: url }).run();
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${Date.now()}_${Math.random().toString(36).substring(2, 7)}.${fileExt}`;
+      const filePath = `content/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('product-images')
+        .upload(filePath, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('product-images')
+        .getPublicUrl(filePath);
+
+      editor.chain().focus().setImage({ src: publicUrl }).run();
+    } catch (err) {
+      console.error('Editor image upload failed:', err);
+      alert('이미지 업로드에 실패했습니다.');
+    } finally {
+      setIsUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -91,7 +121,26 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
   };
 
   return (
-    <div className="border border-border-light rounded-sm overflow-hidden bg-white shadow-inner">
+    <div className="border border-border-light rounded-sm overflow-hidden bg-white shadow-inner relative">
+      {/* Upload Overlay */}
+      {isUploading && (
+        <div className="absolute inset-0 z-50 bg-white/60 backdrop-blur-[1px] flex items-center justify-center">
+          <div className="bg-white p-4 rounded-sm shadow-xl flex items-center gap-3 border border-border-light">
+            <Loader2 className="w-5 h-5 animate-spin text-deep-sage" />
+            <span className="text-xs font-bold text-charcoal uppercase tracking-widest">Uploading Image...</span>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden File Input */}
+      <input 
+        type="file" 
+        accept="image/*" 
+        ref={fileInputRef} 
+        onChange={handleImageUpload} 
+        className="hidden" 
+      />
+
       {/* Toolbar */}
       <div className="bg-hanji-white/50 border-b border-border-light p-2 flex flex-wrap gap-1">
         <MenuButton 
@@ -139,7 +188,11 @@ export default function RichTextEditor({ value, onChange }: RichTextEditorProps)
           <ListOrdered className="w-4 h-4" />
         </MenuButton>
         <div className="w-px h-6 bg-border-light mx-1 my-auto" />
-        <MenuButton onClick={addImage} title="Add Image URL">
+        <MenuButton 
+          onClick={() => fileInputRef.current?.click()} 
+          title="Upload Local Image"
+          disabled={isUploading}
+        >
           <ImageIcon className="w-4 h-4" />
         </MenuButton>
         <MenuButton onClick={addYoutube} title="Add Youtube Video">
