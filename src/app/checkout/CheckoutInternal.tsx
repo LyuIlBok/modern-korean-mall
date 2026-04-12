@@ -261,10 +261,46 @@ export default function CheckoutInternal() {
 
         if (updateError) console.error('Order status sync error:', updateError);
         
+        // 4. Send Order Confirmation Email (Async, fail silently)
+        fetch('/api/email/order-success', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: order.id,
+            email: formData.email,
+            buyerName: formData.name,
+            totalAmount: finalAmount,
+            items: items.map(i => ({
+              name: i.name,
+              quantity: i.quantity,
+              price: i.price + (i.optionPrice || 0),
+              optionName: i.optionName
+            }))
+          })
+        }).catch(err => console.error('Email trigger error:', err));
+
         clearCart();
         router.push(`/order-success?orderId=${order.id}`);
       } else {
         // 무통장 입금 등 다른 수단 처리
+        // For transfer, we also send confirmation email
+        fetch('/api/email/order-success', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            orderId: order.id,
+            email: formData.email,
+            buyerName: formData.name,
+            totalAmount: finalAmount,
+            items: items.map(i => ({
+              name: i.name,
+              quantity: i.quantity,
+              price: i.price + (i.optionPrice || 0),
+              optionName: i.optionName
+            }))
+          })
+        }).catch(err => console.error('Email trigger error:', err));
+
         clearCart();
         router.push(`/order-success?orderId=${order.id}`);
       }

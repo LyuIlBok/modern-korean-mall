@@ -330,10 +330,17 @@ function LoginContent() {
                       <button 
                         type="button" 
                         onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
-                        className="text-[10px] text-deep-sage hover:underline"
+                        className="text-[10px] text-muted hover:text-charcoal hover:underline"
                       >
                         비밀번호 찾기
                       </button>
+                      <span className="text-[10px] text-border-light">|</span>
+                      <Link 
+                        href="/guest-order"
+                        className="text-[10px] text-deep-sage font-bold hover:underline"
+                      >
+                        비회원 주문조회
+                      </Link>
                     </div>
                   </div>
                   <div className="relative">
