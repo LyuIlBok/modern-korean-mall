@@ -144,13 +144,13 @@ function LoginContent() {
   };
 
   const handleSendFullIdEmail = async () => {
-    if (!fullName || !phone || emailSent) return;
+    if (!foundEmailFull || emailSent) return;
     setIsLoading(true);
     try {
       const res = await fetch('/api/auth/send-id-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fullName, phone: phone.replace(/[^0-9]/g, '') }),
+        body: JSON.stringify({ email: foundEmailFull, fullName }),
       });
       if (res.ok) {
         setEmailSent(true);

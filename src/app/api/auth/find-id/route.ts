@@ -50,7 +50,10 @@ export async function POST(request: Request) {
     }
     const maskedEmail = `${maskedLocal}@${domain}`;
 
-    return NextResponse.json({ email: maskedEmail });
+    return NextResponse.json({ 
+      email: maskedEmail,
+      fullEmail: profile.email // Return full email for the 'Send via Email' button
+    });
   } catch (err) {
     console.error('Find ID Catch Error:', err);
     return NextResponse.json(
