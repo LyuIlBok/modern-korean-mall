@@ -10,15 +10,15 @@ import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { 
-  ArrowLeft, Truck, ShieldCheck, Heart, ChevronLeft, 
+  ArrowLeft, ShieldCheck, Heart, ChevronLeft, 
   ChevronRight, ChevronDown, Plus, Minus, ShoppingBag, CreditCard, MessageSquare,
-  Star, StarHalf, MessageCircle, Camera, User
+  Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
 import Breadcrumb from '@/components/ui/Breadcrumb';
-import { Product, ProductOption, Review } from '@/types';
+import { Product, ProductOption } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
 import { formatPrice } from '@/lib/utils';
 
@@ -41,9 +41,6 @@ export default function ProductDetailClient({
   const [activeImage, setActiveImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loadingReviews, setLoadingReviews] = useState(true);
-
   const [options, setOptions] = useState<ProductOption[]>(initialOptions);
   const [loadingOptions, setLoadingOptions] = useState(initialOptions.length === 0);
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
@@ -53,18 +50,6 @@ export default function ProductDetailClient({
   const detailImages = product.detail_content_images || [];
 
   useEffect(() => {
-    const fetchReviews = async () => {
-      setLoadingReviews(true);
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .eq('product_id', product.id)
-        .order('created_at', { ascending: false });
-      
-      if (data) setReviews(data as Review[]);
-      setLoadingReviews(false);
-    };
-    
     const fetchOptions = async () => {
       if (initialOptions.length > 0) {
         setLoadingOptions(false);
@@ -81,13 +66,8 @@ export default function ProductDetailClient({
       setLoadingOptions(false);
     };
 
-    fetchReviews();
     fetchOptions();
   }, [product.id, initialOptions]);
-
-  const avgRating = reviews.length > 0 
-    ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
-    : 0;
 
   const basePrice = Number(product.discount_rate || 0) > 0 
     ? Math.floor(product.price * (1 - (product.discount_rate || 0) / 100))
@@ -104,7 +84,7 @@ export default function ProductDetailClient({
     addItem({ 
       id: product.id, 
       name: product.name, 
-      price: product.price, // useCartStore handles discount/options if updated accordingly
+      price: product.price, 
       imageUrl: product.imageUrl, 
       category: product.category,
       description: product.description,
@@ -159,12 +139,6 @@ export default function ProductDetailClient({
       metadata
     );
     toggleChat(true);
-  };
-
-  const renderStars = (rating: number) => {
-    return Array.from({ length: 5 }).map((_, i) => (
-      <Star key={i} className={`w-3 h-3 ${i < Math.floor(rating) ? 'text-amber-400 fill-current' : 'text-border-light'}`} />
-    ));
   };
 
   const Skeleton = ({ className }: { className: string }) => (
@@ -257,13 +231,6 @@ export default function ProductDetailClient({
               </div>
               <h1 className="font-serif text-5xl text-charcoal leading-tight mb-4 tracking-tight">{product.name}</h1>
               
-              {/* Rating Summary */}
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex gap-0.5">{renderStars(Number(avgRating))}</div>
-                <span className="text-xs font-bold text-charcoal">{avgRating}</span>
-                <span className="text-[10px] text-muted uppercase tracking-widest">({reviews.length} Reviews)</span>
-              </div>
-
               <div className="mb-8">
                 {Number(product.discount_rate || 0) > 0 ? (
                   <div className="space-y-2">
@@ -397,88 +364,10 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* 2. Detail Tabs (Reviews, etc.) */}
+        {/* 2. Detail Tabs (Reviews, Q&A, etc.) */}
         <ProductTabs product={product} />
 
-        {/* 3. Review Section (New) */}
-        <section id="reviews" className="mt-32 pt-24 border-t border-border-light">
-          <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-            <div className="space-y-4">
-              <h2 className="font-serif text-4xl text-charcoal">회원님들의 솔직한 기록</h2>
-              <p className="text-muted font-light italic">Nature Texture&apos;s verified customer reviews.</p>
-            </div>
-            <div className="flex items-center gap-6 bg-white px-8 py-4 border border-border-light rounded-sm shadow-sm">
-              <div className="text-center border-r border-border-light pr-6">
-                <p className="text-[10px] text-muted uppercase font-bold tracking-widest mb-1">Average</p>
-                <p className="text-2xl font-serif font-bold text-charcoal">{avgRating}</p>
-              </div>
-              <div className="text-center">
-                <p className="text-[10px] text-muted uppercase font-bold tracking-widest mb-1">Total</p>
-                <p className="text-2xl font-serif font-bold text-charcoal">{reviews.length}건</p>
-              </div>
-            </div>
-          </div>
-
-          {loadingReviews ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {[1, 2].map((i) => (
-                <div key={i} className="bg-white p-10 border border-border-light rounded-sm shadow-sm space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <Skeleton className="w-10 h-10 rounded-full" />
-                      <div className="space-y-2">
-                        <Skeleton className="h-4 w-20" />
-                        <Skeleton className="h-3 w-16" />
-                      </div>
-                    </div>
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <div className="flex gap-6">
-                    <Skeleton className="w-24 h-24 flex-shrink-0" />
-                    <div className="flex-1 space-y-2">
-                      <Skeleton className="h-4 w-full" />
-                      <Skeleton className="h-4 w-[90%]" />
-                      <Skeleton className="h-4 w-[40%]" />
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : reviews.length === 0 ? (
-            <div className="py-24 text-center bg-white border border-dashed border-border-light rounded-sm">
-              <MessageCircle className="w-10 h-10 text-muted/30 mx-auto mb-4" />
-              <p className="text-muted italic font-light">아직 작성된 리뷰가 없습니다.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {reviews.map((review) => (
-                <motion.div key={review.id} initial={{ opacity: 0, y: 10 }} whileInView={{ opacity: 1, y: 0 }} className="bg-white p-10 border border-border-light rounded-sm shadow-sm space-y-6">
-                  <div className="flex justify-between items-start">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 bg-hanji-white rounded-full flex items-center justify-center text-muted border border-border-light"><User className="w-5 h-5" /></div>
-                      <div>
-                        <p className="text-sm font-bold text-charcoal">{review.user_name || '익명'}</p>
-                        <p className="text-[10px] text-muted uppercase tracking-tighter">{new Date(review.created_at).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-0.5">{renderStars(review.rating)}</div>
-                  </div>
-                  
-                  <div className="flex gap-6">
-                    {review.image_url && (
-                      <div className="relative w-24 h-24 rounded-sm overflow-hidden border border-border-light flex-shrink-0">
-                        <Image src={review.image_url} alt="Review" fill className="object-cover" />
-                      </div>
-                    )}
-                    <p className="text-sm text-charcoal/80 leading-relaxed font-light">{review.content}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </section>
-
-        {/* 4. Detail Content Area (Long Vertical Images) */}
+        {/* 3. Detail Content Area (Long Vertical Images) */}
         <div className="mt-32 max-w-4xl mx-auto">
           <div className="text-center mb-24 space-y-6">
             <div className="inline-block p-3 rounded-full bg-deep-sage/5 mb-4"><ShieldCheck className="w-10 h-10 text-deep-sage" /></div>
@@ -503,7 +392,7 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* 5. Related Products */}
+        {/* 4. Related Products */}
         <div className="mt-48 pt-24 border-t border-border-light">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div>

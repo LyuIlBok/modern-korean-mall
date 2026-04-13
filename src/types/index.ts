@@ -79,10 +79,24 @@ export interface OrderItem {
 export interface Review {
   id: string;
   product_id: string;
+  user_id?: string;
   user_name: string;
   rating: number;
   content: string;
-  image_url?: string;
+  image_url?: string | null;
+  created_at: string;
+}
+
+export interface QnA {
+  id: string;
+  product_id: string;
+  user_id: string;
+  user_name: string;
+  question_type: string;
+  content: string;
+  is_secret: boolean;
+  answer: string | null;
+  answered_at: string | null;
   created_at: string;
 }
 
