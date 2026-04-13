@@ -189,7 +189,11 @@ export default async function Home() {
             그것이 우리가 지키는 농부의 자부심입니다.
           </p>
           <div className="pt-10">
-            <Link href="/about" className="group text-[12px] uppercase tracking-[0.5em] font-bold border-b border-white/20 pb-2 hover:text-white transition-all duration-500" style={{ hoverBorderBottomColor: primaryColor }}>
+            <Link 
+              href="/about" 
+              className="group text-[12px] uppercase tracking-[0.5em] font-bold border-b border-white/20 pb-2 hover:text-white hover:border-[var(--brand-hover)] transition-all duration-500" 
+              style={{ '--brand-hover': primaryColor } as React.CSSProperties}
+            >
               Explore Our Values <ArrowRight className="inline-block w-4 h-4 ml-3 group-hover:translate-x-2 transition-transform" />
             </Link>
           </div>
