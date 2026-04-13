@@ -31,15 +31,32 @@ interface ProductWithReviews {
  * - 모든 사용자에게 버튼이 항상 보이도록 수정됨
  */
 export default async function Home() {
-  // 1. Supabase에서 활성화된 상품 데이터 불러오기
-  const { data: products, error } = await supabase
-    .from('products')
-    .select('*, reviews(rating)')
-    .eq('is_active', true)
-    .order('created_at', { ascending: false });
+  // 1. Supabase에서 활성화된 상품 데이터 및 사이트 설정 불러오기
+  const [productsRes, settingsRes] = await Promise.all([
+    supabase
+      .from('products')
+      .select('*, reviews(rating)')
+      .eq('is_active', true)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('site_settings')
+      .select('*')
+  ]);
 
-  if (error) {
-    console.error('데이터를 불러오는 중 오류가 발생했습니다:', error);
+  const products = productsRes.data;
+  const settingsData = settingsRes.data || [];
+  
+  const settings: Record<string, string> = {};
+  settingsData.forEach((item: any) => {
+    settings[item.key] = item.value;
+  });
+
+  const heroSubtitle = settings.hero_subtitle || '농업회사법인 복이네농장의 프리미엄 브랜드';
+  const heroTitle = settings.hero_title || '바른 땅이 내어준 정직한 산물, 자연의 결';
+  const heroDesc = settings.hero_description || '농업회사법인 복이네농장의 뚝심과 철학을 담았습니다. 경기도 연천의 비옥한 토양과 맑은 물이 키워낸 가장 순수한 농산물과 바른 농자재를 당신의 일상에 제안합니다.';
+
+  if (productsRes.error) {
+    console.error('데이터를 불러오는 중 오류가 발생했습니다:', productsRes.error);
   }
 
   // 2. 상품 데이터 가공 (평점 평균 등)
@@ -67,15 +84,19 @@ export default async function Home() {
         <div className="relative z-10 text-center px-4 space-y-8 max-w-5xl">
           <div className="flex justify-center mb-6">
             <span className="inline-flex items-center gap-2 px-6 py-2 rounded-full bg-deep-sage/20 backdrop-blur-xl border border-white/30 text-[12px] text-white uppercase tracking-[0.5em] font-bold">
-              <Leaf className="w-4 h-4 text-deep-sage" /> 농업회사법인 복이네농장의 프리미엄 브랜드
+              <Leaf className="w-4 h-4 text-deep-sage" /> {heroSubtitle}
             </span>
           </div>
           <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.1] tracking-tighter drop-shadow-2xl">
-            바른 땅이 내어준 정직한 산물,<br/>
-            <span className="text-deep-sage-light">자연의 결</span>
+            {heroTitle.includes(',') ? (
+              <>
+                {heroTitle.split(',')[0]},<br/>
+                <span className="text-deep-sage-light">{heroTitle.split(',')[1]}</span>
+              </>
+            ) : heroTitle}
           </h1>
           <p className="text-xl md:text-2xl text-white/90 font-light tracking-wide max-w-3xl mx-auto leading-relaxed drop-shadow-lg">
-            농업회사법인 복이네농장의 뚝심과 철학을 담았습니다. 경기도 연천의 비옥한 토양과 맑은 물이 키워낸 가장 순수한 농산물과 바른 농자재를 당신의 일상에 제안합니다.
+            {heroDesc}
           </p>
           
           <div className="pt-10 flex flex-col sm:flex-row items-center justify-center gap-6">
