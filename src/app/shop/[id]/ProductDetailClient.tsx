@@ -47,7 +47,6 @@ export default function ProductDetailClient({
 
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
   const galleryImages = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
-  const detailImages = product.detail_content_images || [];
 
   useEffect(() => {
     const fetchOptions = async () => {
@@ -251,12 +250,6 @@ export default function ProductDetailClient({
                   </div>
                 )}
               </div>
-              
-              {/* Rich Text Description Rendering */}
-              <div 
-                className="text-muted leading-relaxed font-light text-lg prose prose-slate max-w-none"
-                dangerouslySetInnerHTML={{ __html: product.description }}
-              />
             </div>
 
             {/* Product Specs */}
@@ -364,35 +357,10 @@ export default function ProductDetailClient({
           </div>
         </div>
 
-        {/* 2. Detail Tabs (Reviews, Q&A, etc.) */}
+        {/* 2. Detail Tabs (Details, Reviews, Q&A) */}
         <ProductTabs product={product} />
 
-        {/* 3. Detail Content Area (Long Vertical Images) */}
-        <div className="mt-32 max-w-4xl mx-auto">
-          <div className="text-center mb-24 space-y-6">
-            <div className="inline-block p-3 rounded-full bg-deep-sage/5 mb-4"><ShieldCheck className="w-10 h-10 text-deep-sage" /></div>
-            <h2 className="font-serif text-4xl md:text-5xl text-charcoal">자연의 결이 선사하는<br/>가장 정직한 산물</h2>
-            <div className="w-px h-24 bg-deep-sage/20 mx-auto"></div>
-          </div>
-
-          <div className="space-y-0">
-            {detailImages.length > 0 ? (
-              detailImages.map((img: string, idx: number) => (
-                <div key={idx} className="relative w-full overflow-hidden">
-                  <div className="relative w-full h-[1000px]">
-                    <Image src={img} alt={`Detail ${idx}`} fill className="object-contain" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="py-32 text-center border-y border-border-light border-dashed">
-                <p className="text-muted italic font-light font-serif text-xl">상세 설명 이미지를 준비 중입니다.</p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 4. Related Products */}
+        {/* 3. Related Products */}
         <div className="mt-48 pt-24 border-t border-border-light">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div>

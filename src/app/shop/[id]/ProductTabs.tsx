@@ -231,10 +231,31 @@ export default function ProductTabs({ product }: { product: Product }) {
       <div className="max-w-5xl mx-auto min-h-[400px] mb-32 px-4">
         {activeTab === 'detail' && (
           <div className="space-y-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <div className="relative aspect-[16/9] w-full rounded-sm overflow-hidden shadow-2xl border border-border-light">
-              <Image src={product.imageUrl} alt="Detail" fill className="object-cover" />
+            {/* Database Rich Text Description */}
+            <div 
+              className="prose prose-slate max-w-none text-charcoal/80 leading-relaxed font-light text-lg"
+              dangerouslySetInnerHTML={{ __html: product.description }}
+            />
+
+            {/* Detail Content Images */}
+            <div className="space-y-0">
+              {product.detail_content_images && product.detail_content_images.length > 0 ? (
+                product.detail_content_images.map((img: string, idx: number) => (
+                  <div key={idx} className="relative w-full overflow-hidden">
+                    <div className="relative w-full h-[800px] md:h-[1200px]">
+                      <Image src={img} alt={`Detail ${idx}`} fill className="object-contain" />
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="py-32 text-center border-y border-border-light border-dashed">
+                  <p className="text-muted italic font-light font-serif text-xl">상세 설명 이미지를 준비 중입니다.</p>
+                </div>
+              )}
             </div>
-            <div className="max-w-2xl mx-auto text-center space-y-8">
+
+            {/* Brand Marketing Section */}
+            <div className="max-w-2xl mx-auto text-center space-y-8 pt-24 border-t border-border-light">
               <span className="text-deep-sage text-xs font-bold tracking-[0.4em] uppercase">The Sincerity of Nature</span>
               <h3 className="font-serif text-4xl md:text-5xl text-charcoal tracking-tight leading-tight">자연의 결이 약속하는<br/>가장 순수한 결실</h3>
               <p className="text-xl text-charcoal/60 leading-relaxed font-light italic">&quot;우리는 꾸밈없는 자연의 산물을 전하기 위해<br/>오늘도 정직한 땀방울을 흘립니다.&quot;</p>
