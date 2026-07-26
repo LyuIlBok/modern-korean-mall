@@ -257,6 +257,19 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // GET /api/state - Unity polls overall system state (system_state.json) for continuity
+    if (parsedUrl.pathname === '/api/state' && req.method === 'GET') {
+        const stateFile = "system_state.json";
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        if (fs.existsSync(stateFile)) {
+            const systemState = fs.readFileSync(stateFile, 'utf8');
+            res.end(systemState);
+        } else {
+            res.end(JSON.stringify({ error: "System state file not found." }));
+        }
+        return;
+    }
+
     // POST /api/command - Unity triggers a new natural language task
     if (parsedUrl.pathname === '/api/command' && req.method === 'POST') {
         let body = '';
