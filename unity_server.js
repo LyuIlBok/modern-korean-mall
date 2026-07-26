@@ -1,5 +1,6 @@
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const { exec, execSync } = require('child_process');
 
 // ANSI colors for backend terminal console
@@ -25,6 +26,31 @@ let agentState = {
     step: 0,
     maxSteps: 10
 };
+
+// Recursive helper to list valid project source files (excluding Temp, Library, .git, etc.)
+function getAllFiles(dirPath, arrayOfFiles = []) {
+    const files = fs.readdirSync(dirPath);
+    const ignoreFolders = ['.git', 'node_modules', 'Temp', 'Library', 'obj', 'bin', 'mobile_app', 'web_deploy'];
+    
+    files.forEach((file) => {
+        const fullPath = path.join(dirPath, file);
+        const relPath = path.relative(__dirname, fullPath).replace(/\\/g, '/');
+        
+        if (fs.statSync(fullPath).isDirectory()) {
+            if (!ignoreFolders.includes(file)) {
+                getAllFiles(fullPath, arrayOfFiles);
+            }
+        } else {
+            // Only list relevant editable and previewable code/config/text files
+            const ext = path.extname(file).toLowerCase();
+            const validExts = ['.js', '.py', '.html', '.cs', '.md', '.json', '.sql', '.txt', '.bat'];
+            if (validExts.includes(ext)) {
+                arrayOfFiles.push(relPath);
+            }
+        }
+    });
+    return arrayOfFiles;
+}
 
 // Save state to disk for robustness against reboots
 function saveState() {
@@ -266,6 +292,52 @@ const server = http.createServer((req, res) => {
             res.end(systemState);
         } else {
             res.end(JSON.stringify({ error: "System state file not found." }));
+        }
+        return;
+    }
+
+    // GET /api/files - List code/text files recursively in the project
+    if (parsedUrl.pathname === '/api/files' && req.method === 'GET') {
+        try {
+            const filesList = getAllFiles(__dirname);
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify(filesList));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // GET /api/file_content - Get raw file content (UTF-8) with directory traversal protection
+    if (parsedUrl.pathname === '/api/file_content' && req.method === 'GET') {
+        const filePath = parsedUrl.searchParams.get('path');
+        if (!filePath) {
+            res.writeHead(400, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end("Error: Missing 'path' parameter.");
+            return;
+        }
+
+        // Secure Path Resolution (Directory Traversal Defense)
+        const safePath = path.resolve(__dirname, filePath);
+        if (!safePath.startsWith(path.resolve(__dirname))) {
+            res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end("Error: Access denied (Directory traversal blocked).");
+            return;
+        }
+
+        try {
+            if (fs.existsSync(safePath) && fs.statSync(safePath).isFile()) {
+                const content = fs.readFileSync(safePath, 'utf8');
+                res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(content);
+            } else {
+                res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
+                res.end(`Error: File '${filePath}' not found.`);
+            }
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' });
+            res.end(`Error reading file: ${e.message}`);
         }
         return;
     }
