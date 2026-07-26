@@ -27,6 +27,9 @@ let agentState = {
     maxSteps: 10
 };
 
+// Multi-Agent message bus
+let agentMessages = [];
+
 // Recursive helper to list valid project source files (excluding Temp, Library, .git, etc.)
 function getAllFiles(dirPath, arrayOfFiles = []) {
     const files = fs.readdirSync(dirPath);
@@ -68,8 +71,6 @@ function loadState() {
             const data = fs.readFileSync(STATE_FILE, 'utf8');
             const loaded = JSON.parse(data);
             
-            // If the server crashed or was restarted while the agent was running,
-            // change status to ERROR/IDLE with a clean explanation instead of getting stuck in THINKING.
             if (loaded.status === "THINKING" || loaded.status === "EXECUTING") {
                 loaded.status = "ERROR";
                 loaded.thought = "이전 작업 수행 중 서버가 예기치 않게 재부팅되어 작업이 중단되었습니다. 새로 명령을 전송해 주세요.";
@@ -212,7 +213,6 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
         
         let observation = "";
         if (action === "read_file") {
-            // Check file
             const fPath = parameters.path;
             if (fs.existsSync(fPath)) {
                 observation = fs.readFileSync(fPath, 'utf8');
@@ -227,7 +227,6 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
                 observation = `Error writing file: ${e.message}`;
             }
         } else if (action === "run_command") {
-            // Auto-approve for Unity pipeline
             try {
                 observation = execSync(parameters.command, { encoding: 'utf8', timeout: 30000 });
             } catch (e) {
@@ -317,6 +316,53 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // GET /api/collaboration/messages - Read agent collaboration messages
+    if (parsedUrl.pathname === '/api/collaboration/messages' && req.method === 'GET') {
+        res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+        res.end(JSON.stringify(agentMessages));
+        return;
+    }
+
+    // POST /api/collaboration/messages - Push/Broadcast a new message on the collaboration bus
+    if (parsedUrl.pathname === '/api/collaboration/messages' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                const { agent_id, role, content } = data;
+                
+                if (!agent_id || !content) {
+                    res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+                    res.end(JSON.stringify({ error: "agent_id and content are required." }));
+                    return;
+                }
+
+                const newMessage = {
+                    id: Date.now(),
+                    agent_id,
+                    role: role || 'worker',
+                    content,
+                    timestamp: new Date().toISOString()
+                };
+
+                agentMessages.push(newMessage);
+                
+                // Prevent memory leak: only keep last 50 messages
+                if (agentMessages.length > 50) {
+                    agentMessages.shift();
+                }
+
+                res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ success: true, message: "Message broadcasted.", data: newMessage }));
+            } catch (e) {
+                res.writeHead(400, { 'Content-Type': 'application/json; charset=utf-8' });
+                res.end(JSON.stringify({ error: "Malformed JSON payload." }));
+            }
+        });
+        return;
+    }
+
     // GET /api/files - List code/text files recursively in the project
     if (parsedUrl.pathname === '/api/files' && req.method === 'GET') {
         try {
@@ -339,7 +385,6 @@ const server = http.createServer((req, res) => {
             return;
         }
 
-        // Secure Path Resolution (Directory Traversal Defense)
         const safePath = path.resolve(__dirname, filePath);
         if (!safePath.startsWith(path.resolve(__dirname))) {
             res.writeHead(403, { 'Content-Type': 'text/plain; charset=utf-8' });
