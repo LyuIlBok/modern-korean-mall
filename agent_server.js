@@ -1,67 +1,22 @@
 const http = require('http');
 const fs = require('fs');
+const path = require('path');
 const { exec, execSync } = require('child_process');
-
-// ANSI colors for backend terminal console
-const C_GREEN = "\x1b[92m";
-const C_CYAN = "\x1b[96m";
-const C_YELLOW = "\x1b[93m";
-const C_RED = "\x1b[91m";
-const C_BOLD = "\x1b[1m";
-const C_RESET = "\x1b[0m";
 
 const PORT = 5001;
 const KEY_FILE = "gemini_key.txt";
 const APP_FILE = "leitner_app.html";
-const STATE_FILE = "agent_state.json";
 
-// Global state of the AI Agent to stream to Unity
+// Global state of the AI Agent
 let agentState = {
-    status: "IDLE", // IDLE, THINKING, EXECUTING, SUCCESS, ERROR, OFFLINE
-    thought: "Unity 연결 대기 중...",
+    status: "IDLE", // IDLE, THINKING, EXECUTING, SUCCESS, ERROR
+    thought: "대기 중... 명령을 입력하십시오.",
     currentAction: "None",
     observation: "None",
     goal: "None",
     step: 0,
     maxSteps: 10
 };
-
-// Save state to disk for robustness against reboots
-function saveState() {
-    try {
-        fs.writeFileSync(STATE_FILE, JSON.stringify(agentState, null, 2), 'utf8');
-    } catch (e) {
-        console.error(`[State Save Error]: ${e.message}`);
-    }
-}
-
-// Load state from disk to recover from reboots
-function loadState() {
-    try {
-        if (fs.existsSync(STATE_FILE)) {
-            const data = fs.readFileSync(STATE_FILE, 'utf8');
-            const loaded = JSON.parse(data);
-            
-            // If the server crashed or was restarted while the agent was running,
-            // change status to ERROR/IDLE with a clean explanation instead of getting stuck in THINKING.
-            if (loaded.status === "THINKING" || loaded.status === "EXECUTING") {
-                loaded.status = "ERROR";
-                loaded.thought = "이전 작업 수행 중 서버가 예기치 않게 재부팅되어 작업이 중단되었습니다. 새로 명령을 전송해 주세요.";
-                loaded.currentAction = "Interrupted";
-            }
-            
-            agentState = loaded;
-            saveState(); // Update file with the resolved interrupted state
-            
-            console.log(`\n💾 ${C_CYAN}[State Recovered] 이전 저장된 상태를 성공적으로 복구했습니다:${C_RESET}`);
-            console.log(`   - Status: ${agentState.status}`);
-            console.log(`   - Goal: ${agentState.goal}`);
-            console.log(`   - Step: ${agentState.step}/${agentState.maxSteps}`);
-        }
-    } catch (e) {
-        console.error(`[State Load Error]: ${e.message}`);
-    }
-}
 
 function loadGeminiKey() {
     if (fs.existsSync(KEY_FILE)) {
@@ -70,27 +25,24 @@ function loadGeminiKey() {
     return "";
 }
 
-// Autonomous Agent Logic (Modified to update state for Unity in real-time)
-async function runUnityAgentLoop(goal) {
+// Autonomous Agent Logic
+async function runAgentLoop(goal) {
     const apiKey = loadGeminiKey();
     if (!apiKey) {
         agentState.status = "ERROR";
         agentState.thought = "Gemini API Key가 누락되었습니다. gemini_key.txt 파일에 입력해 주십시오.";
-        saveState();
         return;
     }
 
     agentState.goal = goal;
     agentState.status = "THINKING";
-    agentState.thought = "과업 분석을 시작합니다...";
+    agentState.thought = "과업 분석 및 문제 해결을 설계 중입니다...";
     agentState.step = 1;
     agentState.currentAction = "Initializing";
     agentState.observation = "None";
-    saveState();
 
-    const systemInstruction = `You are 'Connect AI Lite for Unity', an elite autonomous AI game assistant.
+    const systemInstruction = `You are 'AgriLeitner Web Agent', an elite autonomous software developer.
 Your objective is to complete the user's goal by using the provided tools step-by-step.
-Your actions will drive the 3D animations and UI displays in the Unity game client in real-time!
 
 AVAILABLE TOOLS:
 1. read_file: Read a file's content. Parameters: {"path": "filename"}
@@ -109,7 +61,6 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
     while (agentState.step <= agentState.maxSteps) {
         agentState.status = "THINKING";
         agentState.thought = "다음 행동을 계획하는 중...";
-        saveState();
         
         // 1. Call Gemini
         const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
@@ -136,12 +87,11 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
             aiRes = resData.candidates[0].content.parts[0].text;
         } catch (e) {
             agentState.status = "ERROR";
-            agentState.thought = `Gemini API 호출 중 네트워크 오류가 발생했습니다: ${e.message}`;
-            saveState();
+            agentState.thought = `API 네트워크 오류: ${e.message}`;
             break;
         }
 
-        // 2. Clean and Parse JSON
+        // 2. Parse JSON
         let aiResClean = aiRes.trim();
         if (aiResClean.startsWith("```json")) aiResClean = aiResClean.substring(7);
         if (aiResClean.startsWith("```")) aiResClean = aiResClean.substring(3);
@@ -153,40 +103,29 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
             actionData = JSON.parse(aiResClean);
         } catch (e) {
             agentState.status = "ERROR";
-            agentState.thought = "AI의 응답 데이터 수신 오류 (JSON 파싱 실패).";
-            saveState();
+            agentState.thought = "AI 응답 JSON 분석 실패.";
             break;
         }
 
-        const thought = actionData.thought || "생각 중...";
+        const thought = actionData.thought || "분석 중...";
         const action = actionData.action;
         const parameters = actionData.parameters || {};
 
-        // Update state for Unity
         agentState.thought = thought;
         agentState.currentAction = action;
         agentState.status = "THINKING";
-        saveState();
-
-        console.log(`\n 🤔 [AI 생각]: ${thought}`);
-        console.log(` 🛠️  [AI 행동 요청]: ${action}`);
 
         if (action === "done") {
             agentState.status = "SUCCESS";
-            agentState.thought = `모든 작업을 성공적으로 완료했습니다! 🎉`;
+            agentState.thought = `모든 작업을 완성했습니다!`;
             agentState.observation = parameters.message || "완료";
-            saveState();
-            console.log(`\n${C_GREEN}🎉 [성공] 자율 AI 에이전트 과업 완수!${C_RESET}`);
             break;
         }
 
         // 3. Execute Tool
         agentState.status = "EXECUTING";
-        saveState();
-        
         let observation = "";
         if (action === "read_file") {
-            // Check file
             const fPath = parameters.path;
             if (fs.existsSync(fPath)) {
                 observation = fs.readFileSync(fPath, 'utf8');
@@ -195,13 +134,17 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
             }
         } else if (action === "write_file") {
             try {
-                fs.writeFileSync(parameters.path, parameters.content, 'utf8');
-                observation = `Success: File written.`;
+                // Auto backup
+                const p = parameters.path;
+                if (fs.existsSync(p)) {
+                    fs.writeFileSync(p + ".bak", fs.readFileSync(p, 'utf8'), 'utf8');
+                }
+                fs.writeFileSync(p, parameters.content, 'utf8');
+                observation = `Success: File written successfully. Backup created.`;
             } catch (e) {
                 observation = `Error writing file: ${e.message}`;
             }
         } else if (action === "run_command") {
-            // Auto-approve for Unity pipeline
             try {
                 observation = execSync(parameters.command, { encoding: 'utf8', timeout: 30000 });
             } catch (e) {
@@ -218,26 +161,21 @@ You MUST output EXACTLY ONE JSON object with 'thought', 'action', and 'parameter
         }
 
         agentState.observation = observation;
-        saveState();
-        console.log(` 📊 [실행 결과]: ${observation.substring(0, 150)}...`);
-
         conversationHistory.push({ role: "assistant", content: aiResClean });
         conversationHistory.push({ role: "user", content: `[OBSERVATION]\n${observation}` });
 
         agentState.step++;
-        await new Promise(r => setTimeout(r, 2000)); // Delay for smooth Unity UI feedback
+        await new Promise(r => setTimeout(r, 1500)); // Delay for smooth UI transitions
     }
 
     if (agentState.step > agentState.maxSteps && agentState.status !== "SUCCESS") {
         agentState.status = "ERROR";
-        agentState.thought = "허용된 가동 단계를 초과하여 에이전트 루프가 비정상 종료되었습니다.";
-        saveState();
+        agentState.thought = "허용된 최적 단계를 초과하여 가동이 중단되었습니다.";
     }
 }
 
 // Create HTTP Server
 const server = http.createServer((req, res) => {
-    // Enable CORS for Unity Client
     res.setHeader('Access-Control-Allow-Origin', '*');
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -250,50 +188,129 @@ const server = http.createServer((req, res) => {
 
     const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
 
-    // GET /api/status - Unity polls real-time agent thought, status, and actions
+    // GET /api/status - Status Poller
     if (parsedUrl.pathname === '/api/status' && req.method === 'GET') {
         res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
         res.end(JSON.stringify(agentState));
         return;
     }
 
-    // POST /api/command - Unity triggers a new natural language task
+    // GET /api/files - Get local workspace files list
+    if (parsedUrl.pathname === '/api/files' && req.method === 'GET') {
+        try {
+            const files = fs.readdirSync('.').filter(f => !f.startsWith('.') && fs.statSync(f).isFile());
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ files }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // GET /api/file_content - Read file for dashboard preview
+    if (parsedUrl.pathname === '/api/file_content' && req.method === 'GET') {
+        const filePath = parsedUrl.searchParams.get('path');
+        if (!filePath || !fs.existsSync(filePath)) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: "File not found." }));
+            return;
+        }
+        try {
+            const content = fs.readFileSync(filePath, 'utf8');
+            res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8' });
+            res.end(JSON.stringify({ content }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // POST /api/command - Trigger Goal
     if (parsedUrl.pathname === '/api/command' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => { body += chunk; });
         req.on('end', () => {
             try {
                 const data = JSON.parse(body);
-                const goal = data.command;
-                if (!goal) {
+                if (data.command) {
+                    runAgentLoop(data.command);
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ status: "STARTED" }));
+                } else {
                     res.writeHead(400, { 'Content-Type': 'application/json' });
-                    res.end(JSON.stringify({ error: "Missing 'command' parameter in body." }));
-                    return;
+                    res.end(JSON.stringify({ error: "Missing 'command'" }));
                 }
-
-                // Run Agent Loop in the background (Non-blocking)
-                runUnityAgentLoop(goal);
-
-                res.writeHead(200, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ message: "AI Agent loop initiated successfully.", status: "STARTED" }));
             } catch (e) {
                 res.writeHead(400, { 'Content-Type': 'application/json' });
-                res.end(JSON.stringify({ error: "Malformed JSON payload." }));
+                res.end(JSON.stringify({ error: "Invalid JSON" }));
             }
         });
         return;
     }
 
-    // Default 404 Route
-    res.writeHead(404, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ error: "Endpoint not found." }));
+    // POST /api/run_server - Trigger Local Server
+    if (parsedUrl.pathname === '/api/run_server' && req.method === 'POST') {
+        try {
+            exec("start cmd.exe /c \"title AgriLeitner Local Server && npx http-server -p 5000\"");
+            setTimeout(() => {
+                exec("start http://localhost:5000/leitner_app.html");
+            }, 1000);
+            res.writeHead(200, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ status: "SUCCESS" }));
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    // POST /api/git_sync - Trigger GitSync
+    if (parsedUrl.pathname === '/api/git_sync' && req.method === 'POST') {
+        let body = '';
+        req.on('data', chunk => { body += chunk; });
+        req.on('end', () => {
+            try {
+                const data = JSON.parse(body);
+                const msg = data.message || "Manual Web Sync";
+                exec(`node git_sync.js "Web_Center" "${msg}"`, (err, stdout, stderr) => {
+                    res.writeHead(200, { 'Content-Type': 'application/json' });
+                    res.end(JSON.stringify({ status: err ? "ERROR" : "SUCCESS", output: stdout + "\n" + stderr }));
+                });
+            } catch (e) {
+                res.writeHead(500, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: e.message }));
+            }
+        });
+        return;
+    }
+
+    // POST /api/restore - Trigger Restore
+    if (parsedUrl.pathname === '/api/restore' && req.method === 'POST') {
+        try {
+            if (fs.existsSync(APP_FILE + ".bak")) {
+                fs.writeFileSync(APP_FILE, fs.readFileSync(APP_FILE + ".bak", 'utf8'), 'utf8');
+                res.writeHead(200, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ status: "SUCCESS" }));
+            } else {
+                res.writeHead(400, { 'Content-Type': 'application/json' });
+                res.end(JSON.stringify({ error: "Backup file not found." }));
+            }
+        } catch (e) {
+            res.writeHead(500, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ error: e.message }));
+        }
+        return;
+    }
+
+    res.writeHead(404);
+    res.end();
 });
 
 server.listen(PORT, () => {
-    loadState(); // Recover state on boot (handles any interrupted run cleanly)
-    console.log("\n" + "=" * 70);
-    console.log(` 🎮 ${C_GREEN}Unity ⇄ Node.js Hybrid AI Agent REST API Server 가동 시작!${C_RESET}`);
+    console.log(`\n=========================================================`);
+    console.log(` 🚀 AgriLeitner Web Agent Backend Server 기동 완료!`);
     console.log(` [서버 주소] http://localhost:${PORT}`);
-    console.log(` -> Unity 게임 클라이언트에서 위 주소로 HTTP 요청을 보내 통신합니다.`);
-    console.log("=" * 70 + "\n");
+    console.log(`=========================================================\n`);
 });

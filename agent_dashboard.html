@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriLeitner Pro: AI Agent Workspace Dashboard</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes pulse-ring {
+      0% { transform: scale(0.95); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.5; }
+      100% { transform: scale(0.95); opacity: 1; }
+    }
+    .status-ring { animation: pulse-ring 2s infinite ease-in-out; }
+    
+    @keyframes spin-slow {
+      to { transform: rotate(360deg); }
+    }
+    .spin-loader { animation: spin-slow 1.5s infinite linear; }
+    
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.5); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-[#0b0f19] text-slate-100 font-sans antialiased min-h-screen flex flex-col justify-between">
+
+  <!-- Header -->
+  <header class="border-b border-slate-900 bg-slate-950/60 backdrop-blur-md py-4 px-6 sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 status-ring"></span>
+        <h1 class="text-sm font-black text-slate-200 tracking-wider uppercase flex items-center gap-2">
+          AgriLeitner Pro <span class="text-emerald-400 font-mono text-xs">AI Workspace Cockpit</span>
+        </h1>
+      </div>
+      <div class="flex items-center gap-4 text-xs font-mono text-slate-500">
+        <span>Backend REST API: <span id="api-status" class="text-red-500 font-bold">OFFLINE</span></span>
+        <span class="text-slate-700">|</span>
+        <span>Port: 5001</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- Dashboard Workspace Grid -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    
+    <!-- Panel 1: File Manager & Code Inspector (Left, 1 Column) -->
+    <div class="lg:col-span-1 bg-[#111625] border border-slate-900 rounded-[28px] p-5 flex flex-col justify-between shadow-2xl h-[calc(100vh-140px)] min-h-[500px]">
+      <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b border-slate-850 pb-3">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">🗂️ 프로젝트 파일 목록</h3>
+          <button id="refresh-files-btn" class="text-slate-500 hover:text-emerald-400 text-xs transition-colors">🔄 새로고침</button>
+        </div>
+        
+        <!-- Files List Scroll Container -->
+        <div id="files-container" class="flex-1 overflow-y-auto space-y-1.5 pr-1 text-xs">
+          <p class="text-slate-500 text-center py-6">파일 불러오는 중...</p>
+        </div>
+      </div>
+
+      <!-- Selected File View Indicator -->
+      <div class="border-t border-slate-850 pt-4 mt-4">
+        <p class="text-[10px] text-slate-500 leading-relaxed">
+          목록의 파일명을 클릭하시면 해당 파일의 소스코드를 한눈에 검사할 수 있습니다.
+        </p>
+      </div>
+    </div>
+
+    <!-- Panel 2: Live Code Preview Box (Center-Left, 1 Column) -->
+    <div class="lg:col-span-1 bg-[#111625] border border-slate-900 rounded-[28px] p-5 flex flex-col justify-between shadow-2xl h-[calc(100vh-140px)] min-h-[500px]">
+      <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b border-slate-850 pb-3">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+            🔍 소스코드 인스펙터
+          </h3>
+          <span id="inspected-filename" class="text-[10px] font-mono text-emerald-400 truncate max-w-[120px]">None</span>
+        </div>
+        
+        <!-- Code Content Preview -->
+        <textarea 
+          id="code-inspector-area" 
+          readonly 
+          class="flex-1 w-full bg-[#080c16] text-emerald-300 font-mono text-[10px] p-4 rounded-2xl border border-slate-900/60 focus:outline-none resize-none overflow-auto"
+          placeholder="파일 목록에서 파일을 선택하면 소스코드가 여기에 가시화됩니다."
+        ></textarea>
+      </div>
+
+      <div class="border-t border-slate-850 pt-4 mt-4 flex justify-between items-center text-[10px] text-slate-500">
+        <span>Read-Only mode</span>
+        <span id="code-length" class="font-mono">0 chars</span>
+      </div>
+    </div>
+
+    <!-- Panel 3: AI Thoughts & Terminal Log Monitor (Center-Right, 1 Column) -->
+    <div class="lg:col-span-1 bg-[#111625] border border-slate-900 rounded-[28px] p-5 flex flex-col justify-between shadow-2xl h-[calc(100vh-140px)] min-h-[500px]">
+      <div class="space-y-4 flex-1 flex flex-col overflow-hidden">
+        <div class="flex justify-between items-center border-b border-slate-850 pb-3">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest">🧠 AI 생각 및 로컬 도구 실행</h3>
+          <span id="agent-action-badge" class="px-2 py-0.5 rounded text-[8px] font-mono font-bold bg-slate-800 text-slate-500 uppercase">Idle</span>
+        </div>
+
+        <!-- Real-time Ponder Display -->
+        <div class="bg-[#080c16] border border-slate-900 rounded-2xl p-4 min-h-[100px] flex flex-col justify-center relative overflow-hidden">
+          <div id="loading-spinner-container" class="absolute right-4 top-4 hidden">
+            <svg class="w-4 h-4 text-emerald-500 spin-loader" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </div>
+          <p class="text-[9px] font-black uppercase text-slate-500 mb-1.5 tracking-wider">AI Pondering</p>
+          <p id="agent-thought-text" class="text-xs text-slate-300 leading-relaxed font-bold">
+            대기 중... 오른쪽 패널에서 명령을 내리십시오.
+          </p>
+        </div>
+
+        <!-- Terminal Output -->
+        <div class="flex-1 flex flex-col overflow-hidden space-y-2">
+          <p class="text-[9px] font-black uppercase text-slate-500 tracking-wider">🛠️ 로컬 결과 수집 (Observation)</p>
+          <textarea 
+            id="terminal-observation" 
+            readonly 
+            class="flex-1 w-full bg-[#080c16] text-slate-400 font-mono text-[10px] p-4 rounded-2xl border border-slate-900/60 focus:outline-none resize-none overflow-auto"
+            placeholder="에이전트가 실행한 도구 및 로컬 명령어 실행 결과 출력이 여기에 수집됩니다."
+          ></textarea>
+        </div>
+      </div>
+
+      <div class="border-t border-slate-850 pt-4 mt-4 flex justify-between items-center text-[10px] text-slate-500">
+        <span>Step Progress</span>
+        <span id="agent-step" class="font-mono">0 / 10 steps</span>
+      </div>
+    </div>
+
+    <!-- Panel 4: Interactive Command Input & System Controls (Right, 1 Column) -->
+    <div class="lg:col-span-1 bg-[#111625] border border-slate-900 rounded-[28px] p-5 flex flex-col justify-between shadow-2xl h-[calc(100vh-140px)] min-h-[500px] relative overflow-hidden">
+      <div class="absolute inset-0 bg-gradient-to-b from-emerald-500/5 via-transparent to-transparent pointer-events-none"></div>
+
+      <div class="space-y-6 flex-1 flex flex-col justify-between z-10">
+        
+        <!-- Task Posting Form -->
+        <form id="command-form" class="space-y-3">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-850 pb-3">🏁 자율 과업 지시</h3>
+          <p class="text-[11px] text-slate-500 leading-relaxed">
+            원하는 코드 수정/기능 개발/명령을 자연어로 쓰십시오. 에이전트가 생각, 파일 읽기/쓰기, 쉘 가동을 자동으로 순환합니다.
+          </p>
+          <div class="space-y-2">
+            <textarea 
+              id="goal-input"
+              required
+              rows="4"
+              class="w-full bg-[#080c16] border border-slate-850 rounded-2xl p-4 text-xs text-slate-100 focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-600 transition-all resize-none"
+              placeholder="예: leitner_app.html의 전체 테마를 자연의 결 친환경 감성인 에메랄드 그린 컬러 톤으로 보정해줘"
+            ></textarea>
+          </div>
+          <button 
+            type="submit"
+            id="submit-btn"
+            class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg"
+          >
+            🚀 에이전트 자율 가동 개시
+          </button>
+        </form>
+
+        <!-- System Commands Controls Group -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-850 pb-3">🎛️ 원스톱 신속 원격 제어</h3>
+          <div class="grid grid-cols-2 gap-2 text-xs">
+            <button id="run-server-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold p-3.5 rounded-2xl transition-all">
+              💻 로컬 서버 켜기
+            </button>
+            <button id="git-sync-btn" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 font-bold p-3.5 rounded-2xl transition-all">
+              🐙 깃허브 백업
+            </button>
+          </div>
+          <button id="restore-btn" class="w-full bg-slate-900 hover:bg-slate-800 border border-slate-800 text-slate-400 hover:text-red-400 font-bold py-3.5 rounded-2xl transition-all text-xs">
+            💾 수동 코드 복구 (.bak 파일 적용)
+          </button>
+        </div>
+
+      </div>
+
+      <div class="border-t border-slate-850 pt-4 mt-6 flex justify-between items-center text-[10px] text-slate-600">
+        <span>System ready</span>
+        <span>v1.0.0 (Node)</span>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-950 bg-slate-950/60 py-4 px-6 text-center text-[10px] text-slate-600">
+    <p>AgriLeitner Pro One-Stop AI Command Control Workspace Dashboard</p>
+  </footer>
+
+  <script>
+    const serverUrl = "http://localhost:5001";
+    let pollInterval = null;
+
+    const apiStatus = document.getElementById("api-status");
+    const filesContainer = document.getElementById("files-container");
+    const refreshFilesBtn = document.getElementById("refresh-files-btn");
+    const codeInspectorArea = document.getElementById("code-inspector-area");
+    const inspectedFilename = document.getElementById("inspected-filename");
+    const codeLength = document.getElementById("code-length");
+    
+    const agentActionBadge = document.getElementById("agent-action-badge");
+    const agentThoughtText = document.getElementById("agent-thought-text");
+    const terminalObservation = document.getElementById("terminal-observation");
+    const agentStep = document.getElementById("agent-step");
+    const loadingSpinnerContainer = document.getElementById("loading-spinner-container");
+    
+    const goalInput = document.getElementById("goal-input");
+    const commandForm = document.getElementById("command-form");
+    const submitBtn = document.getElementById("submit-btn");
+    
+    const runServerBtn = document.getElementById("run-server-btn");
+    const gitSyncBtn = document.getElementById("git-sync-btn");
+    const restoreBtn = document.getElementById("restore-btn");
+
+    // Fetch workspace files
+    async function fetchFilesList() {
+      try {
+        const response = await fetch(`${serverUrl}/api/files`);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        
+        filesContainer.innerHTML = "";
+        data.files.forEach(file => {
+          const btn = document.createElement("button");
+          btn.className = "w-full text-left p-2.5 rounded-xl bg-[#1a1f2e]/60 hover:bg-slate-800 border border-slate-900/40 text-slate-350 hover:text-emerald-400 font-mono transition-all truncate block";
+          btn.innerText = `📄 ${file}`;
+          btn.addEventListener("click", () => inspectFile(file));
+          filesContainer.appendChild(btn);
+        });
+      } catch (e) {
+        filesContainer.innerHTML = `<p class="text-red-500 text-center py-6">파일 로딩 실패 (서버 꺼짐)</p>`;
+      }
+    }
+
+    // Inspect file content
+    async function inspectFile(filename) {
+      try {
+        inspectedFilename.innerText = filename;
+        codeInspectorArea.value = "불러오는 중...";
+        
+        const response = await fetch(`${serverUrl}/api/file_content?path=${filename}`);
+        if (!response.ok) throw new Error();
+        const data = await response.json();
+        
+        codeInspectorArea.value = data.content;
+        codeLength.innerText = `${data.content.length.toLocaleString()} chars`;
+      } catch (e) {
+        codeInspectorArea.value = "파일을 읽어오는데 실패했습니다.";
+        codeLength.innerText = "Error";
+      }
+    }
+
+    // Polling Agent Loop Status
+    async function pollAgentStatus() {
+      try {
+        const response = await fetch(`${serverUrl}/api/status`);
+        if (!response.ok) throw new Error();
+        
+        const data = await response.json();
+        
+        apiStatus.innerText = "CONNECTED";
+        apiStatus.className = "text-emerald-400 font-bold";
+
+        // Update thinking loop displays
+        agentThoughtText.innerText = data.thought;
+        terminalObservation.value = data.observation === "None" ? "" : data.observation;
+        agentStep.innerText = `${data.step} / ${data.maxSteps} steps`;
+        agentActionBadge.innerText = data.currentAction;
+
+        if (data.status === "THINKING" || data.status === "EXECUTING") {
+          loadingSpinnerContainer.classList.remove("hidden");
+          submitBtn.disabled = true;
+          submitBtn.innerText = "🤖 AI 가동 중...";
+          submitBtn.className = "w-full bg-slate-800 text-slate-500 font-bold py-4 rounded-2xl text-xs cursor-not-allowed flex items-center justify-center gap-2";
+        } else {
+          loadingSpinnerContainer.classList.add("hidden");
+          submitBtn.disabled = false;
+          submitBtn.innerText = "🚀 에이전트 자율 가동 개시";
+          submitBtn.className = "w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs transition-all flex items-center justify-center gap-2 shadow-lg";
+        }
+      } catch (e) {
+        apiStatus.innerText = "OFFLINE";
+        apiStatus.className = "text-red-500 font-bold";
+        loadingSpinnerContainer.classList.add("hidden");
+      }
+    }
+
+    // Trigger Command
+    commandForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const command = goalInput.value.trim();
+      if (!command) return;
+
+      try {
+        const response = await fetch(`${serverUrl}/api/command`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command })
+        });
+        if (!response.ok) throw new Error();
+        goalInput.value = "";
+        pollAgentStatus();
+      } catch (err) {
+        alert("에이전트 가동 명령 전송 실패!");
+      }
+    });
+
+    // Run Server button
+    runServerBtn.addEventListener("click", async () => {
+      try {
+        const response = await fetch(`${serverUrl}/api/run_server`, { method: "POST" });
+        if (response.ok) alert("로컬 웹 서버가 기동되었습니다! 브라우저 창이 실행됩니다.");
+      } catch (e) {
+        alert("로컬 서버 기동 실패!");
+      }
+    });
+
+    // Git Sync button
+    gitSyncBtn.addEventListener("click", async () => {
+      const commitMsg = prompt("GitHub 백업용 커밋 메시지를 입력하십시오:", "Web Dashboard Sync Commit");
+      if (commitMsg === null) return;
+      try {
+        alert("원격 GitHub 저장소 동기화(Pull & Push)를 시작합니다. 약 5초간 대기하십시오.");
+        const response = await fetch(`${serverUrl}/api/git_sync`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: commitMsg })
+        });
+        const data = await response.json();
+        alert(`동기화 결과:\n${data.status === "SUCCESS" ? "성공!" : "실패"}\n\n${data.output}`);
+      } catch (e) {
+        alert("깃 동기화 연동 오류!");
+      }
+    });
+
+    // Restore Backup button
+    restoreBtn.addEventListener("click", async () => {
+      if (!confirm("정말 가장 최근 백업본으로 leitner_app.html 소스코드를 복구하시겠습니까?")) return;
+      try {
+        const response = await fetch(`${serverUrl}/api/restore`, { method: "POST" });
+        if (response.ok) {
+          alert("성공적으로 복구되었습니다! 코드를 갱신하여 확인해 보십시오.");
+          inspectFile("leitner_app.html");
+        } else {
+          alert("복구에 실패했습니다. 백업 파일(.bak)이 존재하지 않는 것 같습니다.");
+        }
+      } catch (e) {
+        alert("복구 연동 에러!");
+      }
+    });
+
+    refreshFilesBtn.addEventListener("click", fetchFilesList);
+
+    // Initial Load & Loop Intervals
+    fetchFilesList();
+    setInterval(pollAgentStatus, 1500);
+  </script>
+</body>
+</html>

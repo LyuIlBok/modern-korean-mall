@@ -14,7 +14,7 @@ namespace AgriLeitner.AI
     {
         [Header("Network Configurations")]
         [Tooltip("The local address of the Node.js agent backend server.")]
-        [SerializeField] private string serverUrl = "http://localhost:5001";
+        [SerializeField] private string serverUrl = "http://127.0.0.1:5001";
         
         [Tooltip("How often (in seconds) Unity polls the AI agent's status.")]
         [SerializeField] private float pollInterval = 1.0f;
@@ -29,10 +29,11 @@ namespace AgriLeitner.AI
 
         [Header("3D Unity Interactions & Animations")]
         [Tooltip("If you have an AI programmer character (e.g., Robot, Avatar), assign its Animator here.")]
-        [SerializeField] private Animator agentCharacterAnimator;
+        public Animator agentCharacterAnimator; // Made public for editor automation script access
 
         // Coroutines trackers
         private Coroutine pollCoroutine;
+        private bool wasOffline = false;
 
         private void Start()
         {
@@ -47,6 +48,11 @@ namespace AgriLeitner.AI
         /// </summary>
         public void SendAgentCommand(string naturalLanguageCommand)
         {
+            if (agentStatus == "OFFLINE")
+            {
+                Debug.LogWarning("[AI Workspace] 경고: 백엔드 서버가 오프라인입니다. 서버(Run_Unity_Backend.bat)를 먼저 실행한 뒤 명령을 전송하세요.");
+                return;
+            }
             if (string.IsNullOrEmpty(naturalLanguageCommand)) return;
             StartCoroutine(PostCommandCoroutine(naturalLanguageCommand));
         }
@@ -121,9 +127,20 @@ namespace AgriLeitner.AI
                     agentStatus = "OFFLINE";
                     agentThought = "백엔드 서버 오프라인 상태 (서버를 실행해 주십시오).";
                     TriggerAnimationState("Idle");
+                    
+                    if (!wasOffline)
+                    {
+                        Debug.LogWarning("[AI Workspace] 서버가 오프라인이거나 재부팅되는 중입니다. 폴링은 백그라운드에서 유지됩니다.");
+                        wasOffline = true;
+                    }
                 }
                 else
                 {
+                    if (wasOffline)
+                    {
+                        Debug.Log("[AI Workspace] 서버가 성공적으로 다시 연결되었습니다!");
+                        wasOffline = false;
+                    }
                     string jsonResult = request.downloadHandler.text;
                     ParseServerStatus(jsonResult);
                 }
@@ -187,8 +204,7 @@ namespace AgriLeitner.AI
         {
             if (agentCharacterAnimator == null) return;
             
-            // Set Unity Animator Controller parameters (e.g. integer or trigger states)
-            // Example resets other booleans and sets the active state
+            // Set Unity Animator Controller parameters
             agentCharacterAnimator.SetBool("isThinking", stateName == "Thinking");
             agentCharacterAnimator.SetBool("isTyping", stateName == "Typing");
             agentCharacterAnimator.SetBool("isCheering", stateName == "Cheer");
