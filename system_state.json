@@ -1,6 +1,6 @@
 {
-  "current_phase": "Phase 2: 3D 듀얼 콕핏 시각화 및 BYOK 개념 증명(PoC)",
+  "current_phase": "Phase 3: 다중 AI 실시간 통신 브로커와 유니티 3D UI 연동",
   "active_agents": ["Agent_Commander", "Custom_API_Worker"],
-  "next_todo": "Phase 3: Supabase 통합 인증(SSO) 설계 적용",
-  "issues": []
+  "next_todo": "Phase 4: 커스텀 무료 AI(Llama 등) API 연동 테스트를 위한 파이프라인 설계",
+  "issues": ["웹앱(쇼핑몰, 단어장) 통합 작업은 지휘관의 지시에 따라 전면 홀드(Hold) 됨."]
 }
