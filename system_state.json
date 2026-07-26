@@ -1,6 +1,6 @@
 {
-  "current_phase": "Phase 1: Multi-AI Broker Initialization",
-  "active_agents": [],
-  "next_todo": "Phase 2: 유니티 3D 씬 내부에 AI 통신 로그를 시각화하는 다중 홀로그램 전광판 자동 생성",
+  "current_phase": "Phase 2: 3D 듀얼 콕핏 시각화 및 BYOK 개념 증명(PoC)",
+  "active_agents": ["Agent_Commander", "Custom_API_Worker"],
+  "next_todo": "Phase 3: Supabase 통합 인증(SSO) 설계 적용",
   "issues": []
 }
