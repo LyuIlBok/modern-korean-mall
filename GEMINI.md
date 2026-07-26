@@ -16,29 +16,16 @@ This project is a single-file SaaS web application called **AgriLeitner Pro SaaS
 - **Google OAuth Client Secret**: `[REDACTED_SECURELY] (Refer to private project memory .gemini/tmp/project/memory/MEMORY.md)`
 - **Google OAuth Redirect URI**: `https://cfimyvvecsoqeicsjezo.supabase.co/auth/v1/callback`
 
-## Multi-Agent Collaboration (Alpha & Beta)
-To accelerate development, you can run multiple specialized Gemini CLI instances simultaneously. We have designed an automated orchestration system to manage this setup.
+## 🎛️ One-Stop AI Command Control Center (`command_center.py`)
+To make development completely frictionless, we have built a **Unified AI Command Control Center** program. Instead of managing multiple separate agents or terminal windows, you can control the entire project from a single, interactive CLI cockpit.
 
-### 👥 Assigned Roles
-- **Agent Alpha (Frontend & UI)**: Responsible for CSS, Tailwind, layouts, views, and frontend user experience in `leitner_app.html`.
-- **Agent Beta (Backend & Logic)**: Responsible for Supabase database sync, triggers, authentication, APIs, and payment validation.
+### 🌟 Core Capabilities
+1. **🤖 Natural Language AI Code Editor**: Type any feature request or design modification in plain Korean (e.g., *"구글페이 결제 완료 성공 모달창 더 이쁘게 다듬어줘"*). The console directly communicates with the Gemini 1.5 Flash API, surgically rewrites `leitner_app.html`, creates an automatic safety backup, and saves the file!
+2. **💻 Integrated Local Server**: Launch the background local test server (`http://localhost:5000`) and automatically open the app in your default browser with a single press of a button.
+3. **🐙 Automated GitOps GitHub Sync**: Instantly stage, commit, and push your entire codebase directly to your GitHub repository.
+4. **💾 Safety Rollback**: Did the AI write something you want to undo? Instantly restore the previous version of your code from the automatically generated `.bak` safety file.
 
-### 🔄 Real-time Communication Channel
-- The agents write to and monitor **`COOP.md`** to share requirements, API schemas, and synchronize tasks.
-
-### 🖥️ 1-Click Launch & Auto-Arrangement
-- **`run_collaboration_team.bat`**: Double-click this script to automatically launch both 에이전트 Alpha and 에이전트 Beta CMD instances.
-- **`run_collaboration.py`**: A Python script executed by the batch file that utilizes the Windows API (`ctypes`) to automatically snap and size the two command prompts side-by-side on your screen (50% left screen, 50% right screen) for an optimal multi-agent cockpit experience.
-
-### 🐙 Git & GitHub GitOps Sync (`git_sync.py`)
-Both agents can commit and push their collaborative work to your GitHub repository automatically using **`git_sync.py`**.
-- **Agent Alpha Commit**: `python git_sync.py Alpha "Commit message"`
-- **Agent Beta Commit**: `python git_sync.py Beta "Commit message"`
-- *Workflow*:
-  1. The script auto-initializes git if needed.
-  2. Stages all changes (`git add .`).
-  3. Commits with a custom agent tag (e.g., `[Alpha] Added User Profile View`).
-  4. Safely performs `git pull --rebase` from your remote GitHub origin to prevent merge conflicts.
-  5. Pushes your synced workspace directly to `origin main`!
-- *Setup*: Add your GitHub repository as origin:
-  `git remote add origin https://github.com/your-username/your-repo-name.git`
+### 🎮 How to Launch
+1. Double-click **`Run_Command_Center.bat`** in your project directory.
+2. Enter your Gemini API Key on first launch (saved locally to `gemini_key.txt`).
+3. Speak, test, and sync your application to GitHub with absolute zero friction!
