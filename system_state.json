@@ -1,6 +1,6 @@
 {
-  "current_phase": "Phase 3.1: 한글 Native Font 자동화 및 전광판 완전 기동 완료",
+  "current_phase": "Phase 3.2: Standalone AI 시뮬레이션 완전 독립화 완료",
   "active_agents": ["Agent_Commander", "Custom_API_Worker"],
-  "next_todo": "Phase 4: 커스텀 무료 AI(Llama 등) API 연동 테스트를 위한 파이프라인 설계",
+  "next_todo": "Phase 4: 유니티 독립 가동 검증 및 보키네 농장 시뮬레이션 시나리오 고도화",
   "issues": ["웹앱(쇼핑몰, 단어장) 통합 작업은 지휘관의 지시에 따라 전면 홀드(Hold) 됨."]
 }
