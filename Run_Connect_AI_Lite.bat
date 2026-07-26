@@ -1,10 +1,10 @@
 @echo off
 :: Set CMD active page code to UTF-8 to prevent garbled Korean characters
 chcp 65001 >nul
-title AgriLeitner Pro AI Command Center Launcher
+title Connect AI Lite - Launcher
 cd /d "%~dp0"
 cls
-node command_center.js
+node connect_ai_lite.js
 if %errorlevel% neq 0 (
     echo.
     echo ❌ [오류] Node.js 실행에 실패했습니다.
