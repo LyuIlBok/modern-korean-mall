@@ -296,6 +296,27 @@ const server = http.createServer((req, res) => {
         return;
     }
 
+    // GET /api/farm_status - Return Bokine Farm integration control status
+    if (parsedUrl.pathname === '/api/farm_status' && req.method === 'GET') {
+        const statusText = `[SYSTEM] 보키네 농장(Bokine Farm) 통합 관제 시스템 온라인
+==================================================
+[작물 생육 데이터베이스 마운트]
+- 흑태 (Black Beans): 수분 상태 양호
+- 홍고추 (Red Peppers): 일조량 최적화 진행 중
+- 율무 (Job's tears): 토양 영양소 모니터링 중
+- 벼, 참깨, 들깨: 생육 로그 테이블 동기화 완료
+
+[개인 워크스페이스 상태]
+- 식물보호기사(Plant Protection Engineer) 자격 검정 준비 모듈: 활성화
+- 정기 기사 필기 시험 D-Day 카운터: 가동 중
+- 농업 기계(궤도형 살포기) 블루프린트 연동: Standby
+==================================================
+* 5001 Port Polling: Stable`;
+        res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+        res.end(statusText);
+        return;
+    }
+
     // GET /api/files - List code/text files recursively in the project
     if (parsedUrl.pathname === '/api/files' && req.method === 'GET') {
         try {
