@@ -97,7 +97,7 @@ interface AdminRestockAlert {
 }
 
 interface SidebarItem {
-  id: ActiveTab | 'chat' | 'members';
+  id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings';
   label: string;
   icon: any;
   path?: string;
@@ -312,7 +312,9 @@ export default function AdminDashboard() {
     { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
     { id: 'chat', label: t?.admin?.navChat || '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
     { id: 'members', label: t?.admin?.navMembers || '회원 관리', icon: Users, path: '/admin/members' },
-    { id: 'dashboard', label: '사이트 설정', icon: Settings, path: '/admin/settings' },
+    { id: 'unified-members', label: '통합 회원 관리', icon: Users, path: '/admin/unified-members' },
+    { id: 'notices', label: '공지사항 관리', icon: Bell, path: '/admin/notices' },
+    { id: 'settings', label: '사이트 설정', icon: Settings, path: '/admin/settings' },
   ];
 
   return (

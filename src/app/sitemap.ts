@@ -1,9 +1,10 @@
 import { MetadataRoute } from 'next';
+import { supabase } from '@/lib/supabaseClient';
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const baseUrl = 'https://modern-korean-mall.vercel.app';
-  
-  return [
+
+  const staticRoutes: MetadataRoute.Sitemap = [
     {
       url: baseUrl,
       lastModified: new Date(),
@@ -29,4 +30,18 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.3,
     },
   ];
+
+  const { data: products } = await supabase
+    .from('products')
+    .select('id, created_at')
+    .eq('is_active', true);
+
+  const productRoutes: MetadataRoute.Sitemap = (products || []).map((product) => ({
+    url: `${baseUrl}/shop/${product.id}`,
+    lastModified: product.created_at ? new Date(product.created_at) : new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  }));
+
+  return [...staticRoutes, ...productRoutes];
 }

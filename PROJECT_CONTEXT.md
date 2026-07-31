@@ -21,7 +21,7 @@
 ## 3. 최근 조치 이력 (2026-08-01)
 - **보안**: `orders`, `order_items`, `profiles`, `support_messages`, `point_logs`, `product_options`, `site_settings` 7개 테이블에 RLS 비활성화 상태였던 것을 발견, 정책 설계 후 활성화 완료.
 - 비회원 주문조회를 클라이언트 직접 조회 → 서버 라우트(`/api/orders/guest-lookup`)로 이전 (RLS와 호환되도록).
-- **미해결**: `products` 테이블에 "로그인한 회원 누구나 전체 CRUD 가능"한 과다권한 정책이 남아있음 — 다음에 처리 필요.
+- **해결됨 (2026-08-01 재확인)**: `products` 테이블 과다권한 정책 문제. 라이브 DB에는 이미 SELECT(공개)/UPDATE(관리자만) 정책이 적용되어 있었으나 마이그레이션 파일로 기록되어 있지 않아 `supabase/migrations/20260801_products_admin_write_policy.sql`로 코드화함. INSERT/DELETE는 정책 없이 기본 거부 상태이며, 실제 등록/삭제는 `/api/admin/products` 라우트와 `actions/product.ts`에서 관리자 검증 후 service_role로만 수행.
 - Gemini CLI로 작업하던 시절 만들어진 Unity 3D 가상오피스·멀티에이전트 오케스트레이션 파일들(unity_server.js, command_center.py, GEMINI.md 등 약 27개)을 정리 대상으로 표시함. 로컬 삭제 권한 문제로 사용자가 직접 PowerShell에서 삭제해야 함(미완료일 수 있음).
 - Google OAuth Client Secret 등이 과거 로컬 Gemini 메모리 파일에 평문 저장되어 있었다는 기록 있음 — 실제 노출 여부 확인 및 재발급 검토 필요.
 

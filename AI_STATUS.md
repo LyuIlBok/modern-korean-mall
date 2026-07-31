@@ -44,7 +44,10 @@
 - Supabase 보안 advisor 경고 정리, GoTrueClient 중복 인스턴스 경고 수정
 - 히어로 가독성, 카테고리 더미값(`테스트`→`농산물`), 개인정보처리방침/이용약관 페이지 신설
 - 헤더/푸터 UX 개선 (아이콘 간격, 미확정 연락처 자동 숨김)
+- [claude-code] `products` 테이블 admin-write RLS 정책이 라이브 DB에만 있고 마이그레이션 파일로 기록돼 있지 않던 것을 발견 → `supabase/migrations/20260801_products_admin_write_policy.sql`로 코드화 (정책 내용 자체는 변경 없음)
+- [claude-code] 관리자 대시보드 사이드바에 `/admin/notices`, `/admin/unified-members` 링크 누락돼 있던 것 추가 (페이지는 이미 완성돼 있었으나 URL 직접 입력해야만 접근 가능했음). 겸사겸사 "사이트 설정" 항목이 `id: 'dashboard'`를 재사용하던 버그(대시보드 진입 시 사이트 설정이 같이 활성화 표시됨) 수정
+- [claude-code] `sitemap.ts`가 정적 4개 URL만 갖고 있어 상품 페이지가 검색엔진에 노출 안 되던 문제 → Supabase에서 `is_active` 상품을 동적으로 조회하도록 수정. 이 과정에서 `public/sitemap.xml`(2024년 날짜의 정적 잔재 파일, `sitemap.ts`와 라우팅 충돌 원인)을 삭제
 
 ## 알려진 이슈 (아직 미배정)
 
-- 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. 다음 작업자가 실사용 테스트로 목록화 필요.
+- 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. [claude-code]가 다음으로 실사용 테스트하며 목록화 예정.
