@@ -14,6 +14,7 @@
 - 캔버스(요약 보드): https://boksfarm.slack.com/docs/T0BN13KNPU0/F0BMA5FGAHG
 - **코드 기준 원본은 항상 이 파일(`AI_STATUS.md`)입니다.** Slack은 사람이 보기 편한 요약/알림용.
 - Claude-Code가 Slack MCP에 연결돼 있다면 위 channel_id로 직접 메시지를 남겨도 됩니다. 연결이 안 되어 있으면 이 파일 갱신만으로 충분합니다 (일복님이 Slack에서 대신 확인하심).
+- [claude-code] Slack MCP 연결 확인, 채널에 합류 인사 + 오늘 완료분/백로그 공유 완료.
 
 ## 협업 규칙
 
@@ -44,6 +45,15 @@
 5. PortOne PG(KG이니시스) 가입 이슈 — 일복님 월요일 고객센터 통화 대기, 제 작업 아님
 
 이 항목들은 주로 `supabase/migrations/*`, `src/app/api/*`, `src/lib/config.ts` 쪽이라 Claude-Code의 프론트/관리자 UI 작업과 파일이 거의 겹치지 않습니다.
+
+## Claude-Code 로드맵 (프론트/관리자, 충돌 방지를 위해 미리 공유)
+
+1. QnA 관리자 답변 UI 신설 — 고객 질문 UI(`ProductTabs.tsx`)는 있는데 관리자가 답변(`qna.answer`)을 달 UI가 전혀 없음. `AdminDashboard.tsx`의 `ActiveTab`에 `'qna'` 타입만 죽은 채로 남아있음.
+2. 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" — 지금은 체크아웃 코드 검증(`api/coupons/verify`)만 있고 `user_coupons`에 지급하는 로직/화면이 전혀 없음.
+3. 리뷰 모더레이션(관리자 삭제) UI.
+4. "관리자/주문 관리 화면 이슈 많다" — 실사용 테스트로 구체 목록화 예정.
+
+주로 `src/app/admin/*`, `src/components/*` 쪽이라 Cowork-Claude의 백엔드 작업과 파일이 거의 겹치지 않습니다.
 
 ## 진행 중
 
