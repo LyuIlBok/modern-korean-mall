@@ -1,0 +1,9 @@
+{
+  "appId": "com.naturegyeol.agrileitner",
+  "appName": "AgriLeitner Pro",
+  "webDir": "www",
+  "server": {
+    "url": "https://agri-word-app.vercel.app",
+    "cleartext": true
+  }
+}

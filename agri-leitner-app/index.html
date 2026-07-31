@@ -1,0 +1,1491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AgriLeitner Pro SaaS: Cloud & AI Powered</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Tailwind Config for Class-Based Dark Mode & Brand Colors -->
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: '#059669'
+          }
+        }
+      }
+    }
+  </script>
+  
+  <!-- Supabase Client JS CDN -->
+  <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+  <!-- React & ReactDOM -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <!-- Babel -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <!-- Google Pay API -->
+  <script async src="https://pay.google.com/gp/p/js/pay.js"></script>
+
+  <style>
+    @keyframes pulse-red { 0%, 100% { background-color: #ef4444; } 50% { background-color: #991b1b; } }
+    .timer-critical { animation: pulse-red 1s infinite; }
+    .fade-in { animation: fadeIn 0.3s ease-in; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark ::-webkit-scrollbar-thumb { background: #475569; }
+    
+    /* Loading Spinners */
+    .spinner { border: 2.5px solid rgba(255,255,255,0.3); border-radius: 50%; border-top-color: #fff; animation: spin 0.8s ease-in-out infinite; width: 14px; height: 14px; display: inline-block; }
+    .spinner-brand { border: 2.5px solid rgba(5,150,105,0.2); border-radius: 50%; border-top-color: #059669; animation: spin 0.8s ease-in-out infinite; width: 32px; height: 32px; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans antialiased min-h-screen transition-colors duration-300">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+
+    // --- Supabase Config (Reusing your shopping mall credentials) ---
+    const SUPABASE_URL = "https://cfimyvvecsoqeicsjezo.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNmaW15dnZlY3NvcWVpY3NqZXpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQwOTg4ODAsImV4cCI6MjA4OTY3NDg4MH0.mxkQ9gqEBm63yGcXfx8DXVtQscgqn0g5slD-SUahc78";
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const DEFAULT_CONFIG = {
+      timerDuration: 7,
+      intervals: { 1: 1, 2: 3, 3: 7, 4: 14, 5: 30, 6: 60, 7: 90 }
+    };
+
+    // --- Google Pay Constants ---
+    const GOOGLE_PAY_BASE_REQUEST = {
+      apiVersion: 2,
+      apiVersionMinor: 0
+    };
+    const GOOGLE_PAY_ALLOWED_NETWORKS = ["AMEX", "DISCOVER", "INTERAC", "JCB", "MASTERCARD", "VISA"];
+    const GOOGLE_PAY_ALLOWED_AUTH_METHODS = ["PAN_ONLY", "CRYPTOGRAM_3DS"];
+    const GOOGLE_PAY_TOKENIZATION_SPEC = {
+      type: 'PAYMENT_GATEWAY',
+      parameters: {
+        'gateway': 'example',
+        'gatewayMerchantId': 'exampleGatewayMerchantId'
+      }
+    };
+    const GOOGLE_PAY_BASE_CARD_METHOD = {
+      type: 'CARD',
+      parameters: {
+        allowedAuthMethods: GOOGLE_PAY_ALLOWED_AUTH_METHODS,
+        allowedCardNetworks: GOOGLE_PAY_ALLOWED_NETWORKS
+      }
+    };
+    const GOOGLE_PAY_CARD_METHOD = Object.assign(
+      {},
+      GOOGLE_PAY_BASE_CARD_METHOD,
+      { tokenizationSpecification: GOOGLE_PAY_TOKENIZATION_SPEC }
+    );
+
+    // --- High-difficulty Agri-Engineering Terms for Initial Population ---
+    const INITIAL_CARDS = [
+      {
+        term: "Foliar Treatment",
+        meaning: "경엽처리 (식물체의 잎과 줄기에 제초제나 비료를 직접 살포하는 방제법)",
+        morphology: { prefix: "Foli (잎)", root: "ar (의)", suffix: "Treatment (처리)" },
+        context_sentence: "잡초의 생장점에서 신속히 흡수되도록 제초제를 Foliar Treatment하여 잡초 방제 효율을 극대화했습니다.",
+        stage: 1,
+        next_review_at: new Date().toISOString().split('T')[0],
+        is_graduated: false
+      },
+      {
+        term: "Pollinizer",
+        meaning: "수분수 (과수원에서 타가수분을 유도하여 결실률을 높이기 위해 꽃가루를 공급하는 나무)",
+        morphology: { prefix: "Pollin (꽃가루)", root: "ize (되다)", suffix: "er (것)" },
+        context_sentence: "자가 결실률이 낮은 사과 품종의 재배지에 꽃가루가 풍부한 Pollinizer 품종을 일정한 비율로 혼식 설계했습니다.",
+        stage: 1,
+        next_review_at: new Date().toISOString().split('T')[0],
+        is_graduated: false
+      },
+      {
+        term: "Vernalization",
+        meaning: "춘화처리 (작물의 개화를 유도하고 성장을 조절하기 위해 일정 기간 저온 노출을 적용하는 처리)",
+        morphology: { prefix: "Vern (봄)", root: "al (의)", suffix: "ization (처리/화)" },
+        context_sentence: "가을보리를 봄에 파종하기 전에 습한 상태에서 저온 처리를 하는 Vernalization 과정을 가하여 개화를 정상화했습니다.",
+        stage: 1,
+        next_review_at: new Date().toISOString().split('T')[0],
+        is_graduated: false
+      },
+      {
+        term: "Grafted Seedling",
+        meaning: "접목묘 (강인한 대목과 우수한 접수를 결합하여 토양 병해충 저항성과 생장력을 키운 융합 묘목)",
+        morphology: { prefix: "Graft (접목)", root: "ed (된)", suffix: "Seedling (묘목)" },
+        context_sentence: "토양 전염성 병원균 피해를 극복하고 건실한 생장 환경을 조성하기 위해 참외 수박 정식 시 Grafted Seedling을 배치했습니다.",
+        stage: 1,
+        next_review_at: new Date().toISOString().split('T')[0],
+        is_graduated: false
+      },
+      {
+        term: "Dormancy Breaking",
+        meaning: "휴면타파 (자연적/인위적으로 식물의 잠자는 상태를 깨워 균일한 발아 및 성장을 촉진하는 작용)",
+        morphology: { prefix: "Dorm (잠자다)", root: "ancy (상태)", suffix: "Breaking (깨우기)" },
+        context_sentence: "봄철 포도나무의 균일하고 빠른 발아를 촉진하기 위해 약제를 살포하여 조기에 Dormancy Breaking을 실시했습니다.",
+        stage: 1,
+        next_review_at: new Date().toISOString().split('T')[0],
+        is_graduated: false
+      }
+    ];
+
+    function App() {
+      // Auth States
+      const [session, setSession] = useState(null);
+      const [user, setUser] = useState(null);
+      const [profile, setProfile] = useState(null); // SaaS Billing/Usage Info
+      const [authEmail, setAuthEmail] = useState("");
+      const [authPassword, setAuthPassword] = useState("");
+      const [isSignUp, setIsSignUp] = useState(false);
+      const [authLoading, setAuthLoading] = useState(false);
+      
+      // Navigation & Settings
+      const [activeTab, setActiveTab] = useState('study');
+      const [cards, setCards] = useState([]);
+      const [config, setConfig] = useState(DEFAULT_CONFIG);
+      const [isLoaded, setIsLoaded] = useState(false);
+      const [isDarkMode, setIsDarkMode] = useState(false);
+      const [apiKey, setApiKey] = useState("");
+      
+      // Study Session State
+      const [sessionDeck, setSessionDeck] = useState([]);
+      const [currentIndex, setCurrentIndex] = useState(0);
+      const [isRevealed, setIsRevealed] = useState(false);
+      const [timeLeft, setTimeLeft] = useState(7);
+
+      // AI Generation State
+      const [genKeyword, setGenKeyword] = useState("");
+      const [isGenerating, setIsGenerating] = useState(false);
+      const [genResult, setGenResult] = useState(null);
+
+      // Search State inside Manage Tab
+      const [searchQuery, setSearchQuery] = useState("");
+
+      // Modal States
+      const [isModalOpen, setIsModalOpen] = useState(false);
+      const [editingCard, setEditingCard] = useState(null);
+      const [isUpgradeModalOpen, setIsUpgradeModalOpen] = useState(false);
+      const [payLoading, setPayLoading] = useState(false);
+      const [isGooglePayReady, setIsGooglePayReady] = useState(false);
+
+      // UI/UX Enhancement States (Toasts & AI Steps)
+      const [toasts, setToasts] = useState([]);
+      const [genStep, setGenStep] = useState(1);
+
+      const showToast = (message, type = 'success') => {
+        const id = Date.now() + Math.random().toString(36).substr(2, 9);
+        setToasts(prev => [...prev, { id, message, type }]);
+        setTimeout(() => {
+          setToasts(prev => prev.filter(t => t.id !== id));
+        }, 4000);
+      };
+
+      // 1. Auth Change Listener
+      useEffect(() => {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
+
+        const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+          setSession(session);
+          setUser(session?.user ?? null);
+        });
+
+        return () => subscription.unsubscribe();
+      }, []);
+
+      // 2. Fetch API Key and Dark Mode preferences Locally
+      useEffect(() => {
+        const storedTheme = localStorage.getItem('agri_pro_theme_v5');
+        const storedApi = localStorage.getItem('agri_pro_api_v5');
+        if (storedApi) setApiKey(storedApi);
+        if (storedTheme === 'dark') {
+          setIsDarkMode(true);
+          document.documentElement.classList.add('dark');
+        } else {
+          setIsDarkMode(false);
+          document.documentElement.classList.remove('dark');
+        }
+        setIsLoaded(true);
+      }, []);
+
+      // 3. User & Cloud Sync Triggers
+      useEffect(() => {
+        if (user) {
+          fetchProfile();
+          fetchCards();
+        } else {
+          setProfile(null);
+          setCards([]);
+          setSessionDeck([]);
+        }
+      }, [user]);
+
+      // 4. Local Preferences Storage Sync
+      useEffect(() => {
+        if (isLoaded) {
+          localStorage.setItem('agri_pro_theme_v5', isDarkMode ? 'dark' : 'light');
+          localStorage.setItem('agri_pro_api_v5', apiKey);
+        }
+      }, [isDarkMode, apiKey, isLoaded]);
+
+      // 5. Google Pay Actions & Button Handler
+      const handleGooglePayClicked = () => {
+        if (typeof window.google === 'undefined' || !window.google.payments) return;
+
+        const paymentsClient = new window.google.payments.api.PaymentsClient({
+          environment: 'TEST'
+        });
+
+        const paymentDataRequest = Object.assign({}, GOOGLE_PAY_BASE_REQUEST);
+        paymentDataRequest.allowedPaymentMethods = [GOOGLE_PAY_CARD_METHOD];
+        paymentDataRequest.merchantInfo = {
+          merchantName: 'AgriLeitner Pro'
+        };
+        paymentDataRequest.transactionInfo = {
+          countryCode: 'KR',
+          currencyCode: 'KRW',
+          totalPriceStatus: 'FINAL',
+          totalPrice: '19900'
+        };
+
+        setPayLoading(true);
+
+        paymentsClient.loadPaymentData(paymentDataRequest)
+          .then(async (paymentData) => {
+            try {
+              const { data: updatedProfile, error } = await supabase
+                .from('agri_profiles')
+                .update({ tier: 'Pro' })
+                .eq('id', user.id)
+                .select()
+                .single();
+              if (error) throw error;
+              setProfile(updatedProfile);
+              setIsUpgradeModalOpen(false);
+              showToast("축하합니다! Google Pay로 Pro 요금제 결제가 완료되었으며 무제한 AI 단어 생성이 활성화되었습니다.", "success");
+            } catch (err) {
+              showToast("프로필 업데이트 실패: " + err.message, "error");
+            } finally {
+              setPayLoading(false);
+            }
+          })
+          .catch((err) => {
+            console.error("Google Pay payment error:", err);
+            showToast("Google Pay 결제가 취소되었거나 오류가 발생했습니다.", "error");
+            setPayLoading(false);
+          });
+      };
+
+      // 6. Google Pay Button Mounting effect
+      useEffect(() => {
+        if (!isUpgradeModalOpen) return;
+
+        if (typeof window.google === 'undefined' || !window.google.payments) {
+          console.warn("Google Pay SDK not loaded.");
+          return;
+        }
+
+        let paymentsClient;
+        try {
+          paymentsClient = new window.google.payments.api.PaymentsClient({
+            environment: 'TEST'
+          });
+        } catch (e) {
+          console.error("Failed to create PaymentsClient:", e);
+          return;
+        }
+
+        const isReadyToPayRequest = Object.assign(
+          {},
+          GOOGLE_PAY_BASE_REQUEST,
+          { allowedPaymentMethods: [GOOGLE_PAY_BASE_CARD_METHOD] }
+        );
+
+        paymentsClient.isReadyToPay(isReadyToPayRequest)
+          .then((response) => {
+            if (response.result) {
+              setIsGooglePayReady(true);
+              
+              const button = paymentsClient.createButton({
+                onClick: handleGooglePayClicked,
+                buttonColor: isDarkMode ? 'white' : 'default',
+                buttonType: 'subscribe',
+                buttonSizeMode: 'fill'
+              });
+
+              const container = document.getElementById('google-pay-button-container');
+              if (container) {
+                container.innerHTML = '';
+                container.appendChild(button);
+              }
+            } else {
+              setIsGooglePayReady(false);
+            }
+          })
+          .catch((err) => {
+            console.error("Google Pay isReadyToPay error:", err);
+            setIsGooglePayReady(false);
+          });
+      }, [isUpgradeModalOpen, isDarkMode]);
+
+      // 7. Study Session Timer Effect (Decrement timeLeft every second when active and not revealed)
+      useEffect(() => {
+        if (activeTab !== 'study' || sessionDeck.length === 0 || isRevealed) return;
+        if (timeLeft <= 0) {
+          setIsRevealed(true);
+          return;
+        }
+
+        const timer = setTimeout(() => {
+          setTimeLeft(p => p - 1);
+        }, 1000);
+
+        return () => clearTimeout(timer);
+      }, [activeTab, sessionDeck, isRevealed, timeLeft]);
+
+      const toggleTheme = () => {
+        const nextDark = !isDarkMode;
+        setIsDarkMode(nextDark);
+        if (nextDark) {
+          document.documentElement.classList.add('dark');
+        } else {
+          document.documentElement.classList.remove('dark');
+        }
+      };
+
+      // --- SaaS Cloud Database Fetch/Setup Functions ---
+      const fetchProfile = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('agri_profiles')
+            .select('*')
+            .eq('id', user.id)
+            .single();
+          if (error) {
+            // If profile record is missing (sometimes trigger delay), manually provision it
+            if (error.code === 'PGRST116') {
+              const { data: newProfile, error: createError } = await supabase
+                .from('agri_profiles')
+                .insert([{ id: user.id, email: user.email, tier: 'Free', ai_generations_count: 0 }])
+                .select()
+                .single();
+              if (!createError) setProfile(newProfile);
+            } else {
+              console.error("Profile fetch error:", error);
+            }
+          } else {
+            setProfile(data);
+          }
+        } catch (err) {
+          console.error(err);
+        }
+      };
+
+      const fetchCards = async () => {
+        try {
+          const { data, error } = await supabase
+            .from('agri_cards')
+            .select('*')
+            .order('created_at', { ascending: false });
+          if (error) throw error;
+
+          // If a new account has 0 cards, prepopulate with the 5 high-difficulty core cards
+          if (data.length === 0) {
+            const initialWithUserId = INITIAL_CARDS.map(c => ({
+              ...c,
+              user_id: user.id
+            }));
+            const { data: inserted, error: insertError } = await supabase
+              .from('agri_cards')
+              .insert(initialWithUserId)
+              .select();
+            if (!insertError) setCards(inserted);
+          } else {
+            setCards(data);
+          }
+        } catch (err) {
+          console.error("Cards fetch error:", err);
+        }
+      };
+
+      // --- Auth Management Functions ---
+      const handleAuth = async (e) => {
+        e.preventDefault();
+        if (!authEmail.trim() || !authPassword.trim()) return;
+        setAuthLoading(true);
+
+        try {
+          if (isSignUp) {
+            const { data, error } = await supabase.auth.signUp({
+              email: authEmail,
+              password: authPassword,
+            });
+            if (error) throw error;
+            alert("회원가입 확인 이메일이 발송되었습니다! 이메일 내 링크를 클릭하여 인증을 완료해주세요.");
+          } else {
+            const { error } = await supabase.auth.signInWithPassword({
+              email: authEmail,
+              password: authPassword,
+            });
+            if (error) throw error;
+          }
+        } catch (err) {
+          alert("인증 오류: " + err.message);
+        } finally {
+          setAuthLoading(false);
+        }
+      };
+
+      const handleSignOut = async () => {
+        if (confirm("로그아웃 하시겠습니까?")) {
+          await supabase.auth.signOut();
+        }
+      };
+
+      const signInWithGoogle = async () => {
+        if (window.location.protocol === 'file:') {
+          alert(
+            "⚠️ 구글 로그인은 보안(OAuth 2.0) 규정상 로컬 파일(file://) 환경에서는 작동하지 않으며, 쇼핑몰 사이트로 리다이렉트 처리됩니다.\n\n" +
+            "구글 로그인을 정상 이용하시려면:\n" +
+            "1. 폴더 내 제공해 드린 'run_local_server.bat' 파일을 더블 클릭하여 로컬 웹 서버(http://localhost:5000)를 가동하십시오.\n" +
+            "2. 가동된 로컬 주소(http://localhost:5000/leitner_app.html)로 재접속하여 로그인해 주십시오.\n" +
+            "3. 또는 VS Code의 'Live Server' 플러그인을 사용하여 가동해 주십시오.\n\n" +
+            "※ Supabase 설정 창(URL Configuration)에서 Redirect URLs에 로컬 서버 주소(http://localhost:5000/leitner_app.html)가 등록되어 있어야 정상 작동합니다."
+          );
+          return;
+        }
+
+        setAuthLoading(true);
+        try {
+          const { error } = await supabase.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+              redirectTo: window.location.origin + window.location.pathname
+            }
+          });
+          if (error) throw error;
+        } catch (err) {
+          alert("구글 로그인 오류: " + err.message);
+        } finally {
+          setAuthLoading(false);
+        }
+      };
+
+      // --- Study Session Actions ---
+      const startStudy = () => {
+        const today = new Date().toISOString().split('T')[0];
+        const due = cards.filter(c => !c.is_graduated && c.next_review_at <= today);
+        setSessionDeck(due.sort(() => Math.random() - 0.5));
+        setCurrentIndex(0);
+        setIsRevealed(false);
+        setTimeLeft(config.timerDuration);
+      };
+
+      useEffect(() => {
+        if (activeTab === 'study' && user && sessionDeck.length === 0) startStudy();
+      }, [activeTab, cards]);
+
+      const handleEvaluate = async (isKnown) => {
+        const card = sessionDeck[currentIndex];
+        // "Hell's Reset" rule: demote directly to Stage 1 if failed. Otherwise, increment stage.
+        let newStage = isKnown ? Math.min(card.stage + 1, 7) : 1;
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + (config.intervals[newStage] || 1));
+        
+        const nextDateStr = nextDate.toISOString().split('T')[0];
+        const todayStr = new Date().toISOString().split('T')[0];
+
+        try {
+          // Sync directly to Cloud Database
+          const { error } = await supabase
+            .from('agri_cards')
+            .update({
+              stage: newStage,
+              is_graduated: newStage === 7,
+              last_reviewed_at: todayStr,
+              next_review_at: nextDateStr
+            })
+            .eq('id', card.id);
+
+          if (error) throw error;
+
+          // Update local state
+          setCards(cards.map(c => c.id === card.id ? { 
+            ...c, 
+            stage: newStage, 
+            is_graduated: newStage === 7, 
+            last_reviewed_at: todayStr, 
+            next_review_at: nextDateStr 
+          } : c));
+
+          if (currentIndex < sessionDeck.length - 1) {
+            setCurrentIndex(p => p + 1);
+            setIsRevealed(false);
+            setTimeLeft(config.timerDuration);
+          } else {
+            setSessionDeck([]); 
+          }
+        } catch (err) {
+          alert("학습 상태 저장 실패: " + err.message);
+        }
+      };
+
+      // --- AI Word Generator Logic ---
+      const generateWord = async (e) => {
+        e.preventDefault();
+        if (!apiKey) { showToast("계정 & 결제(Billing) 탭에서 Gemini API Key를 먼저 등록해 주십시오.", "error"); return; }
+        if (!genKeyword.trim()) return;
+
+        // B2B/B2C Free Tier Usage Cap (Monthly 5 generations limit)
+        const currentCount = profile?.ai_generations_count ?? 0;
+        if (profile && profile.tier === 'Free' && currentCount >= 5) {
+          setIsUpgradeModalOpen(true);
+          return;
+        }
+
+        setIsGenerating(true);
+        setGenResult(null);
+        setGenStep(1);
+
+        // Start step interval for visual data UX progress
+        const stepInterval = setInterval(() => {
+          setGenStep(prev => prev < 4 ? prev + 1 : prev);
+        }, 1200);
+
+        const prompt = `당신은 시설원예, 식물보호, 종자 생산 및 농업 법인 경영 전문가입니다. 
+주어진 키워드: '${genKeyword}'
+이 키워드에 해당하는 대표적인 학명/영단어(또는 관련 영단어)를 분석하여 반드시 아래 JSON 형식으로만 응답하십시오. 다른 설명이나 텍스트, 마크다운 코드 블록 외부 기호는 절대 포함하지 마십시오.
+{
+  "term": "해당 영단어",
+  "meaning": "한글 뜻",
+  "morphology": {"prefix": "접두사 분석", "root": "어근 분석", "suffix": "접미사 분석"},
+  "context_sentence": "시설원예, 식물보호, 농업 비즈니스 실무와 관련된 고품질 예문"
+}`;
+
+        try {
+          const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+          });
+          
+          if (!response.ok) {
+            throw new Error(`API 요청 실패 (코드 ${response.status})`);
+          }
+
+          const data = await response.json();
+          if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts[0]) {
+            let text = data.candidates[0].content.parts[0].text;
+            
+            // Clean markdown blocks
+            text = text.replace(/```json/gi, '').replace(/```/g, '').trim();
+            const parsed = JSON.parse(text);
+            setGenResult(parsed);
+            showToast(`'${parsed.term}' 단어가 성공적으로 생성되었습니다.`, "success");
+
+            // Increment usage limit in Cloud Profile Database (Null-safe)
+            const nextCount = (profile?.ai_generations_count ?? 0) + 1;
+            const { data: updatedProfile, error: updateError } = await supabase
+              .from('agri_profiles')
+              .update({ ai_generations_count: nextCount })
+              .eq('id', user.id)
+              .select()
+              .single();
+
+            if (!updateError) setProfile(updatedProfile);
+          } else {
+            throw new Error("AI 응답 데이터 구조가 잘못되었습니다.");
+          }
+        } catch (err) {
+          console.error(err);
+          showToast("단어 생성 실패: " + err.message, "error");
+        } finally {
+          clearInterval(stepInterval);
+          setIsGenerating(false);
+        }
+      };
+
+      const addGeneratedWord = async () => {
+        if (!genResult) return;
+        
+        const newCardRaw = {
+          user_id: user.id,
+          term: genResult.term,
+          meaning: genResult.meaning,
+          morphology: {
+            prefix: genResult.morphology.prefix || "",
+            root: genResult.morphology.root || "",
+            suffix: genResult.morphology.suffix || ""
+          },
+          context_sentence: genResult.context_sentence,
+          stage: 1,
+          next_review_at: new Date().toISOString().split('T')[0],
+          is_graduated: false
+        };
+
+        try {
+          const { data, error } = await supabase
+            .from('agri_cards')
+            .insert([newCardRaw])
+            .select();
+          if (error) throw error;
+
+          setCards([data[0], ...cards]);
+          setGenResult(null);
+          setGenKeyword("");
+          alert(`'${data[0].term}' 단어가 클라우드 학습 덱에 추가되었습니다.`);
+        } catch (err) {
+          alert("클라우드 단어 추가 실패: " + err.message);
+        }
+      };
+
+      // --- Direct CRUD Database Sync Operations ---
+      const saveCard = async (formData) => {
+        try {
+          if (editingCard) {
+            const { error } = await supabase
+              .from('agri_cards')
+              .update(formData)
+              .eq('id', editingCard.id);
+            if (error) throw error;
+            setCards(cards.map(c => c.id === editingCard.id ? { ...c, ...formData } : c));
+          } else {
+            const newCardRaw = {
+              user_id: user.id,
+              ...formData,
+              stage: 1,
+              next_review_at: new Date().toISOString().split('T')[0],
+              is_graduated: false
+            };
+            const { data, error } = await supabase
+              .from('agri_cards')
+              .insert([newCardRaw])
+              .select();
+            if (error) throw error;
+            setCards([data[0], ...cards]);
+          }
+        } catch (err) {
+          alert("단어 저장 실패: " + err.message);
+        }
+        setIsModalOpen(false);
+        setEditingCard(null);
+      };
+
+      const deleteCard = async (id) => { 
+        if (confirm('정말 이 단어를 삭제하시겠습니까?')) {
+          try {
+            const { error } = await supabase
+              .from('agri_cards')
+              .delete()
+              .eq('id', id);
+            if (error) throw error;
+            setCards(cards.filter(c => c.id !== id)); 
+          } catch (err) {
+            alert("단어 삭제 실패: " + err.message);
+          }
+        }
+      };
+
+      // --- SaaS Billing Subscription Upgrades (Mock Stripe / PortOne Interface) ---
+      const upgradeToPro = async () => {
+        setPayLoading(true);
+        // Simulating Stripe billing popup
+        setTimeout(async () => {
+          try {
+            const { data: updatedProfile, error } = await supabase
+              .from('agri_profiles')
+              .update({ tier: 'Pro' })
+              .eq('id', user.id)
+              .select()
+              .single();
+            if (error) throw error;
+            setProfile(updatedProfile);
+            setIsUpgradeModalOpen(false);
+            alert("축하합니다! Pro 요금제 구독이 활성화되었습니다. 이제 무제한 AI 단어 생성이 제공됩니다.");
+          } catch (err) {
+            alert("결제 처리 실패: " + err.message);
+          } finally {
+            setPayLoading(false);
+          }
+        }, 1500);
+      };
+
+      const downgradeToFreeForTesting = async () => {
+        try {
+          const { data: updatedProfile, error } = await supabase
+            .from('agri_profiles')
+            .update({ tier: 'Free', ai_generations_count: 0 })
+            .eq('id', user.id)
+            .select()
+            .single();
+          if (error) throw error;
+          setProfile(updatedProfile);
+          alert("테스트를 위해 Free 요금제로 강등 및 AI 카운트가 초기화되었습니다.");
+        } catch (err) {
+          alert("요금제 변경 오류: " + err.message);
+        }
+      };
+
+      // --- Search & Dashboard Calculations (Memoized) ---
+      const filteredCards = useMemo(() => {
+        if (!searchQuery.trim()) return cards;
+        const q = searchQuery.toLowerCase();
+        return cards.filter(c => 
+          c.term.toLowerCase().includes(q) || 
+          c.meaning.toLowerCase().includes(q) ||
+          (c.context_sentence && c.context_sentence.toLowerCase().includes(q))
+        );
+      }, [cards, searchQuery]);
+
+      const stats = useMemo(() => {
+        const todayStr = new Date().toISOString().split('T')[0];
+        const total = cards.length;
+        const graduated = cards.filter(c => c.is_graduated).length;
+        const dueToday = cards.filter(c => !c.is_graduated && c.next_review_at <= todayStr).length;
+        const learning = total - graduated;
+        
+        const stageDistribution = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0, 7: 0 };
+        cards.forEach(c => {
+          if (c.stage >= 1 && c.stage <= 7) {
+            stageDistribution[c.stage]++;
+          }
+        });
+
+        const scheduledReviews = cards
+          .filter(c => !c.is_graduated && c.next_review_at > todayStr)
+          .map(c => {
+            const diffTime = Math.abs(new Date(c.next_review_at) - new Date(todayStr));
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            return { ...c, daysLeft: diffDays };
+          })
+          .sort((a, b) => a.daysLeft - b.daysLeft);
+
+        return { total, graduated, dueToday, learning, stageDistribution, scheduledReviews };
+      }, [cards]);
+
+      if (!isLoaded) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+            <div className="spinner-brand"></div>
+          </div>
+        );
+      }
+
+      // --- Strict Authentication Gateway UI ---
+      if (!session || !user) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gradient-to-tr from-emerald-950 via-slate-900 to-slate-950 p-6">
+            <div className="w-full max-w-md bg-white/10 dark:bg-slate-900/50 backdrop-blur-xl border border-white/10 p-10 rounded-[40px] shadow-2xl space-y-8 animate-[fadeIn_0.3s_ease-out]">
+              <div className="text-center">
+                <span className="bg-emerald-500/20 text-emerald-400 text-[10px] font-black px-3 py-1.5 rounded-full border border-emerald-500/10 uppercase tracking-widest">SaaS Cloud</span>
+                <h2 className="text-3xl font-black text-white mt-4 tracking-tight">AgriLeitner Pro</h2>
+                <p className="text-xs text-slate-300 mt-2 leading-relaxed">
+                  인지공학 기반 농업 법인용 어휘 학습 SaaS<br/>
+                  지옥의 리셋 라이트너 박스로 단기 암기를 무력화하십시오.
+                </p>
+              </div>
+
+              <form onSubmit={handleAuth} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-300 tracking-wider">이메일 주소</label>
+                  <input 
+                    type="email" 
+                    required 
+                    value={authEmail}
+                    onChange={(e) => setAuthEmail(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400"
+                    placeholder="farm@company.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black uppercase text-slate-300 tracking-wider">비밀번호</label>
+                  <input 
+                    type="password" 
+                    required 
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 placeholder-slate-400"
+                    placeholder="비밀번호 입력 (6자 이상)"
+                  />
+                </div>
+
+                <button 
+                  type="submit" 
+                  disabled={authLoading}
+                  className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl text-xs shadow-lg transition-all flex items-center justify-center gap-2"
+                >
+                  {authLoading ? <div className="spinner"></div> : (isSignUp ? "계정 생성 및 로그인" : "보안 로그인")}
+                </button>
+              </form>
+
+              <div className="flex items-center my-4">
+                <div className="flex-grow border-t border-white/10"></div>
+                <span className="mx-4 text-[9px] font-black uppercase text-slate-300 tracking-wider">또는</span>
+                <div className="flex-grow border-t border-white/10"></div>
+              </div>
+
+              <button 
+                type="button"
+                onClick={signInWithGoogle}
+                disabled={authLoading}
+                className="w-full bg-white text-slate-900 font-bold py-4 rounded-2xl text-xs shadow-lg transition-all flex items-center justify-center gap-3 border border-slate-200 hover:bg-slate-100 dark:bg-slate-800 dark:text-white dark:border-slate-700 dark:hover:bg-slate-750"
+              >
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v3.92h6.61c-.29 1.5-.14 3.01-.97 4.13v3.44h3.11c1.8-1.65 2.89-4.09 2.89-6.97z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.11-2.44c-.9.6-2.01.97-3.25.97-2.5 0-4.6-1.69-5.35-3.97H5.11v2.52C7.09 22.12 9.38 24 12 24z"/>
+                  <path fill="#FBBC05" d="M6.65 15.65c-.2-.6-.31-1.24-.31-1.9s.11-1.3.31-1.9V9.33H5.11a11.96 11.96 0 000 10.74l1.54-2.52z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 9.38 0 7.09 1.88 5.11 4.75l1.54 2.52c.75-2.28 2.85-3.97 5.35-3.97z"/>
+                </svg>
+                Google 계정으로 로그인
+              </button>
+
+              <div className="text-center border-t border-white/5 pt-6 space-y-4 text-xs text-slate-400">
+                <div>
+                  {isSignUp ? "이미 계정이 있으신가요?" : "처음 사용하시나요?"} &nbsp;
+                  <button 
+                    onClick={() => setIsSignUp(!isSignUp)} 
+                    className="text-emerald-400 font-bold hover:underline"
+                  >
+                    {isSignUp ? "로그인하기" : "가입하기"}
+                  </button>
+                </div>
+                <div className="pt-3 border-t border-white/5">
+                  <a 
+                    href="https://modern-korean-mall.vercel.app" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 text-xs text-emerald-400 font-black hover:text-emerald-300 transition-all hover:underline"
+                  >
+                    <span>🍃 자연의 결 쇼핑몰 바로가기</span>
+                    <span className="text-[10px]">↗</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      const NavItem = ({ id, icon, label }) => (
+        <button onClick={() => setActiveTab(id)} className={`flex-1 flex flex-col items-center justify-center py-2.5 transition-all ${activeTab === id ? 'text-emerald-600 dark:text-emerald-400 font-bold' : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'}`}>
+          <span className="text-xl mb-1">{icon}</span>
+          <span className="text-[10px] font-black uppercase tracking-tighter">{label}</span>
+        </button>
+      );
+
+      // --- SaaS Active Authenticated Interface ---
+      return (
+        <div className="flex flex-col min-h-screen max-w-lg mx-auto bg-white dark:bg-slate-900 shadow-2xl relative border-x border-slate-100 dark:border-slate-800 transition-colors duration-300">
+          
+          {/* Header */}
+          <header className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-white dark:bg-slate-900 sticky top-0 z-10 transition-colors duration-300">
+            <h1 className="text-lg font-black text-slate-900 dark:text-slate-100 flex items-center gap-2">
+              <span className="w-8 h-8 bg-emerald-600 dark:bg-emerald-700 rounded-lg flex items-center justify-center text-white text-[10px]">PRO</span>
+              AgriLeitner Platform
+            </h1>
+            <div className="flex items-center gap-2">
+              <a 
+                href="https://modern-korean-mall.vercel.app" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="px-2.5 py-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-650 dark:text-emerald-400 text-[9px] font-black hover:bg-emerald-100 dark:hover:bg-emerald-900 transition-all flex items-center gap-1 border border-emerald-200/40 dark:border-emerald-800/30"
+              >
+                🍃 자연의 결 쇼핑몰
+              </a>
+              <button 
+                onClick={toggleTheme} 
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                title={isDarkMode ? "Light Mode" : "Dark Mode"}
+              >
+                {isDarkMode ? "☀️" : "🌙"}
+              </button>
+              <div className="text-[10px] bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md font-bold text-slate-500 dark:text-slate-400">
+                {profile?.tier === 'Pro' ? 'Pro Tier' : 'Free Tier'}
+              </div>
+            </div>
+          </header>
+
+          <main className="flex-1 overflow-y-auto px-6 py-8 safe-bottom">
+            
+            {/* 1. STUDY TAB */}
+            {activeTab === 'study' && (
+              <div className="fade-in">
+                {sessionDeck.length > 0 && currentIndex < sessionDeck.length ? (
+                  <div className="flex flex-col items-center">
+                    <div className="w-full bg-slate-100 dark:bg-slate-800 h-1 rounded-full mb-10 overflow-hidden">
+                      <div className={`h-full transition-all duration-1000 ${timeLeft <= 2 ? 'timer-critical' : 'bg-slate-800 dark:bg-slate-200'}`} style={{ width: `${isRevealed ? 0 : (timeLeft / config.timerDuration) * 100}%` }}></div>
+                    </div>
+
+                    <div className="w-full text-center min-h-[420px] flex flex-col justify-center">
+                      <div className="mb-8 flex flex-wrap justify-center gap-1.5 text-[10px] font-mono text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-800/50 px-4 py-2 rounded-full border border-slate-100 dark:border-slate-800/80 mx-auto">
+                        {sessionDeck[currentIndex].morphology.prefix && <span>[{sessionDeck[currentIndex].morphology.prefix}]</span>}
+                        {sessionDeck[currentIndex].morphology.root && <span className="font-bold text-slate-700 dark:text-slate-300">[{sessionDeck[currentIndex].morphology.root}]</span>}
+                        {sessionDeck[currentIndex].morphology.suffix && <span>[{sessionDeck[currentIndex].morphology.suffix}]</span>}
+                      </div>
+
+                      <h2 className="text-4xl font-black text-slate-900 dark:text-white mb-10 tracking-tight">{sessionDeck[currentIndex].term}</h2>
+
+                      {!isRevealed ? (
+                        <div onClick={() => setIsRevealed(true)} className="w-full py-12 bg-slate-50 dark:bg-slate-800/40 border-2 border-dashed border-slate-200 dark:border-slate-750 rounded-3xl flex flex-col items-center cursor-pointer group hover:bg-slate-100 dark:hover:bg-slate-850 transition-all">
+                          <span className="text-5xl font-black text-slate-600 dark:text-slate-300 mb-2">{timeLeft}s</span>
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-black uppercase tracking-widest group-hover:text-emerald-500 dark:group-hover:text-emerald-400 transition-colors">Recall Intelligence</span>
+                        </div>
+                      ) : (
+                        <div className="fade-in w-full">
+                          <p className="text-3xl font-bold text-emerald-600 dark:text-emerald-400 mb-8">{sessionDeck[currentIndex].meaning}</p>
+                          <div className="bg-slate-50 dark:bg-slate-800/30 p-6 rounded-2xl text-left border border-slate-100 dark:border-slate-800 shadow-inner mb-10">
+                            <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-3 border-b border-slate-200 dark:border-slate-800 pb-2">Business & Agri Context</p>
+                            <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-sm italic">"{sessionDeck[currentIndex].context_sentence}"</p>
+                          </div>
+                          
+                          <div className="flex gap-4">
+                            <button onClick={() => handleEvaluate(false)} className="flex-1 bg-white dark:bg-slate-900 border-2 border-red-100 dark:border-red-950/30 text-red-600 dark:text-red-450 py-4 rounded-2xl font-black shadow-sm hover:bg-red-50/50 dark:hover:bg-red-950/20 active:scale-95 transition-all">
+                              FAILED (X)<br/><span className="text-[10px] font-normal opacity-60">1단계 강등</span>
+                            </button>
+                            <button onClick={() => handleEvaluate(true)} className="flex-1 bg-emerald-600 dark:bg-emerald-700 text-white py-4 rounded-2xl font-black shadow-lg hover:bg-emerald-700 dark:hover:bg-emerald-600 active:scale-95 transition-all">
+                              MASTERED (O)<br/><span className="text-[10px] font-normal opacity-90">승급 확정</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-24 fade-in">
+                    <div className="w-20 h-20 bg-emerald-100 dark:bg-emerald-950/40 rounded-full flex items-center justify-center mx-auto mb-8 text-emerald-600 dark:text-emerald-400 text-3xl">✓</div>
+                    <h3 className="text-2xl font-black text-slate-800 dark:text-slate-200 mb-3">당일 학습 완료</h3>
+                    <p className="text-slate-500 dark:text-slate-400 text-sm mb-10 leading-relaxed">오늘 배정된 인출 훈련을 모두 마쳤습니다.<br/>망각 곡선 주기에 따라 내일 새로운 세션이 생성됩니다.</p>
+                    <button onClick={startStudy} className="text-emerald-600 dark:text-emerald-400 font-bold text-sm hover:underline">데이터 다시 불러오기</button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* 2. PROGRESS DASHBOARD TAB */}
+            {activeTab === 'dashboard' && (
+              <div className="fade-in space-y-8">
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 dark:text-slate-200 mb-1">학습 진척도 대시보드</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">라이트너 박스 망각 단계 분포와 스케줄을 점검합니다.</p>
+                </div>
+
+                {/* Metric Summary Grid */}
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-850 text-center shadow-sm">
+                    <span className="text-xs font-bold text-slate-400 dark:text-slate-500">전체 단어</span>
+                    <p className="text-2xl font-black text-slate-900 dark:text-white mt-1">{stats.total}</p>
+                  </div>
+                  <div className="p-4 bg-emerald-50/60 dark:bg-emerald-950/20 rounded-2xl border border-emerald-100/50 dark:border-emerald-900/30 text-center shadow-sm">
+                    <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400">마스터 (Lvl 7)</span>
+                    <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 mt-1">{stats.graduated}</p>
+                  </div>
+                  <div className="p-4 bg-amber-50/60 dark:bg-amber-950/20 rounded-2xl border border-amber-100/50 dark:border-amber-900/30 text-center shadow-sm">
+                    <span className="text-xs font-bold text-amber-600 dark:text-amber-400">오늘 복습</span>
+                    <p className="text-2xl font-black text-amber-700 dark:text-amber-300 mt-1">{stats.dueToday}</p>
+                  </div>
+                </div>
+
+                {/* Stage Distribution Chart */}
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 mb-5 uppercase tracking-widest">Leitner Stage Distribution</h4>
+                  <div className="space-y-3.5">
+                    {Object.entries(stats.stageDistribution).map(([stage, count]) => {
+                      const percentage = stats.total > 0 ? (count / stats.total) * 100 : 0;
+                      return (
+                        <div key={stage} className="flex items-center text-xs">
+                          <span className="w-16 font-bold text-slate-500 dark:text-slate-300">Stage {stage}</span>
+                          <div className="flex-1 bg-slate-200 dark:bg-slate-900 h-2.5 rounded-full overflow-hidden mx-3">
+                            <div 
+                              className={`h-full rounded-full transition-all duration-500 ${
+                                parseInt(stage) === 7 ? 'bg-emerald-500 dark:bg-emerald-600' : 'bg-slate-700 dark:bg-slate-400'
+                              }`} 
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                          <span className="w-6 text-right font-black text-slate-700 dark:text-slate-200">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Scheduled Future Reviews List */}
+                <div className="p-6 bg-slate-50 dark:bg-slate-800/50 rounded-3xl border border-slate-100 dark:border-slate-850">
+                  <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 mb-4 uppercase tracking-widest">Upcoming Review Schedule</h4>
+                  {stats.scheduledReviews.length > 0 ? (
+                    <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
+                      {stats.scheduledReviews.map(card => (
+                        <div key={card.id} className="flex justify-between items-center py-2.5 border-b border-slate-100 dark:border-slate-800 last:border-0 text-xs">
+                          <div className="flex flex-col">
+                            <span className="font-bold text-slate-800 dark:text-slate-100">{card.term}</span>
+                            <span className="text-[10px] text-slate-400 dark:text-slate-400 truncate max-w-[200px]">{card.meaning}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="bg-slate-200 dark:bg-slate-900 text-[9px] font-bold px-1.5 py-0.5 rounded text-slate-500 dark:text-slate-300">Stage {card.stage}</span>
+                            <span className="text-emerald-600 dark:text-emerald-400 font-black">{card.daysLeft}일 후 복습</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 dark:text-slate-500 text-center py-6">예정된 미래의 복습 일정이 없습니다.</p>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 3. MANAGE TAB (Search & AI Integration) */}
+            {activeTab === 'manage' && (
+              <div className="fade-in pb-20 space-y-6">
+                
+                {/* AI Keyword Word Generator */}
+                <form onSubmit={generateWord} className="bg-slate-50 dark:bg-slate-800/50 p-6 rounded-3xl border border-slate-100 dark:border-slate-850 space-y-4">
+                  <div className="flex justify-between items-center">
+                    <h4 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">AI Word Generator (Gemini Powered)</h4>
+                    <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">1단계 단어 자동 생성</span>
+                  </div>
+                  
+                  <div className="flex gap-2">
+                    <input 
+                      type="text" 
+                      value={genKeyword} 
+                      onChange={(e) => setGenKeyword(e.target.value)}
+                      className="flex-1 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-750 rounded-2xl px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500"
+                      placeholder="생성하고 싶은 키워드 입력 (예: 수분수, 광합성)"
+                    />
+                    <button 
+                      type="submit" 
+                      disabled={isGenerating} 
+                      className="bg-emerald-600 dark:bg-emerald-700 text-white px-5 py-3 rounded-2xl text-xs font-bold shadow hover:bg-emerald-700 transition-all flex items-center gap-1.5"
+                    >
+                      {isGenerating ? <div className="spinner"></div> : "생성"}
+                    </button>
+                  </div>
+                </form>
+
+                {/* AI Word Generator Loading Experience */}
+                {isGenerating && (
+                  <div className="bg-slate-50 dark:bg-slate-800/30 border border-slate-100 dark:border-slate-800 p-6 rounded-3xl flex flex-col items-center justify-center py-10 space-y-4 animate-pulse">
+                    <div className="spinner-brand mb-2"></div>
+                    <div className="text-center space-y-2">
+                      <div className="flex items-center justify-center gap-2">
+                        <span className="flex h-2 w-2 relative">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                        </span>
+                        <p className="text-xs font-black text-slate-700 dark:text-slate-300">
+                          {genStep === 1 && "Gemini 1.5 Flash 모델 연결 중..."}
+                          {genStep === 2 && "농업/공학 전문 어휘 형태학 분석 중..."}
+                          {genStep === 3 && "고부가가치 비즈니스 맞춤형 예문 합성 중..."}
+                          {genStep === 4 && "최종 클라우드 데이터 스키마 준비 중..."}
+                        </p>
+                      </div>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500">지능형 농업 어휘가 생성되는 동안 잠시만 기다려 주세요.</p>
+                    </div>
+                    {/* Tiny visual progress bar */}
+                    <div className="w-48 bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                      <div 
+                        className="bg-emerald-500 h-full transition-all duration-500" 
+                        style={{ width: `${(genStep / 4) * 100}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI Generation Preview Card */}
+                {genResult && (
+                  <div className="fade-in bg-emerald-50/20 dark:bg-emerald-950/10 border border-emerald-100/40 dark:border-emerald-900/30 p-6 rounded-3xl space-y-4 shadow-sm">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h5 className="text-2xl font-black text-slate-900 dark:text-white">{genResult.term}</h5>
+                        <p className="text-sm font-bold text-emerald-600 dark:text-emerald-400 mt-1">{genResult.meaning}</p>
+                      </div>
+                      <button 
+                        onClick={addGeneratedWord} 
+                        className="bg-emerald-600 dark:bg-emerald-700 text-white px-4 py-2 rounded-xl text-[10px] font-black shadow hover:bg-emerald-700"
+                      >
+                        학습 박스에 추가
+                      </button>
+                    </div>
+                    
+                    {/* Morphology Breakdown */}
+                    <div className="flex gap-2 text-[10px] font-mono text-slate-400 dark:text-slate-450">
+                      {genResult.morphology.prefix && <span>[{genResult.morphology.prefix}]</span>}
+                      {genResult.morphology.root && <span className="font-bold text-slate-600 dark:text-slate-300">[{genResult.morphology.root}]</span>}
+                      {genResult.morphology.suffix && <span>[{genResult.morphology.suffix}]</span>}
+                    </div>
+
+                    {/* Context sentence box */}
+                    <div className="bg-white dark:bg-slate-900/60 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 text-xs text-slate-700 dark:text-slate-300">
+                      <p className="font-bold text-[9px] text-slate-400 dark:text-slate-500 uppercase mb-1">AI Generated Context</p>
+                      <p className="italic leading-relaxed">"{genResult.context_sentence}"</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Database Search & List section */}
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-lg font-black text-slate-800 dark:text-slate-200 mb-1">단어 목록 ({filteredCards.length})</h3>
+                      <p className="text-xs text-slate-400 dark:text-slate-500">클라우드 단어를 실시간으로 검색하고 편집합니다.</p>
+                    </div>
+                    <button 
+                      onClick={() => { setEditingCard(null); setIsModalOpen(true); }} 
+                      className="bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 px-4 py-2.5 rounded-xl text-[10px] font-black shadow hover:bg-slate-800 dark:hover:bg-white transition-all"
+                    >
+                      NEW WORD
+                    </button>
+                  </div>
+
+                  {/* Real-time Search Input Field */}
+                  <div className="relative">
+                    <input 
+                      type="text" 
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-800 rounded-2xl py-3 pl-10 pr-10 text-sm focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 transition-colors" 
+                      placeholder="단어명, 한글 뜻, 또는 비즈니스 예문 검색..."
+                    />
+                    <span className="absolute left-3.5 top-3.5 text-slate-400">🔍</span>
+                    {searchQuery && (
+                      <button 
+                        onClick={() => setSearchQuery("")} 
+                        className="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Words List */}
+                  {filteredCards.length > 0 ? (
+                    <div className="space-y-4">
+                      {filteredCards.map(card => (
+                        <div key={card.id} className="p-5 bg-white dark:bg-slate-800/50 border border-slate-100 dark:border-slate-850 rounded-3xl shadow-sm hover:shadow-md transition-all flex justify-between items-center">
+                          <div>
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="font-black text-slate-800 dark:text-white text-lg">{card.term}</span>
+                              <span className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-1.5 py-0.5 rounded text-[8px] font-bold text-slate-500 dark:text-slate-400">
+                                {card.is_graduated ? 'Graduated' : `Stage ${card.stage}`}
+                              </span>
+                            </div>
+                            <p className="text-sm text-emerald-600 dark:text-emerald-400 font-bold">{card.meaning}</p>
+                          </div>
+                          <div className="flex gap-4">
+                            <button onClick={() => { setEditingCard(card); setIsModalOpen(true); }} className="text-slate-400 dark:text-slate-450 hover:text-blue-600 dark:hover:text-blue-400 text-[10px] font-bold">EDIT</button>
+                            <button onClick={() => deleteCard(card.id)} className="text-slate-400 dark:text-slate-450 hover:text-red-600 dark:hover:text-red-400 text-[10px] font-bold">DEL</button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12 text-xs text-slate-400 dark:text-slate-500">
+                      검색 조건에 맞는 단어가 없습니다.
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* 4. ACCOUNT & BILLING TAB (SaaS Hub) */}
+            {activeTab === 'settings' && (
+              <div className="fade-in space-y-8 animate-[fadeIn_0.2s_ease-out]">
+                <div>
+                  <h3 className="text-lg font-black text-slate-800 dark:text-slate-200 mb-1">계정 & 구독 (Account & Billing)</h3>
+                  <p className="text-xs text-slate-400 dark:text-slate-500">회원 정보와 등급별 혜택 및 클라우드 동기화 상태를 관리합니다.</p>
+                </div>
+
+                {/* SaaS Profile Information Dashboard */}
+                <section className="bg-slate-50 dark:bg-slate-850 p-6 rounded-3xl border border-slate-100 dark:border-slate-800/60 shadow-sm flex flex-col space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-black rounded-full flex items-center justify-center text-xl">
+                      {user.email.substring(0,2).toUpperCase()}
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-slate-800 dark:text-slate-100">{user.email}</h4>
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">클라우드 세션 활성화 중</p>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t border-slate-100 dark:border-slate-800/80 pt-4 flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-500 dark:text-slate-400">구독 플랜 등급</span>
+                    <span className={`font-black px-3 py-1.5 rounded-full text-[10px] uppercase border ${
+                      profile?.tier === 'Pro' 
+                        ? 'bg-emerald-50/60 text-emerald-600 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-800/50' 
+                        : 'bg-slate-100 text-slate-500 border-slate-200 dark:bg-slate-800 dark:text-slate-450 dark:border-slate-700/60'
+                    }`}>
+                      {profile?.tier === 'Pro' ? "★ PRO ENTERPRISE" : "FREE PLAN"}
+                    </span>
+                  </div>
+                </section>
+
+                {/* Monthly Usage Rate Limiting Card */}
+                <section className="bg-slate-50 dark:bg-slate-850 p-6 rounded-3xl border border-slate-100 dark:border-slate-800/60 shadow-sm space-y-4">
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="font-bold text-slate-700 dark:text-slate-300">AI 단어 생성기 사용량</span>
+                    <span className="font-black text-emerald-600 dark:text-emerald-400">
+                      {profile?.tier === 'Pro' ? `${profile?.ai_generations_count} / 무제한` : `${profile?.ai_generations_count ?? 0} / 5회`}
+                    </span>
+                  </div>
+
+                  {/* Usage Bar Gauge */}
+                  <div className="w-full bg-slate-200 dark:bg-slate-900 h-2.5 rounded-full overflow-hidden">
+                    <div 
+                      className={`h-full transition-all duration-500 ${profile?.ai_generations_count >= 5 && profile?.tier !== 'Pro' ? 'bg-red-500' : 'bg-emerald-500'}`}
+                      style={{ width: profile?.tier === 'Pro' ? '100%' : `${((profile?.ai_generations_count ?? 0) / 5) * 100}%` }}
+                    ></div>
+                  </div>
+
+                  {profile?.tier !== 'Pro' ? (
+                    <div className="space-y-3.5 pt-2">
+                      <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                        무료 플랜은 월 최대 5회의 AI 단어 자동 생성이 제공됩니다. 학습 효율 극대화 및 고부가가치 농업 생산성을 달성하려면 Pro 요금제로 전환하십시오.
+                      </p>
+                      <button 
+                        onClick={() => setIsUpgradeModalOpen(true)}
+                        className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-2xl text-xs shadow-md transition-all"
+                      >
+                        Pro 플랜으로 업그레이드
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="space-y-3.5 pt-2">
+                      <p className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold leading-relaxed">
+                        ✓ 귀하의 농업 법인은 무제한 AI 생성이 제공되는 Pro 라이선스를 사용 중입니다.
+                      </p>
+                      <button 
+                        onClick={downgradeToFreeForTesting}
+                        className="w-full bg-slate-200 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold py-3.5 rounded-2xl text-xs hover:bg-slate-300 dark:hover:bg-slate-700 transition-all"
+                      >
+                        [개발 테스트용] 무료 요금제로 변경
+                      </button>
+                    </div>
+                  )}
+                </section>
+
+                {/* Gemini API Key Configuration Card */}
+                <section className="bg-slate-50 dark:bg-slate-850 p-6 rounded-3xl border border-slate-100 dark:border-slate-800/60 shadow-sm">
+                  <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 mb-4 uppercase tracking-widest">Gemini API Configuration</h3>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 dark:text-slate-500">Gemini API Key</label>
+                    <input 
+                      type="password" 
+                      value={apiKey} 
+                      onChange={(e) => setApiKey(e.target.value)} 
+                      className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-750 rounded-2xl p-4 text-xs font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" 
+                      placeholder="API 키가 있다면 입력해 주십시오" 
+                    />
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-relaxed">
+                      API 키는 브라우저 내부 스토리지에만 저장됩니다.<br/>
+                      <span className="font-bold text-amber-500/80">SaaS 보안 정보:</span> 실제 상용화 제품 환경에서는 API 키가 클라이언트에 전혀 노출되지 않도록 **Supabase Edge Functions**를 이용한 서버리스 백엔드 프록시 라우팅을 설계합니다.
+                    </p>
+                  </div>
+                </section>
+
+                {/* System Controls */}
+                <section className="flex gap-4">
+                  <button 
+                    onClick={handleSignOut}
+                    className="flex-1 py-4 font-black border border-red-200 text-red-500 rounded-2xl text-xs hover:bg-red-50/50 dark:hover:bg-red-950/10 active:scale-95 transition-all text-center"
+                  >
+                    로그아웃
+                  </button>
+                </section>
+                
+                <div className="text-center">
+                  <p className="text-[10px] text-slate-300 dark:text-slate-600 font-bold uppercase tracking-widest">AgriLeitner Pro Cloud v5.0</p>
+                </div>
+              </div>
+            )}
+          </main>
+
+          {/* Bottom Nav Bar */}
+          <nav className="border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 px-4 py-2 flex justify-around items-center sticky bottom-0 z-10 shadow-[0_-10px_20px_rgba(0,0,0,0.02)] transition-colors duration-300">
+            <NavItem id="study" icon="⚡" label="Train" />
+            <NavItem id="dashboard" icon="📈" label="Status" />
+            <NavItem id="manage" icon="📊" label="Manage" />
+            <NavItem id="settings" icon="⚙️" label="Billing" />
+          </nav>
+
+          {/* Toast Notification Container Overlay */}
+          <div className="fixed top-6 right-6 z-[9999] space-y-3 max-w-sm w-full pointer-events-none px-4 md:px-0">
+            {toasts.map(t => (
+              <div 
+                key={t.id} 
+                className={`pointer-events-auto p-4 rounded-2xl shadow-xl flex items-center justify-between gap-3 border transition-all duration-300 transform translate-y-0 animate-[fadeIn_0.2s_ease-out] ${
+                  t.type === 'success' 
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-600 dark:bg-emerald-950/40 dark:border-emerald-800/50 dark:text-emerald-400' 
+                    : t.type === 'error'
+                    ? 'bg-red-500/10 border-red-500/20 text-red-600 dark:bg-red-950/40 dark:border-red-900/50 dark:text-red-400'
+                    : 'bg-blue-500/10 border-blue-500/20 text-blue-600 dark:bg-blue-950/40 dark:border-blue-900/50 dark:text-blue-400'
+                }`}
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm leading-none">
+                    {t.type === 'success' ? '✓' : t.type === 'error' ? '⚠️' : 'ℹ️'}
+                  </span>
+                  <p className="text-xs font-bold leading-relaxed">{t.message}</p>
+                </div>
+                <button 
+                  onClick={() => setToasts(prev => prev.filter(item => item.id !== t.id))} 
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xs font-black p-1 leading-none"
+                >
+                  ✕
+                </button>
+              </div>
+            ))}
+          </div>
+
+          {/* Manual Add & Edit Modal */}
+          {isModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 dark:bg-black/70 backdrop-blur-sm p-6">
+              <div className="w-full max-w-md bg-white dark:bg-slate-850 rounded-[40px] p-10 shadow-2xl border border-slate-100 dark:border-slate-800/80 animate-[fadeIn_0.2s_ease-out] transition-colors duration-300">
+                <h4 className="text-2xl font-black text-slate-800 dark:text-slate-100 mb-8">{editingCard ? '단어 수정' : '새로운 지식 등록'}</h4>
+                <form 
+                  onSubmit={(e) => { 
+                    e.preventDefault(); 
+                    const d = new FormData(e.target); 
+                    saveCard({ 
+                      term: d.get('term'), 
+                      meaning: d.get('meaning'), 
+                      morphology: { prefix: d.get('prefix'), root: d.get('root'), suffix: d.get('suffix') }, 
+                      context_sentence: d.get('context') 
+                    }); 
+                  }} 
+                  className="space-y-6"
+                >
+                  <input 
+                    name="term" 
+                    defaultValue={editingCard?.term} 
+                    required 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-2xl p-4 font-black text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" 
+                    placeholder="Word (e.g. Grafting)" 
+                  />
+                  <input 
+                    name="meaning" 
+                    defaultValue={editingCard?.meaning} 
+                    required 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-2xl p-4 font-black text-emerald-600 dark:text-emerald-400 placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" 
+                    placeholder="Meaning (e.g. 접목)" 
+                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <input name="prefix" defaultValue={editingCard?.morphology.prefix} className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Prefix" />
+                    <input name="root" defaultValue={editingCard?.morphology.root} className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-xl p-3 text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Root" />
+                    <input name="suffix" defaultValue={editingCard?.morphology.suffix} className="bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500" placeholder="Suffix" />
+                  </div>
+                  <textarea 
+                    name="context" 
+                    defaultValue={editingCard?.context_sentence} 
+                    rows="3" 
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-100 dark:border-slate-750 rounded-2xl p-4 text-sm leading-relaxed text-slate-900 dark:text-white placeholder-slate-400 dark:placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-emerald-500" 
+                    placeholder="Business Context Sentence"
+                  ></textarea>
+                  <div className="flex gap-4 pt-4">
+                    <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-4 font-black text-slate-400 dark:text-slate-500 hover:text-slate-650 dark:hover:text-slate-350 transition-all">CANCEL</button>
+                    <button type="submit" className="flex-1 bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 py-4 rounded-2xl font-black shadow-xl hover:bg-slate-800 dark:hover:bg-white transition-all">SAVE DATA</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
+
+          {/* SaaS Plan Subscription Upgrade Modal (Mock Billing Interface) */}
+          {isUpgradeModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 dark:bg-black/80 backdrop-blur-sm p-6">
+              <div className="w-full max-w-md bg-white dark:bg-slate-850 rounded-[40px] p-10 shadow-2xl border border-slate-100 dark:border-slate-800 animate-[fadeIn_0.2s_ease-out] transition-colors duration-300 relative overflow-hidden">
+                
+                {/* Close Button */}
+                <button 
+                  onClick={() => setIsUpgradeModalOpen(false)}
+                  className="absolute right-6 top-6 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-xl font-bold"
+                >
+                  ✕
+                </button>
+
+                <div className="text-center space-y-4">
+                  <span className="bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 text-[10px] font-black px-3 py-1.5 rounded-full">PLAN UPGRADE</span>
+                  <h4 className="text-2xl font-black text-slate-800 dark:text-slate-100">무료 사용량이 초과되었습니다!</h4>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
+                    Free 플랜은 AI 단어 자동 생성이 **월 5회**로 차단됩니다. 아래의 우수 구독 플랜으로 즉시 업그레이드하여 농업 생산성을 강화해 보세요!
+                  </p>
+                </div>
+
+                <div className="mt-8 space-y-4">
+                  {/* Pro Plan Card */}
+                  <div className="p-5 border-2 border-emerald-500 dark:border-emerald-600 bg-emerald-50/10 dark:bg-emerald-950/10 rounded-2xl flex justify-between items-center">
+                    <div>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase">Pro Enterprise Plan</span>
+                      <h5 className="font-bold text-slate-800 dark:text-slate-100 text-base mt-1">AI 단어 생성 무제한</h5>
+                      <p className="text-[10px] text-slate-400 mt-0.5">망각 단계 다중 통계 기능 포함</p>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-sm font-black text-slate-800 dark:text-slate-100">₩19,900</span>
+                      <p className="text-[9px] text-slate-400">/ 월</p>
+                    </div>
+                  </div>
+
+                  {/* Mock Credit Card Inputs */}
+                  <div className="space-y-3 pt-2">
+                    <label className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">신용카드 결제 정보 입력 (모의 결제)</label>
+                    <input 
+                      type="text" 
+                      disabled
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-750 rounded-xl p-3.5 text-xs text-slate-400 dark:text-slate-500 focus:outline-none" 
+                      defaultValue="4215 •••• •••• 9924 (테스트 카드 기본 탑재)" 
+                    />
+                  </div>
+
+                  {/* Google Pay Button Container */}
+                  {isGooglePayReady && (
+                    <div className="space-y-3 pt-2">
+                      <label className="text-[9px] font-black uppercase text-slate-400 dark:text-slate-500 tracking-wider">간편 결제 (Google Pay)</label>
+                      <div id="google-pay-button-container" className="w-full min-h-[48px] rounded-2xl overflow-hidden shadow-md"></div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-4 pt-4">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsUpgradeModalOpen(false)} 
+                      className="flex-1 py-4 font-black text-slate-400 dark:text-slate-500 hover:text-slate-650 dark:hover:text-slate-350 transition-all text-xs"
+                    >
+                      다음에 하기
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={upgradeToPro}
+                      disabled={payLoading}
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white py-4 rounded-2xl font-black shadow-xl transition-all text-xs flex items-center justify-center gap-2"
+                    >
+                      {payLoading ? <div className="spinner"></div> : "안전 결제 및 업그레이드"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
