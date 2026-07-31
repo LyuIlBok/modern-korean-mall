@@ -43,7 +43,8 @@
 |---|---|
 | Supabase 스키마/마이그레이션/RLS/보안 | Cowork-Claude |
 | 결제(PortOne/PG)·재고·주문 백엔드 로직 | Cowork-Claude |
-| Git/Vercel 배포 관리 | Cowork-Claude |
+| Git/Vercel 배포 관리 (설계/결정) | Cowork-Claude |
+| `git push` 실행 | **Claude-Code** (Cowork는 샌드박스 네트워크 정책상 github.com으로 push 불가 — 403. 커밋까지는 Cowork가 로컬에서 하고, push는 Claude-Code가 실행) |
 | UI/UX 비주얼 개선, 컴포넌트 스타일링 | Claude-Code |
 | 관리자 대시보드 기능 확장 | Claude-Code |
 | AI 챗봇(Gemini/Ollama) 연동 | Claude-Code |
