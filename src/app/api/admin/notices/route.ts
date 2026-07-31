@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { CONFIG } from '@/lib/config';
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,24 +9,9 @@ export const dynamic = 'force-dynamic';
  * notices 테이블은 서비스 롤 전용 쓰기 정책이라, 공지 등록/수정/삭제는
  * 반드시 이 API(관리자 검증 통과)를 통해서만 이루어져야 합니다.
  */
-async function validateAdmin(adminToken: string) {
-  const { data: adminProfile, error: authError } = await supabaseAdmin
-    .from('profiles')
-    .select('is_admin, email')
-    .eq('id', adminToken)
-    .single();
-
-  if (authError || !adminProfile) return false;
-
-  const isSuperAdmin = adminProfile.email === CONFIG.ADMIN_EMAILS[0];
-  return adminProfile.is_admin || isSuperAdmin;
-}
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const adminToken = searchParams.get('adminToken');
-
-  if (!adminToken || !(await validateAdmin(adminToken))) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
   }
 
@@ -40,12 +25,13 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  const body = await request.json();
-  const { adminToken, title, content, category, is_popup, is_active } = body;
-
-  if (!adminToken || !(await validateAdmin(adminToken))) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
   }
+
+  const body = await request.json();
+  const { title, content, category, is_popup, is_active } = body;
+
   if (!title || !content) {
     return NextResponse.json({ error: '제목과 내용은 필수입니다.' }, { status: 400 });
   }
@@ -61,12 +47,13 @@ export async function POST(request: Request) {
 }
 
 export async function PATCH(request: Request) {
-  const body = await request.json();
-  const { adminToken, id, title, content, category, is_popup, is_active } = body;
-
-  if (!adminToken || !(await validateAdmin(adminToken))) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
   }
+
+  const body = await request.json();
+  const { id, title, content, category, is_popup, is_active } = body;
+
   if (!id) {
     return NextResponse.json({ error: 'id가 필요합니다.' }, { status: 400 });
   }
@@ -83,13 +70,13 @@ export async function PATCH(request: Request) {
 }
 
 export async function DELETE(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const adminToken = searchParams.get('adminToken');
-  const id = searchParams.get('id');
-
-  if (!adminToken || !(await validateAdmin(adminToken))) {
+  if (!(await verifyAdmin(request))) {
     return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
   }
+
+  const { searchParams } = new URL(request.url);
+  const id = searchParams.get('id');
+
   if (!id) {
     return NextResponse.json({ error: 'id가 필요합니다.' }, { status: 400 });
   }

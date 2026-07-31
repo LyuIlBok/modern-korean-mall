@@ -7,7 +7,7 @@ import {
   User, MapPin, Hash, Loader2, Save, CheckCircle
 } from 'lucide-react';
 import Image from 'next/image';
-import { supabase } from '@/lib/supabaseClient';
+import { adminFetch } from '@/lib/adminFetch';
 
 interface OrderItem {
   product_id: string;
@@ -57,15 +57,12 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
   const handleSave = async () => {
     setIsLoading(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch(`/api/admin/orders/${order.id}`, {
+      const response = await adminFetch(`/api/admin/orders/${order.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           status,
           tracking_number: trackingNumber,
-          adminToken: session?.user?.id
         })
       });
 

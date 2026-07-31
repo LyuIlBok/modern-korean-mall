@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { CONFIG } from '@/lib/config';
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,31 +12,9 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const adminToken = searchParams.get('adminToken');
-
-    if (!adminToken) {
-      console.error('[Admin CRM GET] Missing adminToken in query params');
-      return NextResponse.json({ error: '인증 토큰(adminToken)이 누락되었습니다.' }, { status: 401 });
-    }
-
-    // 1. 관리자 권한 검증
-    const { data: adminProfile, error: authError } = await supabaseAdmin
-      .from('profiles')
-      .select('is_admin, email')
-      .eq('id', adminToken)
-      .single();
-
-    if (authError) {
-      console.error('[Admin CRM GET] Auth Query Error:', authError.message);
-      return NextResponse.json({ error: `관리자 확인 실패: ${authError.message}` }, { status: 403 });
-    }
-
-    const isSuperAdmin = adminProfile?.email === CONFIG.ADMIN_EMAILS[0];
-    const isAdmin = adminProfile?.is_admin || isSuperAdmin;
-
-    if (!isAdmin) {
-      console.error('[Admin CRM GET] Unauthorized attempt by:', adminProfile?.email);
+    const admin = await verifyAdmin(request);
+    if (!admin) {
+      console.error('[Admin CRM GET] Unauthorized attempt');
       return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
     }
 
@@ -66,26 +44,17 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
-    const body = await request.json();
-    const { userId, targetTier, targetPoints, adminToken } = body;
-
-    if (!adminToken || !userId) {
-      return NextResponse.json({ error: '필수 파라미터가 누락되었습니다.' }, { status: 400 });
-    }
-
-    // 1. 관리자 권한 검증
-    const { data: adminProfile, error: authError } = await supabaseAdmin
-      .from('profiles')
-      .select('is_admin, email')
-      .eq('id', adminToken)
-      .single();
-
-    const isSuperAdmin = adminProfile?.email === CONFIG.ADMIN_EMAILS[0];
-    const isAdmin = adminProfile?.is_admin || isSuperAdmin;
-
-    if (authError || !isAdmin) {
+    const admin = await verifyAdmin(request);
+    if (!admin) {
       console.error('[Admin CRM PATCH] Unauthorized attempt');
       return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { userId, targetTier, targetPoints } = body;
+
+    if (!userId) {
+      return NextResponse.json({ error: '필수 파라미터가 누락되었습니다.' }, { status: 400 });
     }
 
     // 2. 회원 정보 업데이트 수행

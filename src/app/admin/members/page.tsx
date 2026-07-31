@@ -10,6 +10,7 @@ import {
   ShoppingBag, Clock, AlertCircle
 } from 'lucide-react';
 import { CONFIG } from '@/lib/config';
+import { adminFetch } from '@/lib/adminFetch';
 
 interface Profile {
   id: string;
@@ -59,7 +60,7 @@ export default function AdminMembersPage() {
         return;
       }
 
-      const response = await fetch(`/api/admin/members?adminToken=${session.user.id}`);
+      const response = await adminFetch('/api/admin/members');
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -151,16 +152,13 @@ export default function AdminMembersPage() {
     }
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      const response = await fetch('/api/admin/members', {
+      const response = await adminFetch('/api/admin/members', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           userId: selectedMember.id,
           targetTier: selectedTier,
           targetPoints: newPoints,
-          adminToken: session?.user?.id
         })
       });
 

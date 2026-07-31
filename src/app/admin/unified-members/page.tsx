@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, Search, ShoppingBag, BookOpen } from 'lucide-react';
+import { adminFetch } from '@/lib/adminFetch';
 
 interface UnifiedMember {
   id: string;
@@ -40,7 +41,7 @@ export default function UnifiedMembersPage() {
         setError('인증 세션이 유효하지 않습니다. 다시 로그인해주세요.');
         return;
       }
-      const res = await fetch(`/api/admin/unified-members?adminToken=${session.user.id}`);
+      const res = await adminFetch('/api/admin/unified-members');
       const json = await res.json();
       if (!res.ok) {
         setError(json.error || '조회에 실패했습니다.');

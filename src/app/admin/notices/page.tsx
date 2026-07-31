@@ -9,6 +9,7 @@ import {
   ToggleLeft, ToggleRight, Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { adminFetch } from '@/lib/adminFetch';
 
 interface Notice {
   id: string;
@@ -26,7 +27,7 @@ export default function AdminNoticesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
-  const [adminToken, setAdminToken] = useState<string | null>(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,9 +47,9 @@ export default function AdminNoticesPage() {
         router.replace('/');
         return;
       }
-      setAdminToken(session.user.id);
+      setIsAuthReady(true);
 
-      const res = await fetch(`/api/admin/notices?adminToken=${session.user.id}`);
+      const res = await adminFetch('/api/admin/notices');
       const json = await res.json();
       if (!res.ok) {
         if (res.status === 403) router.replace('/');
@@ -91,14 +92,14 @@ export default function AdminNoticesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminToken) return;
+    if (!isAuthReady) return;
     setIsSaving(true);
 
     try {
-      const res = await fetch('/api/admin/notices', {
+      const res = await adminFetch('/api/admin/notices', {
         method: editingNotice ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminToken, id: editingNotice?.id, ...formData }),
+        body: JSON.stringify({ id: editingNotice?.id, ...formData }),
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
@@ -114,9 +115,9 @@ export default function AdminNoticesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?') || !adminToken) return;
+    if (!confirm('정말 삭제하시겠습니까?') || !isAuthReady) return;
     try {
-      const res = await fetch(`/api/admin/notices?adminToken=${adminToken}&id=${id}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/notices?id=${id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error);
       setNotices(notices.filter(n => n.id !== id));

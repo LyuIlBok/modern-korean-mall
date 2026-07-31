@@ -12,6 +12,7 @@ import RichTextEditor from './RichTextEditor';
 import Link from 'next/link';
 
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { adminFetch } from '@/lib/adminFetch';
 
 interface AdminProduct {
   id?: string;
@@ -114,7 +115,6 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     setIsLoading(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       let finalImageUrl = formData.imageUrl;
 
       if (mainImage) {
@@ -130,11 +130,11 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
       // 1. Submit Product
       const endpoint = '/api/admin/products';
       const method = isEditMode ? 'PATCH' : 'POST';
-      const body = isEditMode 
-        ? { productId: initialData?.id, productData: productPayload, adminToken: session?.user?.id }
-        : { productData: productPayload, adminToken: session?.user?.id };
+      const body = isEditMode
+        ? { productId: initialData?.id, productData: productPayload }
+        : { productData: productPayload };
 
-      const res = await fetch(endpoint, {
+      const res = await adminFetch(endpoint, {
         method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
