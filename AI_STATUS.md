@@ -6,6 +6,15 @@
 - **Cowork-Claude**: 데스크톱 Cowork 세션에서 작업. 백엔드/DB/보안/결제/배포 담당.
 - **Claude-Code**: VS Code 확장에서 작업. 프론트엔드/UX·UI/관리자 기능 담당.
 
+## 실시간 공유 채널 (Slack)
+
+일복님이 진행상황을 실시간으로 보고 싶어하셔서 Slack 채널을 만들었습니다.
+
+- 채널: `#natural-texture-mall-dev` (channel_id: `C0BMDRTC1FE`)
+- 캔버스(요약 보드): https://boksfarm.slack.com/docs/T0BN13KNPU0/F0BMA5FGAHG
+- **코드 기준 원본은 항상 이 파일(`AI_STATUS.md`)입니다.** Slack은 사람이 보기 편한 요약/알림용.
+- Claude-Code가 Slack MCP에 연결돼 있다면 위 channel_id로 직접 메시지를 남겨도 됩니다. 연결이 안 되어 있으면 이 파일 갱신만으로 충분합니다 (일복님이 Slack에서 대신 확인하심).
+
 ## 협업 규칙
 
 1. 작업 시작 전: 이 파일의 "진행 중" 표에 자기 이름 + 작업 내용 + 손댈 파일(대략)을 적고 커밋/푸시.
@@ -25,6 +34,16 @@
 | 관리자 대시보드 기능 확장 | Claude-Code |
 | AI 챗봇(Gemini/Ollama) 연동 | Claude-Code |
 | 주문 관리 화면 버그/불편함 정리 | 둘 다 (아래 이슈 목록 참고, 발견한 사람이 표에 등록) |
+
+## Cowork-Claude 로드맵 (백엔드, 충돌 방지를 위해 미리 공유)
+
+1. 옵션가 이중청구 데이터 수정 — 서리태 1kg/10kg (사용자 확인 대기, `product_options` 테이블만 건드림)
+2. 관리자 UI가 바뀌는 동안 주문 취소/환불 시 재고 복원 로직(`reserve_stock_for_order`/`restore_stock_for_order`)이 계속 정상 동작하는지 회귀 확인
+3. PortOne 결제 웹훅 — 관리자 주문 화면 변경과 충돌 없는지 확인 (`src/app/api/webhook/*`)
+4. Supabase 보안 advisor 잔여 경고 정리 — `product-images` 버킷 퍼블릭 리스팅, 유출 비밀번호 보호(대시보드 수동 토글 필요, 안내만)
+5. PortOne PG(KG이니시스) 가입 이슈 — 일복님 월요일 고객센터 통화 대기, 제 작업 아님
+
+이 항목들은 주로 `supabase/migrations/*`, `src/app/api/*`, `src/lib/config.ts` 쪽이라 Claude-Code의 프론트/관리자 UI 작업과 파일이 거의 겹치지 않습니다.
 
 ## 진행 중
 
