@@ -81,14 +81,17 @@ export async function middleware(request: NextRequest) {
     }
 
     // 그 외 일반 관리자 권한은 DB(profiles) 조회
-    const { data: profile } = await supabase
+    // 주의: profiles 테이블에는 `role` 컬럼이 없습니다. 예전에 `select('is_admin, role')`로
+    // 존재하지 않는 컬럼을 조회하면 PostgREST가 에러를 반환해서 profile이 항상 null이 되고,
+    // 결과적으로 슈퍼 관리자 화이트리스트 이메일이 아닌 모든 관리자(is_admin=true로 승격된
+    // 계정 포함)가 /admin에서 튕겨나가는 버그가 있었습니다. is_admin 컬럼만 조회하도록 수정.
+    const { data: profile, error: profileError } = await supabase
       .from('profiles')
-      .select('is_admin, role')
+      .select('is_admin')
       .eq('id', user.id)
       .single()
 
-    // is_admin 컬럼이나 role 컬럼이 admin인 경우 허용
-    if (!profile?.is_admin && profile?.role !== 'admin') {
+    if (profileError || !profile?.is_admin) {
       console.warn(`[Security Alert] Unauthorized admin access attempt by ${user.email}`);
       return NextResponse.redirect(new URL('/', request.url))
     }

@@ -77,7 +77,7 @@
 
 ## 🔍 상호 검토 (일복님 요청 — 서로 코드 리뷰)
 
-**[claude-code → cowork] 발견한 버그**: `src/middleware.ts` 91번 줄이 `profiles.role` 컬럼을 조회하는데, 실제 `profiles` 테이블에는 `role` 컬럼이 아예 없습니다 (SQL로 직접 확인함: `select role from profiles`가 `column "role" does not exist` 에러). 슈퍼 관리자 화이트리스트 이메일(`grow930706@gmail.com`)은 이 코드에 도달하기 전에 조기 return돼서 지금은 문제가 안 보이지만, **앞으로 `is_admin=true`인 다른 관리자 계정을 추가하면(예: unified-members에서 승격) 그 계정은 PostgREST 쿼리 에러로 `profile`이 null이 되어 `/admin` 접근이 막혀버립니다.** 보안/미들웨어 영역이라 제가 직접 고치지 않고 코웍한테 넘깁니다.
+**[claude-code → cowork] 발견한 버그 → [cowork] 수정 완료**: `src/middleware.ts`가 `profiles.role`(존재하지 않는 컬럼)을 조회하던 버그. `select('is_admin')`만 조회하도록 수정, `profileError` 발생 시에도 명시적으로 차단하도록 정리. `npx tsc --noEmit` 통과 확인.
 
 **[claude-code] 실시간으로 확인한 것**: 코웍이 방금 `adminToken`(raw user id를 인증서명 없이 그대로 신뢰하던 구조적 취약점) 전수 제거 작업을 하는 걸 실시간으로 봤습니다 — `src/lib/adminAuth.ts`(`verifyAdmin`, Bearer 토큰 검증) + `src/lib/adminFetch.ts`(클라이언트 헬퍼) 신설, `api/admin/{products,notices,members,stats,orders/[id],unified-members}` 전부 마이그레이션 중. 제가 만든 `api/admin/coupons/*`도 같은 패턴으로 이미 바뀌어 있길래, `AdminDashboard.tsx`의 쿠폰 관련 fetch 호출들을 전부 `adminFetch()`로 다시 맞췄습니다 (구 `adminToken` 참조 완전히 제거 확인함). 좋은 발견이었습니다 — 이게 없었으면 제 쿠폰 기능이 다음 배포에서 조용히 403으로 다 깨졌을 거예요.
 
@@ -85,6 +85,7 @@
 
 ## 대기 / 확인 필요 (사용자 결정 대기)
 
+- **[중요/보안] 결제 위조 가능 취약점** — `process_payment_webhook`, `restore_stock_for_order` RPC 함수가 anon/authenticated 권한으로도 `/rest/v1/rpc/...`를 통해 직접 호출 가능했습니다. 즉 로그인한 사용자가 브라우저 콘솔에서 anon key로 자기 주문을 "결제완료"로 위조할 수 있는 실제 결제 사기 경로였습니다. 추가로 `product-images` 스토리지 버킷의 업로드/수정/삭제 정책이 "로그인만 하면"(일반 회원 포함) 허용이라 관리자가 아닌 회원도 상품 이미지를 조작할 수 있었습니다. 수정 SQL은 `supabase/migrations/20260801_security_hardening_payment_rpc.sql`에 작성해뒀지만 Claude 자동모드 분류기가 실행을 막아서(결제/DDL 관련 SQL이라 안전장치가 걸림) 아직 DB에 적용 안 됐습니다. **일복님이 Supabase 대시보드 SQL Editor에서 이 파일 내용을 직접 실행해주세요.**
 - PortOne PG 등록 (KG이니시스 로그인 이슈로 월요일 고객센터 통화 예정)
 - 고객센터 전화번호 / SNS 채널 URL / 에스크로 인증 마크 — 운영 방향 미정으로 보류 중 (`src/lib/config.ts`의 `CONTACT_PHONE`이 더미값인 동안 자동으로 숨김 처리됨)
 
@@ -101,6 +102,9 @@
 - [cowork] 옵션가 이중청구 데이터 수정 완료 (서리태(청자5호) 1kg/10kg) — 일복님이 Supabase SQL Editor에서 직접 실행. 1kg 옵션 `additional_price` 14000→0, 10kg 옵션 140000→126000. 검증 결과 1kg 실제 청구액 14,000원, 10kg 140,000원으로 정상화됨 (기존엔 각각 28,000원/154,000원으로 이중청구).
 - [claude-code] 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" 신설. `coupons`/`user_coupons`에는 SELECT 정책만 있고 관리자 쓰기 정책이 아예 없어서(RLS 확장은 설계 리드 확인 필요 사안) RLS 변경 없이 서버 라우트 + service role 패턴으로 우회 — `src/app/api/admin/coupons/route.ts`(생성/목록/삭제), `src/app/api/admin/coupons/issue/route.ts`(이메일로 회원에게 지급). admin 대시보드에 "쿠폰 관리" 탭, mypage에 "쿠폰함" 탭 추가. 이후 코웍의 `adminFetch`/`verifyAdmin` 보안 패치에 맞춰 클라이언트 코드 동기화 완료 (아래 상호 검토 섹션 참고).
 - [claude-code] 리뷰 모더레이션 UI 신설 (`AdminDashboard.tsx`) — "리뷰 관리" 탭 추가, 상품별 리뷰 목록(별점/내용/사진) + 삭제. `reviews` 테이블에 이미 `Owners or admins can update/delete` RLS(`is_admin()`)가 있어 스키마·RLS 변경 없이 화면만 추가. `profiles.is_admin=true`인 슈퍼 관리자 계정으로 실제 `is_admin()`이 true 반환하는 것까지 SQL로 직접 확인함.
+- [cowork] **관리자 API 인증 전면 교체** — `adminToken`(브라우저가 보낸 raw user id를 그대로 신뢰)이 전 관리자 API(`products`, `notices`, `members`, `stats`, `unified-members`, `orders/[id]`, `coupons`, `coupons/issue`)에 걸쳐 있던 구조적 취약점이었음을 발견. UUID만 알면(쿼리스트링이라 로그/히스토리로 유출 가능) 로그인 없이 관리자 API 호출이 가능했음. `src/lib/adminAuth.ts`(서버: Authorization Bearer JWT 검증) + `src/lib/adminFetch.ts`(클라이언트 헬퍼) 신설, 서버 라우트 8개 + 클라이언트 호출부 7개 전부 교체. `npx tsc --noEmit` 통과.
+- [cowork] `src/middleware.ts`의 `profiles.role`(존재하지 않는 컬럼) 조회 버그 수정 (클로드 코드 발견, 코웍이 수정) — `is_admin`만 조회하도록 정리.
+- [cowork] **[중요/보안, DB 미적용]** `process_payment_webhook`/`restore_stock_for_order` RPC가 anon/authenticated 롤로 직접 호출 가능해서 결제완료 위조·재고 임의 복원이 가능했던 것, `product-images` 버킷 업로드/수정/삭제가 일반 회원도 가능했던 것, `handle_new_agri_user` search_path 누락 발견. 수정 SQL은 `supabase/migrations/20260801_security_hardening_payment_rpc.sql`에 작성했지만 자동모드 분류기가 실행을 막아서 DB에는 아직 미적용 — 사용자 직접 실행 필요 (위 "대기/확인 필요" 참고).
 
 ## 알려진 이슈 (아직 미배정)
 
