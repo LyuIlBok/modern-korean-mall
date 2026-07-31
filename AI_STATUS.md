@@ -61,7 +61,7 @@
 
 ## Claude-Code 로드맵 (프론트/관리자, 충돌 방지를 위해 미리 공유)
 
-1. QnA 관리자 답변 UI 신설 — 고객 질문 UI(`ProductTabs.tsx`)는 있는데 관리자가 답변(`qna.answer`)을 달 UI가 전혀 없음. `AdminDashboard.tsx`의 `ActiveTab`에 `'qna'` 타입만 죽은 채로 남아있음.
+1. ~~QnA 관리자 답변 UI 신설~~ — 완료 (아래 "최근 완료" 참고)
 2. 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" — 지금은 체크아웃 코드 검증(`api/coupons/verify`)만 있고 `user_coupons`에 지급하는 로직/화면이 전혀 없음.
 3. 리뷰 모더레이션(관리자 삭제) UI.
 4. "관리자/주문 관리 화면 이슈 많다" — 실사용 테스트로 구체 목록화 예정.
@@ -89,6 +89,7 @@
 - [claude-code] `products` 테이블 admin-write RLS 정책이 라이브 DB에만 있고 마이그레이션 파일로 기록돼 있지 않던 것을 발견 → `supabase/migrations/20260801_products_admin_write_policy.sql`로 코드화 (정책 내용 자체는 변경 없음)
 - [claude-code] 관리자 대시보드 사이드바에 `/admin/notices`, `/admin/unified-members` 링크 누락돼 있던 것 추가 (페이지는 이미 완성돼 있었으나 URL 직접 입력해야만 접근 가능했음). 겸사겸사 "사이트 설정" 항목이 `id: 'dashboard'`를 재사용하던 버그(대시보드 진입 시 사이트 설정이 같이 활성화 표시됨) 수정
 - [claude-code] `sitemap.ts`가 정적 4개 URL만 갖고 있어 상품 페이지가 검색엔진에 노출 안 되던 문제 → Supabase에서 `is_active` 상품을 동적으로 조회하도록 수정. 이 과정에서 `public/sitemap.xml`(2024년 날짜의 정적 잔재 파일, `sitemap.ts`와 라우팅 충돌 원인)을 삭제
+- [claude-code] QnA 관리자 답변 UI 신설 (`AdminDashboard.tsx`) — 사이드바 "상품 문의" 탭 추가, 문의 목록(미답변 우선 표시)에서 답변 작성/수정/삭제 가능. `qna` 테이블에 이미 admin UPDATE/DELETE RLS 정책(`is_admin()`)이 있어 스키마·RLS 변경 없이 화면만 추가함. 로그인 없이는 실제 화면 확인이 불가해 lint 통과 + 코드 리뷰까지만 검증함 — 실사용 확인 필요.
 
 ## 알려진 이슈 (아직 미배정)
 

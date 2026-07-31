@@ -9,7 +9,7 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -96,6 +96,22 @@ interface AdminRestockAlert {
   } | null;
 }
 
+interface AdminQna {
+  id: string;
+  created_at: string;
+  product_id: string;
+  user_name: string;
+  question_type: string | null;
+  content: string;
+  is_secret: boolean;
+  answer: string | null;
+  answered_at: string | null;
+  products: {
+    name: string;
+    imageUrl: string;
+  } | null;
+}
+
 interface SidebarItem {
   id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings';
   label: string;
@@ -109,6 +125,8 @@ export default function AdminDashboard() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [orders, setOrders] = useState<AdminOrder[]>([]);
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
+  const [qnaList, setQnaList] = useState<AdminQna[]>([]);
+  const [qnaDrafts, setQnaDrafts] = useState<Record<string, string>>({});
   const [userCount, setUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -141,17 +159,19 @@ export default function AdminDashboard() {
 
       setIsAdmin(true);
       
-      const [productsRes, ordersRes, alertsRes, userCountRes] = await Promise.all([
+      const [productsRes, ordersRes, alertsRes, userCountRes, qnaRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('orders').select('*, order_items(*, products(name, imageUrl))').order('created_at', { ascending: false }),
         supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false }),
-        supabase.from('profiles').select('*', { count: 'exact', head: true })
+        supabase.from('profiles').select('*', { count: 'exact', head: true }),
+        supabase.from('qna').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
       ]);
 
       if (productsRes.data) setProducts(productsRes.data as AdminProduct[]);
       if (ordersRes.data) setOrders(ordersRes.data as AdminOrder[]);
       if (alertsRes.data) setRestockAlerts(alertsRes.data as AdminRestockAlert[]);
       if (userCountRes.count !== null) setUserCount(userCountRes.count);
+      if (qnaRes.data) setQnaList(qnaRes.data as AdminQna[]);
       
     } catch (err) { 
       console.error('Admin data fetch failed:', err);
@@ -291,6 +311,54 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleAnswerQna = async (qna: AdminQna) => {
+    const answer = (qnaDrafts[qna.id] ?? qna.answer ?? '').trim();
+    if (!answer) {
+      alert('답변 내용을 입력해주세요.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase
+        .from('qna')
+        .update({ answer, answered_at: new Date().toISOString() })
+        .eq('id', qna.id);
+
+      if (error) {
+        alert(`답변 등록 실패: ${error.message}`);
+        return;
+      }
+
+      setQnaList(prev => prev.map(q => q.id === qna.id ? { ...q, answer, answered_at: new Date().toISOString() } : q));
+      alert('답변이 등록되었습니다.');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleDeleteQna = async (qna: AdminQna) => {
+    if (!confirm('이 문의를 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('qna').delete().eq('id', qna.id);
+      if (error) {
+        alert(`삭제 실패: ${error.message}`);
+        return;
+      }
+      setQnaList(prev => prev.filter(q => q.id !== qna.id));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case '결제완료': return 'bg-blue-50 text-blue-600 border-blue-100';
@@ -310,6 +378,7 @@ export default function AdminDashboard() {
     { id: 'products', label: t?.admin?.navProducts || '상품 관리', icon: Package },
     { id: 'orders', label: t?.admin?.navOrders || '주문 관리', icon: ShoppingCart },
     { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
+    { id: 'qna', label: '상품 문의', icon: HelpCircle },
     { id: 'chat', label: t?.admin?.navChat || '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
     { id: 'members', label: t?.admin?.navMembers || '회원 관리', icon: Users, path: '/admin/members' },
     { id: 'unified-members', label: '통합 회원 관리', icon: Users, path: '/admin/unified-members' },
@@ -615,6 +684,75 @@ export default function AdminDashboard() {
                   </tbody>
                 </table>
               </div>
+            </motion.div>
+          )}
+
+          {activeTab === 'qna' && (
+            <motion.div key="qna" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+              <div className="space-y-4">
+                <h1 className="font-serif text-4xl">상품 문의</h1>
+                <p className="text-muted text-sm font-light">
+                  총 {qnaList.length}건 중 미답변 {qnaList.filter(q => !q.answer).length}건
+                </p>
+              </div>
+
+              {qnaList.length === 0 ? (
+                <div className="bg-white border border-border-light rounded-sm p-12 text-center text-muted text-sm">
+                  아직 등록된 문의가 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {qnaList.map((qna) => (
+                    <div key={qna.id} className="bg-white border border-border-light rounded-sm shadow-sm p-8 space-y-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="relative w-10 h-12 rounded-sm overflow-hidden bg-hanji-white shrink-0">
+                            {qna.products?.imageUrl && (
+                              <Image src={qna.products.imageUrl} alt="" fill className="object-cover" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-charcoal">{qna.products?.name || '(삭제된 상품)'}</p>
+                            <p className="text-[10px] text-muted">
+                              {qna.user_name} · {new Date(qna.created_at).toLocaleString()}
+                              {qna.is_secret && <span className="ml-2 px-2 py-0.5 rounded-full bg-terracotta/10 text-terracotta font-bold">비밀글</span>}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 shrink-0">
+                          <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${qna.answer ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                            {qna.answer ? '답변완료' : '미답변'}
+                          </span>
+                          <button onClick={() => handleDeleteQna(qna)} className="text-muted hover:text-terracotta transition-colors">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <p className="text-sm text-charcoal leading-relaxed bg-hanji-white p-4 rounded-sm">{qna.content}</p>
+
+                      <div className="space-y-3">
+                        <textarea
+                          value={qnaDrafts[qna.id] ?? qna.answer ?? ''}
+                          onChange={(e) => setQnaDrafts(prev => ({ ...prev, [qna.id]: e.target.value }))}
+                          placeholder="답변을 입력하세요..."
+                          rows={3}
+                          className="w-full text-sm p-4 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage resize-none"
+                        />
+                        <div className="flex justify-end">
+                          <button
+                            onClick={() => handleAnswerQna(qna)}
+                            disabled={isLoading}
+                            className="bg-charcoal text-white text-xs font-medium px-6 py-3 rounded-sm hover:bg-deep-sage transition-all disabled:opacity-50"
+                          >
+                            {qna.answer ? '답변 수정' : '답변 등록'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
