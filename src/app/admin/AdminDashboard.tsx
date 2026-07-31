@@ -360,13 +360,14 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase
-        .from('qna')
-        .update({ answer, answered_at: new Date().toISOString() })
-        .eq('id', qna.id);
-
-      if (error) {
-        alert(`답변 등록 실패: ${error.message}`);
+      const res = await adminFetch('/api/admin/qna', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: qna.id, answer }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(`답변 등록 실패: ${json.error || '알 수 없는 오류'}`);
         return;
       }
 
@@ -385,9 +386,10 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.from('qna').delete().eq('id', qna.id);
-      if (error) {
-        alert(`삭제 실패: ${error.message}`);
+      const res = await adminFetch(`/api/admin/qna?id=${qna.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(`삭제 실패: ${json.error || '알 수 없는 오류'}`);
         return;
       }
       setQnaList(prev => prev.filter(q => q.id !== qna.id));
@@ -497,9 +499,10 @@ export default function AdminDashboard() {
 
     setIsLoading(true);
     try {
-      const { error } = await supabase.from('reviews').delete().eq('id', review.id);
-      if (error) {
-        alert(`삭제 실패: ${error.message}`);
+      const res = await adminFetch(`/api/admin/reviews?id=${review.id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(`삭제 실패: ${json.error || '알 수 없는 오류'}`);
         return;
       }
       setReviewList(prev => prev.filter(r => r.id !== review.id));

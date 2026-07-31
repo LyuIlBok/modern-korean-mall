@@ -38,12 +38,21 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: '이미 만료된 쿠폰입니다.' }, { status: 400 });
     }
 
+    // 주의: coupons 테이블에는 discount_amount 컬럼 하나만 존재합니다.
+    // 관리자 쿠폰 생성 화면(AdminDashboard.tsx)도 percent 타입일 때 퍼센트 숫자를
+    // discount_amount 컬럼에 그대로 저장합니다(discount_value 컬럼은 실제로 쓰이지 않음).
+    // 예전 코드가 percent 분기에서 discount_value를 읽어서 항상 NaN 할인액이 나오던
+    // 버그였습니다(퍼센트 쿠폰 적용 시 결제 화면에 "₩NaN"이 표시되는 문제).
     let discount = 0;
     if (coupon.discount_type === 'amount' || coupon.discount_type === 'fixed') {
-      discount = Number(coupon.discount_amount || coupon.discount_value);
+      discount = Number(coupon.discount_amount);
     } else if (coupon.discount_type === 'percent' || coupon.discount_type === 'rate') {
-      discount = Math.floor(amount * (Number(coupon.discount_value) / 100));
+      discount = Math.floor(amount * (Number(coupon.discount_amount) / 100));
     }
+
+    // 할인액이 주문 금액을 초과하지 않도록 방어
+    if (!Number.isFinite(discount) || discount < 0) discount = 0;
+    if (discount > amount) discount = amount;
 
     return NextResponse.json({ 
       success: true, 

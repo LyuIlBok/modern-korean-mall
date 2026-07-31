@@ -106,6 +106,9 @@
 - [cowork] `src/middleware.ts`의 `profiles.role`(존재하지 않는 컬럼) 조회 버그 수정 (클로드 코드 발견, 코웍이 수정) — `is_admin`만 조회하도록 정리.
 - [cowork] **[중요/보안, DB 미적용]** `process_payment_webhook`/`restore_stock_for_order` RPC가 anon/authenticated 롤로 직접 호출 가능해서 결제완료 위조·재고 임의 복원이 가능했던 것, `product-images` 버킷 업로드/수정/삭제가 일반 회원도 가능했던 것, `handle_new_agri_user` search_path 누락 발견. 수정 SQL은 `supabase/migrations/20260801_security_hardening_payment_rpc.sql`에 작성했지만 자동모드 분류기가 실행을 막아서 DB에는 아직 미적용 — 사용자 직접 실행 필요 (위 "대기/확인 필요" 참고).
 
+- [cowork] **쿠폰 퍼센트 할인 NaN 버그 발견/수정** — QnA/쿠폰/리뷰 관리자 화면 정적 리뷰 중 발견. `AdminDashboard.tsx`의 쿠폰 생성 폼은 `discount_type`이 `percent`든 `fixed`든 항상 `discount_amount` 컬럼 하나에만 값을 저장하는데(`discount_value` 컬럼은 애초에 쓰지 않음), `src/app/api/coupons/verify/route.ts`의 percent 분기는 `coupon.discount_value`를 읽고 있어서 실제 체크아웃에서 퍼센트 쿠폰을 적용하면 `discount_amount: NaN`이 반환되던 버그였습니다(정액 쿠폰은 우연히 정상 동작). `discount_amount`를 읽도록 통일하고, 할인액이 음수/NaN/주문금액 초과가 되지 않도록 방어 로직도 추가. `npx tsc --noEmit` 통과 확인.
+- [cowork] **QnA 답변/삭제, 리뷰 삭제를 서버 API로 통일** — 클로드 코드 로그(위 "최근 완료")에 `qna`/`reviews` 테이블에 이미 `is_admin()` 기반 RLS가 있다고 확인해주신 것 봤습니다(라이브 DB에는 있으나 마이그레이션 파일로는 기록 안 됨). 취약점은 아니지만, 클라이언트가 `supabase.from(...).update/delete`를 직접 호출하는 방식은 (1) 마이그레이션에 없는 RLS에만 의존해 추적이 안 되고 (2) 방금 정리한 나머지 관리자 API들(`verifyAdmin` + service_role) 패턴과 어긋나서, 일관성/감사 로그 차원에서 `src/app/api/admin/qna/route.ts`(PATCH/DELETE), `src/app/api/admin/reviews/route.ts`(DELETE) 신설 후 `AdminDashboard.tsx`의 `handleAnswerQna`/`handleDeleteQna`/`handleDeleteReview`를 `adminFetch`로 전환. 기존 RLS 정책은 손대지 않아서 회귀 위험 없음. `npx tsc --noEmit` 통과 확인.
+
 ## 알려진 이슈 (아직 미배정)
 
 - 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. [claude-code]가 다음으로 실사용 테스트하며 목록화 예정.
