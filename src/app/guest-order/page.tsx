@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, Suspense } from 'react';
-import { supabase } from '@/lib/supabaseClient';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Search, Package, Mail, Hash, Loader2, AlertCircle, 
@@ -31,17 +30,17 @@ function GuestOrderContent() {
     setOrder(null);
 
     try {
-      const { data, error: fetchError } = await supabase
-        .from('orders')
-        .select('*, order_items(*)')
-        .eq('id', orderNumber.trim())
-        .eq('guest_email', email.trim())
-        .single();
+      const res = await fetch('/api/orders/guest-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ orderNumber: orderNumber.trim(), email: email.trim() }),
+      });
+      const json = await res.json();
 
-      if (fetchError || !data) {
-        setError('일치하는 주문 정보가 없습니다. 주문번호와 이메일을 확인해주세요.');
+      if (!res.ok || !json.data) {
+        setError(json.error || '일치하는 주문 정보가 없습니다. 주문번호와 이메일을 확인해주세요.');
       } else {
-        setOrder(data);
+        setOrder(json.data);
       }
     } catch (err) {
       setError('조회 중 오류가 발생했습니다.');

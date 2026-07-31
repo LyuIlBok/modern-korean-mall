@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AgriLeitner Pro | AI Command Center</title>
+    <style>
+        :root {
+            --bg-color: #0b0f19;
+            --panel-bg: rgba(20, 25, 35, 0.7);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --cmd-color: #00FFFF;
+            --back-color: #FFD700;
+            --front-color: #00FF00;
+            --cli-color: #DA70D6;
+        }
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background: radial-gradient(circle at top, #1a233a, var(--bg-color)); 
+            color: #e0e0e0; 
+            margin: 0; 
+            padding: 40px 20px; 
+            min-height: 100vh;
+        }
+        .container { max-width: 1400px; margin: auto; }
+        .header {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 2px solid var(--border-color); padding-bottom: 15px; margin-bottom: 30px;
+        }
+        .header h1 { margin: 0; color: #fff; font-size: 28px; letter-spacing: 2px; }
+        .header span { color: #888; font-size: 14px; }
+        
+        .panel-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 25px; margin-bottom: 30px; }
+        .panel { 
+            background: var(--panel-bg); 
+            backdrop-filter: blur(15px); 
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid var(--border-color); 
+            border-radius: 12px; 
+            padding: 25px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            display: flex; flex-direction: column;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .panel.active { transform: translateY(-5px); }
+        
+        .panel-header { display: flex; align-items: center; margin-bottom: 15px; }
+        .status-dot { width: 10px; height: 10px; border-radius: 50%; margin-right: 12px; background: #555; }
+        .active .status-dot { animation: pulse 1.5s infinite; }
+        
+        .panel h3 { margin: 0; font-size: 18px; letter-spacing: 1px; }
+        .p-cmd h3, .p-cmd .status-dot.active { color: var(--cmd-color); background: var(--cmd-color); text-shadow: 0 0 10px var(--cmd-color); }
+        .p-back h3, .p-back .status-dot.active { color: var(--back-color); background: var(--back-color); text-shadow: 0 0 10px var(--back-color); }
+        .p-front h3, .p-front .status-dot.active { color: var(--front-color); background: var(--front-color); text-shadow: 0 0 10px var(--front-color); }
+        .p-cli h3, .p-cli .status-dot.active { color: var(--cli-color); background: var(--cli-color); text-shadow: 0 0 10px var(--cli-color); }
+        
+        .log-box { 
+            flex-grow: 1; height: 180px; overflow-y: auto; font-size: 15px; 
+            line-height: 1.6; color: #ccc; padding-right: 10px; 
+        }
+        .log-box::-webkit-scrollbar { width: 6px; }
+        .log-box::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
+        
+        .controls { 
+            background: var(--panel-bg); border: 1px solid var(--border-color);
+            border-radius: 12px; padding: 25px; display: flex; gap: 15px; 
+            align-items: center; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+        input[type="text"] { 
+            flex: 1; padding: 15px 20px; background: rgba(0,0,0,0.5); 
+            border: 1px solid #444; color: white; border-radius: 8px; font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input[type="text"]:focus { outline: none; border-color: var(--cmd-color); }
+        
+        button { 
+            padding: 15px 30px; background: #fff; color: #000; border: none; 
+            font-weight: bold; font-size: 16px; cursor: pointer; border-radius: 8px; 
+            transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+        }
+        .btn-run { background: var(--cmd-color); color: #000; }
+        .btn-run:hover { background: #00cccc; box-shadow: 0 0 15px rgba(0,255,255,0.4); }
+        .btn-save { background: transparent; border: 1px solid var(--cli-color); color: var(--cli-color); }
+        .btn-save:hover { background: var(--cli-color); color: #000; box-shadow: 0 0 15px rgba(218,112,214,0.4); }
+
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(255,255,255,0); }
+            100% { box-shadow: 0 0 0 0 rgba(255,255,255,0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>AGRILEITNER PRO <span style="color:#00FFFF; font-size:18px;">// AI COMMAND CENTER</span></h1>
+            <span>System Status: <strong style="color:#00FF00">ONLINE</strong></span>
+        </div>
+        
+        <div class="panel-grid">
+            <div class="panel p-cmd" id="panel-commander">
+                <div class="panel-header"><div class="status-dot"></div><h3>[Agent_Commander]</h3></div>
+                <div class="log-box" id="log-commander">웹 및 3D 동기화 대기 중...</div>
+            </div>
+            <div class="panel p-back" id="panel-backend">
+                <div class="panel-header"><div class="status-dot"></div><h3>[Agent_Backend_Dev]</h3></div>
+                <div class="log-box" id="log-backend">대기 중...</div>
+            </div>
+            <div class="panel p-front" id="panel-frontend">
+                <div class="panel-header"><div class="status-dot"></div><h3>[Agent_Frontend_Dev]</h3></div>
+                <div class="log-box" id="log-frontend">대기 중...</div>
+            </div>
+            <div class="panel p-cli" id="panel-cli">
+                <div class="panel-header"><div class="status-dot"></div><h3>[Agent_Field_Executor]</h3></div>
+                <div class="log-box" id="log-cli">대기 중...</div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <input type="text" id="userInput" placeholder="플랫폼 고도화 지시 (예: 다중 사용자 접속 시 AI 응답 지연을 방지하기 위한 아키텍처를 설계하라)" onkeypress="if(event.key === 'Enter') executeMission()">
+            <button class="btn-run" onclick="executeMission()">작전 실행 (Web + Unity 동기화)</button>
+            <button class="btn-save" onclick="saveToDesktop()">회의록 출력</button>
+        </div>
+    </div>
+
+    <script>
+        let fullMeetingLog = "";
+
+        function setPanelActive(panelId, isActive) {
+            const panel = document.getElementById(panelId);
+            const dot = panel.querySelector('.status-dot');
+            if(isActive) {
+                panel.classList.add('active');
+                dot.classList.add('active');
+            } else {
+                panel.classList.remove('active');
+                dot.classList.remove('active');
+            }
+        }
+
+        async function sendToAgent(agentId, prompt, targetElementId, panelId) {
+            setPanelActive(panelId, true);
+            const logBox = document.getElementById(targetElementId);
+            logBox.innerHTML = "<span style='color:#666'>[데이터 연산 및 전송 중...]</span>";
+            
+            try {
+                const res = await fetch('/api/agent_chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ agent_id: agentId, prompt: prompt })
+                });
+                const data = await res.json();
+                if (data.success) {
+                    logBox.innerHTML = data.response;
+                    fullMeetingLog += `[${agentId}]\n${data.response}\n\n`;
+                    setPanelActive(panelId, false);
+                    return data.response;
+                }
+            } catch (err) {
+                logBox.innerHTML = "<span style='color:red'>서버 통신 장애 발생</span>";
+            }
+            setPanelActive(panelId, false);
+        }
+
+        async function executeMission() {
+            const input = document.getElementById("userInput").value;
+            if (!input) return alert("명령을 입력하십시오.");
+            
+            await fetch('/api/set_mission', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mission: input })
+            });
+
+            fullMeetingLog = `=== AI 플랫폼 고도화 회의록: ${input} ===\n\n`;
+            
+            const cmdRes = await sendToAgent("Agent_Commander", input, "log-commander", "panel-commander");
+            const backRes = await sendToAgent("Agent_Backend_Dev", `지휘관 명령(${input})에 맞추어 통신 속도 및 서버 구조 최적화 방안을 2문장으로 제시하라.`, "log-backend", "panel-backend");
+            await sendToAgent("Agent_Frontend_Dev", `백엔드 설계안(${backRes})에 맞춰 3D 아바타 시각화 및 UI 동기화 기법을 2문장으로 제시하라.`, "log-frontend", "panel-frontend");
+            await sendToAgent("Agent_Field_Executor", "로컬 기획서 저장 준비가 완료되었음을 1문장으로 보고하라.", "log-cli", "panel-cli");
+        }
+
+        async function saveToDesktop() {
+            if (!fullMeetingLog) return alert("저장할 회의 데이터가 없습니다.");
+            await fetch('/api/save_blueprint', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ content: fullMeetingLog })
+            });
+            alert("바탕화면에 물리적 회의록이 출력되었습니다.");
+        }
+    </script>
+</body>
+</html>

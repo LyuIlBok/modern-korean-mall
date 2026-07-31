@@ -1,9 +1,13 @@
-# AgriLeitner Pro - 통합 아키텍처 명세서
-- 프로젝트 목표: 다중 AI(Multi-Agent) 협업 기반의 3D 메타버스 오피스 및 웹앱(쇼핑몰, 단어장) 통합 관리.
-- 통신 프로토콜: 로컬 Node.js (Port: 5001) 기반 REST API 메시지 브로커.
-- AI 역할 분담 (예정):
-  1. Agent_Commander: 전체 시스템 아키텍처 및 3D 씬 기획.
-  2. Agent_Worker: 로컬 코드 작성, 백엔드/프론트엔드 실무 구현.
+# AgriLeitner Pro - 통합 아키텍처 명세서 (Updated)
 
-- [NEW] BYOK (Bring Your Own Key) 확장 시스템:
-  소비자가 Llama 등 무료 오픈소스 AI 또는 외부 API 키를 플랫폼에 직접 등록하면, 해당 AI가 5001번 브로커에 접속하여 독립적인 Worker Agent로 활동하도록 권한을 부여함. (토큰 비용 제로화 아키텍처)
+## 0. 실행 조직도 (AI Ecosystem)
+- **Agent_Commander (Gemini Web)**: 수석 시스템 아키텍트, 전체 방향성 통제 및 XML 작전 명령 하달.
+- **Agent_Field_Executor (Gemini CLI)**: 로컬 파일 시스템 제어, 셸 명령어 자동 실행 및 실무 코드 배포 전담.
+- **Local AI (Ollama/Gemma)**: 유니티 3D 공간 내 4개 페르소나(설계, 분석 등)의 실시간 자율 토론 엔진.
+
+## 1. 메타버스 3D 협업툴 (Unity + Node.js)
+- **상태**: 4분할 시각적 목업 및 3D 아바타 렌더링 완료. 로컬 AI 연동 및 자율 통신망 구축 완료.
+
+## 2. 통합 인증(SSO) 아키텍처 (Vercel + Supabase)
+- **목표**: 보키네 농장 '쇼핑몰 앱'과 식물보호기사 학습용 '단어장 앱'의 단일 계정 체계(SSO) 구축.
+- **진행 상황**: `shared_auth/supabaseClient.js` 공용 클라이언트 생성 완료. 쿠키 기반 세션 공유 준비.
