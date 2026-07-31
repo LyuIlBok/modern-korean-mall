@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { CONFIG } from '@/lib/config';
+import { verifyAdmin } from '@/lib/adminAuth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,28 +9,13 @@ export const dynamic = 'force-dynamic';
  * - POST: 특정 회원(이메일)에게 쿠폰 지급
  */
 
-async function validateAdmin(adminToken: string) {
-  const { data: adminProfile, error: authError } = await supabaseAdmin
-    .from('profiles')
-    .select('is_admin, email')
-    .eq('id', adminToken)
-    .single();
-
-  if (authError || !adminProfile) return false;
-
-  const isSuperAdmin = adminProfile.email === CONFIG.ADMIN_EMAILS[0];
-  return adminProfile.is_admin || isSuperAdmin;
-}
-
 export async function POST(request: Request) {
   try {
+    const admin = await verifyAdmin(request);
+    if (!admin) return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
+
     const body = await request.json();
-    const { couponId, email, adminToken } = body;
-
-    if (!adminToken) return NextResponse.json({ error: '인증이 필요합니다.' }, { status: 401 });
-
-    const isAdmin = await validateAdmin(adminToken);
-    if (!isAdmin) return NextResponse.json({ error: '관리자 권한이 없습니다.' }, { status: 403 });
+    const { couponId, email } = body;
 
     if (!couponId || !email) {
       return NextResponse.json({ error: '쿠폰과 회원 이메일을 모두 입력해주세요.' }, { status: 400 });

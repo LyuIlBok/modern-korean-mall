@@ -9,10 +9,11 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket, Star
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
+import { adminFetch } from '@/lib/adminFetch';
 import { CONFIG } from '@/lib/config';
 import { useLanguageStore } from '@/store/useLanguageStore';
 import RichTextEditor from '@/components/admin/RichTextEditor';
@@ -30,7 +31,7 @@ const SalesChart = dynamic(() => import('./SalesChart'), {
 
 export const viewport = { width: 'device-width', initialScale: 1 };
 
-type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock' | 'coupons';
+type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock' | 'coupons' | 'reviews';
 
 interface AdminProduct {
   id: string;
@@ -124,6 +125,21 @@ interface AdminCoupon {
   used_count: number;
 }
 
+interface AdminReview {
+  id: string;
+  created_at: string;
+  product_id: string;
+  user_name: string;
+  rating: number;
+  content: string;
+  photo_url: string | null;
+  is_verified: boolean;
+  products: {
+    name: string;
+    imageUrl: string;
+  } | null;
+}
+
 interface SidebarItem {
   id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings';
   label: string;
@@ -139,11 +155,11 @@ export default function AdminDashboard() {
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
   const [qnaList, setQnaList] = useState<AdminQna[]>([]);
   const [qnaDrafts, setQnaDrafts] = useState<Record<string, string>>({});
-  const [adminUserId, setAdminUserId] = useState<string | null>(null);
   const [couponList, setCouponList] = useState<AdminCoupon[]>([]);
   const [couponForm, setCouponForm] = useState({ code: '', discount_type: 'fixed' as 'fixed' | 'percent', discount_amount: '', min_order_amount: '', valid_until: '' });
   const [issueEmailDrafts, setIssueEmailDrafts] = useState<Record<string, string>>({});
   const [isCouponLoading, setIsCouponLoading] = useState(false);
+  const [reviewList, setReviewList] = useState<AdminReview[]>([]);
   const [userCount, setUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -175,19 +191,19 @@ export default function AdminDashboard() {
       }
 
       setIsAdmin(true);
-      setAdminUserId(session.user.id);
 
-      fetch(`/api/admin/coupons?adminToken=${session.user.id}`)
+      adminFetch('/api/admin/coupons')
         .then(res => res.json())
         .then(json => { if (json.success) setCouponList(json.data); })
         .catch(err => console.error('Coupon fetch failed:', err));
 
-      const [productsRes, ordersRes, alertsRes, userCountRes, qnaRes] = await Promise.all([
+      const [productsRes, ordersRes, alertsRes, userCountRes, qnaRes, reviewsRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('orders').select('*, order_items(*, products(name, imageUrl))').order('created_at', { ascending: false }),
         supabase.from('restock_alerts').select('*, products(name, imageUrl, stock), profiles(email, full_name)').order('created_at', { ascending: false }),
         supabase.from('profiles').select('*', { count: 'exact', head: true }),
-        supabase.from('qna').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
+        supabase.from('qna').select('*, products(name, imageUrl)').order('created_at', { ascending: false }),
+        supabase.from('reviews').select('*, products(name, imageUrl)').order('created_at', { ascending: false })
       ]);
 
       if (productsRes.data) setProducts(productsRes.data as AdminProduct[]);
@@ -195,6 +211,7 @@ export default function AdminDashboard() {
       if (alertsRes.data) setRestockAlerts(alertsRes.data as AdminRestockAlert[]);
       if (userCountRes.count !== null) setUserCount(userCountRes.count);
       if (qnaRes.data) setQnaList(qnaRes.data as AdminQna[]);
+      if (reviewsRes.data) setReviewList(reviewsRes.data as AdminReview[]);
       
     } catch (err) { 
       console.error('Admin data fetch failed:', err);
@@ -383,15 +400,13 @@ export default function AdminDashboard() {
   };
 
   const refreshCoupons = async () => {
-    if (!adminUserId) return;
-    const res = await fetch(`/api/admin/coupons?adminToken=${adminUserId}`);
+    const res = await adminFetch('/api/admin/coupons');
     const json = await res.json();
     if (json.success) setCouponList(json.data);
   };
 
   const handleCreateCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!adminUserId) return;
     if (!couponForm.code.trim() || !couponForm.discount_amount) {
       alert('쿠폰 코드와 할인 금액을 입력해주세요.');
       return;
@@ -399,11 +414,10 @@ export default function AdminDashboard() {
 
     setIsCouponLoading(true);
     try {
-      const res = await fetch('/api/admin/coupons', {
+      const res = await adminFetch('/api/admin/coupons', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          adminToken: adminUserId,
           couponData: {
             code: couponForm.code,
             discount_type: couponForm.discount_type,
@@ -429,12 +443,11 @@ export default function AdminDashboard() {
   };
 
   const handleDeleteCoupon = async (coupon: AdminCoupon) => {
-    if (!adminUserId) return;
     if (!confirm(`'${coupon.code}' 쿠폰을 삭제하시겠습니까?`)) return;
 
     setIsCouponLoading(true);
     try {
-      const res = await fetch(`/api/admin/coupons?id=${coupon.id}&adminToken=${adminUserId}`, { method: 'DELETE' });
+      const res = await adminFetch(`/api/admin/coupons?id=${coupon.id}`, { method: 'DELETE' });
       const json = await res.json();
       if (!res.ok) {
         alert(json.error || '쿠폰 삭제에 실패했습니다.');
@@ -450,7 +463,6 @@ export default function AdminDashboard() {
   };
 
   const handleIssueCoupon = async (coupon: AdminCoupon) => {
-    if (!adminUserId) return;
     const email = (issueEmailDrafts[coupon.id] || '').trim();
     if (!email) {
       alert('지급할 회원의 이메일을 입력해주세요.');
@@ -459,10 +471,10 @@ export default function AdminDashboard() {
 
     setIsCouponLoading(true);
     try {
-      const res = await fetch('/api/admin/coupons/issue', {
+      const res = await adminFetch('/api/admin/coupons/issue', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ adminToken: adminUserId, couponId: coupon.id, email }),
+        body: JSON.stringify({ couponId: coupon.id, email }),
       });
       const json = await res.json();
       if (!res.ok) {
@@ -477,6 +489,25 @@ export default function AdminDashboard() {
       alert(`시스템 오류: ${msg}`);
     } finally {
       setIsCouponLoading(false);
+    }
+  };
+
+  const handleDeleteReview = async (review: AdminReview) => {
+    if (!confirm('이 리뷰를 삭제하시겠습니까? 되돌릴 수 없습니다.')) return;
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.from('reviews').delete().eq('id', review.id);
+      if (error) {
+        alert(`삭제 실패: ${error.message}`);
+        return;
+      }
+      setReviewList(prev => prev.filter(r => r.id !== review.id));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -501,6 +532,7 @@ export default function AdminDashboard() {
     { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
     { id: 'qna', label: '상품 문의', icon: HelpCircle },
     { id: 'coupons', label: '쿠폰 관리', icon: Ticket },
+    { id: 'reviews', label: '리뷰 관리', icon: Star },
     { id: 'chat', label: t?.admin?.navChat || '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
     { id: 'members', label: t?.admin?.navMembers || '회원 관리', icon: Users, path: '/admin/members' },
     { id: 'unified-members', label: '통합 회원 관리', icon: Users, path: '/admin/unified-members' },
@@ -953,6 +985,61 @@ export default function AdminDashboard() {
                           지급
                         </button>
                       </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'reviews' && (
+            <motion.div key="reviews" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+              <div className="space-y-4">
+                <h1 className="font-serif text-4xl">리뷰 관리</h1>
+                <p className="text-muted text-sm font-light">
+                  총 {reviewList.length}건 (평균 {reviewList.length > 0 ? (reviewList.reduce((sum, r) => sum + (r.rating || 0), 0) / reviewList.length).toFixed(1) : '0'}점)
+                </p>
+              </div>
+
+              {reviewList.length === 0 ? (
+                <div className="bg-white border border-border-light rounded-sm p-12 text-center text-muted text-sm">
+                  아직 등록된 리뷰가 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {reviewList.map((review) => (
+                    <div key={review.id} className="bg-white border border-border-light rounded-sm shadow-sm p-8 space-y-4">
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex items-center gap-4">
+                          <div className="relative w-10 h-12 rounded-sm overflow-hidden bg-hanji-white shrink-0">
+                            {review.products?.imageUrl && (
+                              <Image src={review.products.imageUrl} alt="" fill className="object-cover" />
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-charcoal">{review.products?.name || '(삭제된 상품)'}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <div className="flex">
+                                {[1, 2, 3, 4, 5].map((n) => (
+                                  <Star key={n} className={`w-3 h-3 ${n <= review.rating ? 'text-amber-400 fill-current' : 'text-border-light'}`} />
+                                ))}
+                              </div>
+                              <p className="text-[10px] text-muted">{review.user_name} · {new Date(review.created_at).toLocaleString()}</p>
+                            </div>
+                          </div>
+                        </div>
+                        <button onClick={() => handleDeleteReview(review)} className="text-muted hover:text-terracotta transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <p className="text-sm text-charcoal leading-relaxed bg-hanji-white p-4 rounded-sm">{review.content}</p>
+
+                      {review.photo_url && (
+                        <div className="relative w-24 h-24 rounded-sm overflow-hidden border border-border-light">
+                          <Image src={review.photo_url} alt="" fill className="object-cover" />
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

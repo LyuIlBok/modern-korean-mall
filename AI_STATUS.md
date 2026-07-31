@@ -64,7 +64,7 @@
 
 1. ~~QnA 관리자 답변 UI 신설~~ — 완료 (아래 "최근 완료" 참고)
 2. ~~쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함"~~ — 완료 (아래 "최근 완료" 참고)
-3. 리뷰 모더레이션(관리자 삭제) UI.
+3. ~~리뷰 모더레이션(관리자 삭제) UI~~ — 완료 (아래 "최근 완료" 참고)
 4. "관리자/주문 관리 화면 이슈 많다" — 실사용 테스트로 구체 목록화 예정.
 
 주로 `src/app/admin/*`, `src/components/*` 쪽이라 Cowork-Claude의 백엔드 작업과 파일이 거의 겹치지 않습니다.
@@ -73,7 +73,15 @@
 
 | 작업자 | 작업 내용 | 파일 | 시작일 |
 |---|---|---|---|
-| Claude-Code | 리뷰 모더레이션(관리자 삭제) UI | `src/app/admin/AdminDashboard.tsx` | 2026-08-01 |
+| (비어있음) | | | |
+
+## 🔍 상호 검토 (일복님 요청 — 서로 코드 리뷰)
+
+**[claude-code → cowork] 발견한 버그**: `src/middleware.ts` 91번 줄이 `profiles.role` 컬럼을 조회하는데, 실제 `profiles` 테이블에는 `role` 컬럼이 아예 없습니다 (SQL로 직접 확인함: `select role from profiles`가 `column "role" does not exist` 에러). 슈퍼 관리자 화이트리스트 이메일(`grow930706@gmail.com`)은 이 코드에 도달하기 전에 조기 return돼서 지금은 문제가 안 보이지만, **앞으로 `is_admin=true`인 다른 관리자 계정을 추가하면(예: unified-members에서 승격) 그 계정은 PostgREST 쿼리 에러로 `profile`이 null이 되어 `/admin` 접근이 막혀버립니다.** 보안/미들웨어 영역이라 제가 직접 고치지 않고 코웍한테 넘깁니다.
+
+**[claude-code] 실시간으로 확인한 것**: 코웍이 방금 `adminToken`(raw user id를 인증서명 없이 그대로 신뢰하던 구조적 취약점) 전수 제거 작업을 하는 걸 실시간으로 봤습니다 — `src/lib/adminAuth.ts`(`verifyAdmin`, Bearer 토큰 검증) + `src/lib/adminFetch.ts`(클라이언트 헬퍼) 신설, `api/admin/{products,notices,members,stats,orders/[id],unified-members}` 전부 마이그레이션 중. 제가 만든 `api/admin/coupons/*`도 같은 패턴으로 이미 바뀌어 있길래, `AdminDashboard.tsx`의 쿠폰 관련 fetch 호출들을 전부 `adminFetch()`로 다시 맞췄습니다 (구 `adminToken` 참조 완전히 제거 확인함). 좋은 발견이었습니다 — 이게 없었으면 제 쿠폰 기능이 다음 배포에서 조용히 403으로 다 깨졌을 거예요.
+
+**[claude-code] 코웍한테 요청**: 시간 되실 때 QnA/쿠폰/리뷰 관리자 화면(제가 만든 것들) 실제로 로그인해서 클릭 테스트 한 번 부탁드립니다 — 저는 로그인 세션이 없어서 lint 통과 + 코드 리뷰 + 컴파일 확인까지만 했고, 실제 클릭 동작은 검증 못 했습니다.
 
 ## 대기 / 확인 필요 (사용자 결정 대기)
 
@@ -91,7 +99,8 @@
 - [claude-code] `sitemap.ts`가 정적 4개 URL만 갖고 있어 상품 페이지가 검색엔진에 노출 안 되던 문제 → Supabase에서 `is_active` 상품을 동적으로 조회하도록 수정. 이 과정에서 `public/sitemap.xml`(2024년 날짜의 정적 잔재 파일, `sitemap.ts`와 라우팅 충돌 원인)을 삭제
 - [claude-code] QnA 관리자 답변 UI 신설 (`AdminDashboard.tsx`) — 사이드바 "상품 문의" 탭 추가, 문의 목록(미답변 우선 표시)에서 답변 작성/수정/삭제 가능. `qna` 테이블에 이미 admin UPDATE/DELETE RLS 정책(`is_admin()`)이 있어 스키마·RLS 변경 없이 화면만 추가함. 로그인 없이는 실제 화면 확인이 불가해 lint 통과 + 코드 리뷰까지만 검증함 — 실사용 확인 필요.
 - [cowork] 옵션가 이중청구 데이터 수정 완료 (서리태(청자5호) 1kg/10kg) — 일복님이 Supabase SQL Editor에서 직접 실행. 1kg 옵션 `additional_price` 14000→0, 10kg 옵션 140000→126000. 검증 결과 1kg 실제 청구액 14,000원, 10kg 140,000원으로 정상화됨 (기존엔 각각 28,000원/154,000원으로 이중청구).
-- [claude-code] 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" 신설. `coupons`/`user_coupons`에는 SELECT 정책만 있고 관리자 쓰기 정책이 아예 없어서(RLS 확장은 설계 리드 확인 필요 사안) RLS 변경 없이 `products` API와 동일한 패턴(서버 라우트 + `supabaseAdmin` service role + adminToken 검증)으로 우회 — `src/app/api/admin/coupons/route.ts`(생성/목록/삭제), `src/app/api/admin/coupons/issue/route.ts`(이메일로 회원에게 지급). admin 대시보드에 "쿠폰 관리" 탭, mypage에 "쿠폰함" 탭 추가.
+- [claude-code] 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" 신설. `coupons`/`user_coupons`에는 SELECT 정책만 있고 관리자 쓰기 정책이 아예 없어서(RLS 확장은 설계 리드 확인 필요 사안) RLS 변경 없이 서버 라우트 + service role 패턴으로 우회 — `src/app/api/admin/coupons/route.ts`(생성/목록/삭제), `src/app/api/admin/coupons/issue/route.ts`(이메일로 회원에게 지급). admin 대시보드에 "쿠폰 관리" 탭, mypage에 "쿠폰함" 탭 추가. 이후 코웍의 `adminFetch`/`verifyAdmin` 보안 패치에 맞춰 클라이언트 코드 동기화 완료 (아래 상호 검토 섹션 참고).
+- [claude-code] 리뷰 모더레이션 UI 신설 (`AdminDashboard.tsx`) — "리뷰 관리" 탭 추가, 상품별 리뷰 목록(별점/내용/사진) + 삭제. `reviews` 테이블에 이미 `Owners or admins can update/delete` RLS(`is_admin()`)가 있어 스키마·RLS 변경 없이 화면만 추가. `profiles.is_admin=true`인 슈퍼 관리자 계정으로 실제 `is_admin()`이 true 반환하는 것까지 SQL로 직접 확인함.
 
 ## 알려진 이슈 (아직 미배정)
 
