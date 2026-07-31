@@ -78,7 +78,17 @@ export default function AdminMembersPage() {
   useEffect(() => {
     const checkAdminAndFetch = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
+      if (!session) {
+        router.replace('/');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+      const isSuperAdmin = session.user.email === CONFIG.ADMIN_EMAILS[0];
+      if (!profile?.is_admin && !isSuperAdmin) {
         router.replace('/');
         return;
       }

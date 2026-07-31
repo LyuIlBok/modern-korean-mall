@@ -25,6 +25,7 @@ interface ProductWithReviews {
   is_sold_out: boolean;
   created_at: string;
   reviews?: Review[];
+  product_options?: { id: string }[];
   avgRating?: number;
   reviewCount?: number;
 }
@@ -39,9 +40,11 @@ async function ProductList({
   const sort = searchParams.sort || 'latest';
 
   // 1. Supabase Query Build
+  // product_options(id)를 같이 가져와서 "옵션 선택 필수" 상품인지 목록에서부터
+  // 알 수 있게 합니다. (없으면 카드 빠른담기 버튼이 옵션 없이 잘못 담아버림)
   let query = supabase
     .from('products')
-    .select('*, reviews(rating)')
+    .select('*, reviews(rating), product_options(id)')
     .eq('is_active', true);
 
   // 2. Filters
@@ -72,10 +75,10 @@ async function ProductList({
   // 4. 데이터 가공 (평점 평균 등)
   const displayProducts = (products as ProductWithReviews[] | null)?.map((p) => {
     const ratings = p.reviews?.map((r) => r.rating) || [];
-    const avgRating = ratings.length > 0 
-      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
       : 0;
-    return { ...p, avgRating, reviewCount: ratings.length };
+    return { ...p, avgRating, reviewCount: ratings.length, has_options: (p.product_options?.length ?? 0) > 0 };
   }) || [];
 
   // 5. 평점순 정렬 (메모리 정렬)

@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion';
 import { ArrowLeft, RefreshCcw, AlertCircle, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
+import { CONFIG } from '@/lib/config';
 
 export default function RefundPolicyPage() {
   return (
@@ -56,7 +57,9 @@ export default function RefundPolicyPage() {
 
             <div className="pt-8 border-t border-border-light text-center">
               <p className="text-muted text-xs mb-4">도움이 필요하신가요?</p>
-              <p className="font-serif text-lg">고객센터: 010-0000-0000</p>
+              <p className="font-serif text-lg">
+                고객센터: {CONFIG.CONTACT_PHONE !== '010-0000-0000' ? CONFIG.CONTACT_PHONE : CONFIG.CONTACT_EMAIL}
+              </p>
             </div>
           </div>
         </motion.div>

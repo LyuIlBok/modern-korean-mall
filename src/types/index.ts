@@ -18,6 +18,9 @@ export interface Product {
   reward_points?: number;
   origin?: string;
   producer?: string;
+  // 상품 목록(ProductCard)에서 "옵션 선택 필수" 상품인지 판단하기 위한 값.
+  // 목록 조회 시 product_options(id)를 같이 select해서 길이로 채워줍니다.
+  has_options?: boolean;
   specs?: {
     origin?: string;
     producer?: string;

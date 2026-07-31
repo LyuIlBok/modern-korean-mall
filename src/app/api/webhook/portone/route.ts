@@ -1,40 +1,14 @@
-import { NextResponse } from 'next/server';
+import { NextRequest } from 'next/server';
+import { handlePaymentWebhook } from '../_shared';
 
 export const dynamic = 'force-dynamic';
 
-interface PortOneWebhookData {
-  imp_uid: string;
-  merchant_uid: string;
-  status: string;
-  payment_id?: string; // V2 규격 대응
-}
-
-export async function POST(req: Request) {
-  const WEBHOOK_SECRET = process.env.PORTONE_WEBHOOK_SECRET;
-
-  try {
-    const body = await req.text();
-    const signature = req.headers.get('x-portone-signature');
-
-    // 1. 보안 검증 (Webhook Secret 활용)
-    if (WEBHOOK_SECRET && signature) {
-      console.log('Webhook signature received:', signature);
-    }
-
-    const data: PortOneWebhookData = JSON.parse(body);
-    const { merchant_uid, status, payment_id } = data;
-    const finalId = payment_id || merchant_uid;
-
-    console.log(`[Verified Webhook] Order: ${finalId}, Status: ${status}`);
-
-    if (status === 'paid' || status === 'PAID') {
-      console.log(`Processing paid status for ${finalId}`);
-    }
-
-    return NextResponse.json({ received: true }, { status: 200 });
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Unknown error';
-    console.error('Webhook Verification Error:', msg);
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+/**
+ * [결제 웹훅 처리 라우트 - 구(舊) URL]
+ * 예전에는 아무 처리도 하지 않는 빈 스텁이었습니다. PortOne 콘솔에 이 URL이
+ * 등록돼 있었다면 결제 확인이 영영 반영되지 않는 심각한 문제였습니다.
+ * 지금은 /api/webhook과 동일한 실제 처리 로직(./_shared.ts)을 사용합니다.
+ */
+export async function POST(req: NextRequest) {
+  return handlePaymentWebhook(req);
 }

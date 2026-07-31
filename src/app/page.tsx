@@ -24,6 +24,7 @@ interface ProductWithReviews {
   is_sold_out: boolean;
   created_at: string;
   reviews?: Review[];
+  product_options?: { id: string }[];
 }
 
 /**
@@ -35,7 +36,7 @@ export default async function Home() {
   const [productsRes, settingsRes] = await Promise.all([
     supabase
       .from('products')
-      .select('*, reviews(rating)')
+      .select('*, reviews(rating), product_options(id)')
       .eq('is_active', true)
       .order('created_at', { ascending: false }),
     supabase
@@ -64,32 +65,35 @@ export default async function Home() {
   // 2. 상품 데이터 가공 (평점 평균 등)
   const displayProducts = (products as ProductWithReviews[] | null)?.map((p) => {
     const ratings = p.reviews?.map((r) => r.rating) || [];
-    const avgRating = ratings.length > 0 
-      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length 
+    const avgRating = ratings.length > 0
+      ? ratings.reduce((a: number, b: number) => a + b, 0) / ratings.length
       : 0;
-    return { ...p, avgRating, reviewCount: ratings.length };
+    return { ...p, avgRating, reviewCount: ratings.length, has_options: (p.product_options?.length ?? 0) > 0 };
   }) || [];
 
   return (
     <main className="flex-1 bg-hanji-white min-h-screen">
       {/* Hero Section */}
       <section className="relative h-[85vh] flex items-center justify-center overflow-hidden">
-        <Image 
-          src={heroBgImage} 
-          alt="복이네농장 연천 농경지" 
-          fill 
-          className="object-cover brightness-[0.75] scale-105"
+        <Image
+          src={heroBgImage}
+          alt="복이네농장 연천 농경지"
+          fill
+          className="object-cover brightness-[0.55] scale-105"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-hanji-white/80" />
-        
+        {/* 배경 이미지가 밝을 때도 흰색 텍스트 가독성을 보장하기 위한 딤 레이어.
+            중앙(텍스트 영역)이 가장 어둡고 위/아래로 갈수록 옅어집니다. */}
+        <div className="absolute inset-0 bg-black/35" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-hanji-white/80" />
+
         <div className="relative z-10 text-center px-4 space-y-8 max-w-5xl">
           <div className="flex justify-center mb-6">
-            <span className="inline-flex items-center gap-2 px-6 py-2 rounded-full backdrop-blur-xl border border-white/30 text-[12px] text-white uppercase tracking-[0.5em] font-bold" style={{ backgroundColor: `${primaryColor}33` }}>
+            <span className="inline-flex items-center gap-2 px-6 py-2 rounded-full backdrop-blur-xl border border-white/30 text-[12px] text-white uppercase tracking-[0.5em] font-bold [text-shadow:0_1px_4px_rgb(0_0_0_/_60%)]" style={{ backgroundColor: `${primaryColor}33` }}>
               <Leaf className="w-4 h-4" style={{ color: primaryColor }} /> {heroSubtitle}
             </span>
           </div>
-          <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.1] tracking-tighter drop-shadow-2xl">
+          <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.1] tracking-tighter [text-shadow:0_2px_16px_rgb(0_0_0_/_55%)]">
             {heroTitle.includes(',') ? (
               <>
                 {heroTitle.split(',')[0]},<br/>
@@ -97,7 +101,7 @@ export default async function Home() {
               </>
             ) : heroTitle}
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 font-light tracking-wide max-w-3xl mx-auto leading-relaxed drop-shadow-lg">
+          <p className="text-xl md:text-2xl text-white/90 font-light tracking-wide max-w-3xl mx-auto leading-relaxed [text-shadow:0_1px_8px_rgb(0_0_0_/_60%)]">
             {heroDesc}
           </p>
           
@@ -105,7 +109,7 @@ export default async function Home() {
             <Link href="/shop" className="group inline-flex items-center gap-4 px-12 py-5 text-white rounded-sm hover:bg-charcoal transition-all duration-700 font-serif text-xl shadow-2xl hover:scale-105" style={{ backgroundColor: primaryColor }}>
               추천 농산물 보기 <ArrowRight className="w-6 h-6 group-hover:translate-x-3 transition-transform duration-500" />
             </Link>
-            <Link href="/about" className="px-12 py-5 bg-white/10 backdrop-blur-md text-white border border-white/30 rounded-sm hover:bg-white hover:text-charcoal transition-all duration-500 font-serif text-xl">
+            <Link href="/about" className="px-12 py-5 bg-white/20 backdrop-blur-md text-white border-2 border-white/80 rounded-sm shadow-lg hover:bg-white hover:text-charcoal transition-all duration-500 font-serif text-xl">
               브랜드 이야기
             </Link>
           </div>

@@ -13,6 +13,7 @@ import {
   Tag, Ticket, Percent, ChevronDown, Check, X
 } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
+import { CONFIG } from '@/lib/config';
 import Script from 'next/script';
 import CheckoutItem from '@/components/CheckoutItem';
 import DaumPostcode from 'react-daum-postcode';
@@ -255,6 +256,31 @@ export default function CheckoutInternal() {
       const { error: itemsError } = await supabase.from('order_items').insert(orderItems);
       if (itemsError) throw itemsError;
 
+      // 2.4. 재고 원자적 검증 + 차감 (오버셀 방지)
+      // products/product_options의 stock을 락을 걸고 확인한 뒤 부족하면 주문을
+      // 실패시킵니다. 결제 진행 전에 반드시 재고를 선점해야 동시에 여러 명이
+      // 마지막 한 개를 동시에 결제하는 상황을 막을 수 있습니다.
+      const { data: reserveResult, error: reserveError } = await supabase.rpc(
+        'reserve_stock_for_order',
+        { p_order_id: order.id }
+      );
+
+      if (reserveError || !reserveResult?.success) {
+        // 재고 부족/오류 시 주문을 취소 상태로 남기고 결제를 진행하지 않음
+        await supabase.from('orders').update({ status: '재고부족취소' }).eq('id', order.id);
+
+        if (reserveResult?.insufficient_items?.length) {
+          const names = reserveResult.insufficient_items
+            .map((it: any) => `${it.product_name}${it.option_name ? ` (${it.option_name})` : ''} - 재고 ${it.available}개`)
+            .join('\n');
+          alert(`재고가 부족하여 주문할 수 없습니다:\n${names}`);
+        } else {
+          alert('재고 확인 중 오류가 발생했습니다. 다시 시도해 주세요.');
+        }
+        setIsLoading(false);
+        return;
+      }
+
       // 2.5. Record Purchase Reward Points (1% of finalAmount)
       if (session?.user?.id) {
         const rewardPoints = Math.floor(finalAmount * 0.01);
@@ -297,16 +323,10 @@ export default function CheckoutInternal() {
         }
 
         // Success (for popup mode)
-        const { error: updateError } = await supabase
-          .from('orders')
-          .update({ 
-            status: '결제완료', 
-            pg_tid: payment.paymentId 
-          })
-          .eq('id', order.id);
+        // 주문 상태(결제완료) 반영은 클라이언트가 아니라 서버 웹훅(/api/webhook)이
+        // PortOne에 결제금액을 재확인한 뒤 단독으로 처리합니다. 클라이언트가 직접
+        // "결제완료"를 기록하면 결제 없이도 위조될 수 있어 제거했습니다(RLS도 이를 막음).
 
-        if (updateError) console.error('Order status sync error:', updateError);
-        
         // 4. Send Order Confirmation Email (Async, fail silently)
         fetch('/api/email/order-success', {
           method: 'POST',
@@ -326,7 +346,7 @@ export default function CheckoutInternal() {
         }).catch(err => console.error('Email trigger error:', err));
 
         clearCart();
-        router.push(`/order-success?orderId=${order.id}`);
+        router.push(`/order-success?orderId=${order.id}&method=card`);
       } else {
         // 무통장 입금 등 다른 수단 처리
         // For transfer, we also send confirmation email
@@ -348,7 +368,7 @@ export default function CheckoutInternal() {
         }).catch(err => console.error('Email trigger error:', err));
 
         clearCart();
-        router.push(`/order-success?orderId=${order.id}`);
+        router.push(`/order-success?orderId=${order.id}&method=transfer`);
       }
 
     } catch (err: any) {
@@ -554,6 +574,19 @@ export default function CheckoutInternal() {
                   <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer || '무통장 입금'}</span>
                 </button>
               </div>
+
+              {paymentMethod === 'transfer' && (
+                <div className="p-8 bg-deep-sage/5 border-2 border-deep-sage/30 rounded-sm space-y-2">
+                  <p className="text-xs font-bold text-deep-sage uppercase tracking-widest mb-2">입금 계좌 안내</p>
+                  <p className="text-sm text-charcoal">
+                    <span className="font-bold">{CONFIG.BANK_ACCOUNT.bankName}</span>{' '}
+                    {CONFIG.BANK_ACCOUNT.accountNumber} ({CONFIG.BANK_ACCOUNT.accountHolder})
+                  </p>
+                  <p className="text-xs text-muted leading-relaxed">
+                    주문 접수 후 24시간 이내에 위 계좌로 입금해주세요. 입금자명이 주문자명과 다를 경우 고객센터로 알려주시면 확인이 더 빨라집니다.
+                  </p>
+                </div>
+              )}
             </section>
           </div>
 

@@ -68,11 +68,16 @@ export default function ProductDetailClient({
     fetchOptions();
   }, [product.id, initialOptions]);
 
-  const basePrice = Number(product.discount_rate || 0) > 0 
+  const basePrice = Number(product.discount_rate || 0) > 0
     ? Math.floor(product.price * (1 - (product.discount_rate || 0) / 100))
     : product.price;
 
   const totalPrice = (basePrice + (selectedOption?.additional_price || 0)) * quantity;
+
+  // 옵션을 선택했으면 옵션 재고, 아니면 상품 재고가 실제 구매 가능한 최대치입니다.
+  // (최종 검증은 주문 시 서버(reserve_stock_for_order RPC)에서 다시 하지만,
+  // 여기서 미리 막아두면 사용자 경험이 훨씬 좋아집니다.)
+  const maxQuantity = Math.max(1, selectedOption ? selectedOption.stock : product.stock);
 
   const handleAddToCart = () => {
     if (!product) return;
@@ -88,7 +93,7 @@ export default function ProductDetailClient({
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,
-      quantity,
+      quantity: Math.min(quantity, maxQuantity),
       optionName: selectedOption?.option_name,
       optionPrice: selectedOption?.additional_price
     });
@@ -109,7 +114,7 @@ export default function ProductDetailClient({
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,
-      quantity,
+      quantity: Math.min(quantity, maxQuantity),
       optionName: selectedOption?.option_name,
       optionPrice: selectedOption?.additional_price
     });
@@ -319,8 +324,8 @@ export default function ProductDetailClient({
                   <span className="text-sm font-bold uppercase tracking-widest text-muted">{t?.shop?.quantity || '수량'}</span>
                   <div className="flex items-center gap-8 bg-white border border-border-light rounded-sm shadow-sm overflow-hidden">
                     <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-hanji-white hover:text-deep-sage transition-all border-r border-border-light"><Minus className="w-5 h-5" /></button>
-                    <span className="font-serif text-2xl w-12 text-center font-bold">{quantity}</span>
-                    <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-hanji-white hover:text-deep-sage transition-all border-l border-border-light"><Plus className="w-5 h-5" /></button>
+                    <span className="font-serif text-2xl w-12 text-center font-bold">{Math.min(quantity, maxQuantity)}</span>
+                    <button onClick={() => setQuantity(Math.min(maxQuantity, quantity + 1))} className="p-3 hover:bg-hanji-white hover:text-deep-sage transition-all border-l border-border-light"><Plus className="w-5 h-5" /></button>
                   </div>
                 </div>
                 

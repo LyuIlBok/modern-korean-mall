@@ -49,7 +49,20 @@ export default function AdminOrdersPage() {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
+      if (!session) {
+        router.replace('/');
+        return;
+      }
+      // profiles.is_admin이 진짜 관리자 판정 기준입니다. CONFIG.ADMIN_EMAILS는
+      // 최초 슈퍼관리자 이메일 하나만 담긴 폴백이라, 이것만 보면 나중에 추가한
+      // 다른 관리자 계정이 이 화면에서 튕겨나가는 문제가 있었습니다.
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+      const isSuperAdmin = session.user.email === CONFIG.ADMIN_EMAILS[0];
+      if (!profile?.is_admin && !isSuperAdmin) {
         router.replace('/');
         return;
       }

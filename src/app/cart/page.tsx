@@ -10,12 +10,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 // Cart page with fixed TypeScript types
 export default function CartPage() {
-  const { items, removeItem, updateQuantity } = useCartStore();
+  const { items, removeItem, updateQuantity, getShippingFee } = useCartStore();
   const { t } = useLanguageStore();
   const hasMounted = useHasMounted();
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
-  const shipping = subtotal > 50000 || items.length === 0 ? 0 : 3000;
+  // 옵션가 포함 소계 + 상품별 설정된 배송비(묶음배송 시 최대값) 적용.
+  // 결제 페이지(CheckoutInternal.tsx)와 동일한 로직을 써야 장바구니에서 본 금액과
+  // 결제 화면 금액이 어긋나지 않습니다.
+  const subtotal = items.reduce((acc, item) => acc + (item.price + (item.optionPrice || 0)) * item.quantity, 0);
+  const shipping = getShippingFee();
   const total = subtotal + shipping;
 
   if (!hasMounted) return <div className="flex-1 bg-hanji-white h-screen" />;
@@ -68,7 +71,10 @@ export default function CartPage() {
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
-                      <p className="text-sm text-muted font-light line-clamp-2 max-w-md">{item.description}</p>
+                      {/* description은 관리자 상품등록 화면의 리치텍스트 에디터에서 HTML로
+                          저장돼요. 그대로 찍으면 <p>...</p> 태그가 글자 그대로 보였어서
+                          태그만 제거한 일반 텍스트로 보여줍니다. */}
+                      <p className="text-sm text-muted font-light line-clamp-2 max-w-md">{item.description?.replace(/<[^>]*>?/gm, '')}</p>
                     </div>
 
                     <div className="flex items-center justify-between mt-8 sm:mt-0">
@@ -81,7 +87,7 @@ export default function CartPage() {
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
-                      <p className="text-xl font-serif font-bold text-charcoal tracking-tight">₩{(item.price * item.quantity).toLocaleString()}</p>
+                      <p className="text-xl font-serif font-bold text-charcoal tracking-tight">₩{((item.price + (item.optionPrice || 0)) * item.quantity).toLocaleString()}</p>
                     </div>
                   </div>
                 </motion.div>

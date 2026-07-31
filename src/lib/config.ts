@@ -5,4 +5,9 @@ export const CONFIG = {
   CONTACT_PHONE: '010-0000-0000',
   FREE_SHIPPING_THRESHOLD: 50000,
   SHIPPING_FEE: 3000,
+  BANK_ACCOUNT: {
+    bankName: '농협은행',
+    accountNumber: '301-0347-4361-81',
+    accountHolder: '농업회사법인복이네농장(주)',
+  },
 };

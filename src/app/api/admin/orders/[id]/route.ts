@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { CONFIG } from '@/lib/config';
 
 export const dynamic = 'force-dynamic';
@@ -44,6 +44,15 @@ export async function PATCH(
       .single();
 
     if (error) throw error;
+
+    // 관리자가 주문을 취소/환불 상태로 바꾸면 차감했던 재고를 복구합니다.
+    const cancellationStatuses = ['취소됨', '주문취소', '환불완료', '재고부족취소'];
+    if (cancellationStatuses.includes(status)) {
+      const { error: restoreError } = await supabaseAdmin.rpc('restore_stock_for_order', { p_order_id: id });
+      if (restoreError) {
+        console.error('[Admin Order PATCH] Stock restore failed:', restoreError.message);
+      }
+    }
 
     return NextResponse.json({ success: true, data });
   } catch (err: unknown) {

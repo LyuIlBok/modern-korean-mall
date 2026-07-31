@@ -123,8 +123,18 @@ export default function AdminDashboard() {
   const fetchData = useCallback(async () => {
     try {
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-      
-      if (sessionError || !session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
+
+      if (sessionError || !session) {
+        router.replace('/');
+        return;
+      }
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_admin')
+        .eq('id', session.user.id)
+        .single();
+      const isSuperAdmin = session.user.email === CONFIG.ADMIN_EMAILS[0];
+      if (!profile?.is_admin && !isSuperAdmin) {
         router.replace('/');
         return;
       }

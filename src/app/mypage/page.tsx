@@ -77,13 +77,15 @@ function MyPageContent() {
       if (!session) { router.push('/login'); return; }
       const currentUser = session.user;
       setUser(currentUser);
-      setIsAdmin(currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false);
 
       const { data: profileData } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', currentUser.id)
         .maybeSingle();
+
+      const isSuperAdmin = currentUser.email ? CONFIG.ADMIN_EMAILS.includes(currentUser.email) : false;
+      setIsAdmin(Boolean(profileData?.is_admin) || isSuperAdmin);
       
       // Fetch total points from ledger view
       const { data: pointData } = await supabase

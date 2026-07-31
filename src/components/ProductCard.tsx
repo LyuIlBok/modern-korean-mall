@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Product } from '@/types';
 import { useCartStore } from '@/store/useCartStore';
 import { useToastStore } from '@/store/useToastStore';
@@ -17,6 +18,7 @@ export interface ProductWithRating extends Product {
 }
 
 export default function ProductCard({ product }: { product: ProductWithRating }) {
+  const router = useRouter();
   const { addItem } = useCartStore();
   const { addToast } = useToastStore();
   const { toggleWish, isInWishlist } = useWishlistStore();
@@ -28,10 +30,20 @@ export default function ProductCard({ product }: { product: ProductWithRating })
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
     if (product.is_sold_out) return;
-    addItem({ 
-      ...product, 
+
+    // 옵션 선택이 필요한 상품은 여기서 바로 담으면 옵션 정보(및 옵션별 재고 차감
+    // 대상) 없이 담겨버려서 나중에 결제/재고 처리가 꼬입니다. 상세페이지로 보내
+    // 옵션을 고르게 합니다.
+    if (product.has_options) {
+      addToast('옵션을 선택해야 하는 상품이에요. 상세페이지로 이동할게요.', 'info');
+      router.push(`/shop/${product.id}`);
+      return;
+    }
+
+    addItem({
+      ...product,
       quantity: 1,
-      shipping_fee: product.shipping_fee || 0 
+      shipping_fee: product.shipping_fee || 0
     });
     addToast(`${product.name}이(가) 장바구니에 담겼습니다.`, 'success');
   };

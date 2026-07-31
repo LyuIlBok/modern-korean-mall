@@ -123,16 +123,16 @@ export default function Header() {
       <header className="sticky top-0 z-50 bg-hanji-white/90 backdrop-blur-md border-b border-border-light">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between">
           <div className="flex items-center gap-1 sm:gap-2">
-            <button 
+            <button
               onClick={() => setIsMenuOpen(true)}
-              className="md:hidden p-2 -ml-2 text-charcoal/80 hover:text-deep-sage transition-colors"
+              className="md:hidden p-2.5 -ml-2 rounded-full text-charcoal/80 hover:text-deep-sage hover:bg-hanji-white transition-colors"
               aria-label="메뉴 열기"
             >
               <Menu className="w-6 h-6" />
             </button>
-            <button 
+            <button
               onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className="p-2 text-charcoal/80 hover:text-deep-sage transition-colors"
+              className="p-2.5 rounded-full text-charcoal/80 hover:text-deep-sage hover:bg-hanji-white transition-colors"
               aria-label="검색 열기"
             >
               <Search className="w-5 h-5" />
@@ -158,25 +158,25 @@ export default function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-1 sm:gap-4">
-            <Link href="/mypage?tab=wishlist" className="relative p-2 text-charcoal/60 hover:text-terracotta transition-colors" title="관심 상품 목록" aria-label="관심 상품">
+          <div className="flex items-center gap-1.5 sm:gap-3">
+            <Link href="/mypage?tab=wishlist" className="relative p-2.5 rounded-full text-charcoal/60 hover:text-terracotta hover:bg-hanji-white transition-colors" title="관심 상품 목록" aria-label="관심 상품">
               <Heart className="w-5 h-5" />
-              {wishCount > 0 && <span className="absolute top-1 right-1 w-2 h-2 bg-terracotta rounded-full shadow-sm" />}
+              {wishCount > 0 && <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-terracotta rounded-full shadow-sm" />}
             </Link>
 
             {user ? (
               <div className="flex items-center gap-1 sm:gap-3">
-                <Link href="/mypage" className="p-2 text-charcoal/60 hover:text-charcoal transition-colors hidden sm:block" title="마이페이지" aria-label="마이페이지"><User className="w-5 h-5" /></Link>
-                <button onClick={handleLogout} className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter" aria-label="로그아웃">{t?.common?.logout || 'Logout'}</button>
+                <Link href="/mypage" className="p-2.5 rounded-full text-charcoal/60 hover:text-charcoal hover:bg-hanji-white transition-colors hidden sm:block" title="마이페이지" aria-label="마이페이지"><User className="w-5 h-5" /></Link>
+                <button onClick={handleLogout} className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter px-1" aria-label="로그아웃">{t?.common?.logout || 'Logout'}</button>
               </div>
             ) : (
-              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest" aria-label="로그인">{t?.common?.login || 'Login'}</Link>
+              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest px-1" aria-label="로그인">{t?.common?.login || 'Login'}</Link>
             )}
-            
-            <button onClick={() => toggleCart(true)} className="relative p-2 text-charcoal/80 hover:text-terracotta transition-colors" aria-label="장바구니 열기">
+
+            <button onClick={() => toggleCart(true)} className="relative p-2.5 rounded-full text-charcoal/80 hover:text-terracotta hover:bg-hanji-white transition-colors" aria-label="장바구니 열기">
               <ShoppingBag className="w-6 h-6" />
               {itemCount > 0 && (
-                <span className="absolute top-0 right-0 bg-terracotta text-white text-[10px] font-medium w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{itemCount}</span>
+                <span className="absolute top-0.5 right-0.5 bg-terracotta text-white text-[10px] font-medium w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{itemCount}</span>
               )}
             </button>
           </div>

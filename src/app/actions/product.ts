@@ -1,6 +1,7 @@
 'use server';
 
-import { supabase, supabaseAdmin } from '@/lib/supabaseClient';
+import { supabase } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { createClient } from '@/lib/supabaseServer';
 import { revalidatePath } from 'next/cache';
 

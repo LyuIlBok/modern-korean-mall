@@ -6,6 +6,7 @@ import {
 } from 'recharts';
 import { Loader2, TrendingUp, DollarSign, Package } from 'lucide-react';
 import { useLanguageStore } from '@/store/useLanguageStore';
+import { supabase } from '@/lib/supabaseClient';
 
 interface ChartData {
   date: string;
@@ -27,7 +28,9 @@ export default function SalesChart() {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const res = await fetch('/api/admin/stats');
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) { setLoading(false); return; }
+        const res = await fetch(`/api/admin/stats?adminToken=${session.user.id}`);
         const json = await res.json();
         if (json.success) {
           setData(json.data);

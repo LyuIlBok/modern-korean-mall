@@ -9,7 +9,6 @@ import {
   ToggleLeft, ToggleRight, Layout
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CONFIG } from '@/lib/config';
 
 interface Notice {
   id: string;
@@ -27,6 +26,7 @@ export default function AdminNoticesPage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingNotice, setEditingNotice] = useState<Notice | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [adminToken, setAdminToken] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -42,18 +42,19 @@ export default function AdminNoticesPage() {
     setLoading(true);
     try {
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session || !session.user.email || !CONFIG.ADMIN_EMAILS.includes(session.user.email)) {
+      if (!session) {
         router.replace('/');
         return;
       }
+      setAdminToken(session.user.id);
 
-      const { data, error } = await supabase
-        .from('notices')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      setNotices(data as Notice[]);
+      const res = await fetch(`/api/admin/notices?adminToken=${session.user.id}`);
+      const json = await res.json();
+      if (!res.ok) {
+        if (res.status === 403) router.replace('/');
+        throw new Error(json.error);
+      }
+      setNotices(json.data as Notice[]);
     } catch (error) {
       console.error('Error fetching notices:', error);
     } finally {
@@ -90,21 +91,17 @@ export default function AdminNoticesPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!adminToken) return;
     setIsSaving(true);
 
     try {
-      if (editingNotice) {
-        const { error } = await supabase
-          .from('notices')
-          .update(formData)
-          .eq('id', editingNotice.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase
-          .from('notices')
-          .insert([formData]);
-        if (error) throw error;
-      }
+      const res = await fetch('/api/admin/notices', {
+        method: editingNotice ? 'PATCH' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminToken, id: editingNotice?.id, ...formData }),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
 
       alert('공지사항이 저장되었습니다.');
       setIsModalOpen(false);
@@ -117,10 +114,11 @@ export default function AdminNoticesPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+    if (!confirm('정말 삭제하시겠습니까?') || !adminToken) return;
     try {
-      const { error } = await supabase.from('notices').delete().eq('id', id);
-      if (error) throw error;
+      const res = await fetch(`/api/admin/notices?adminToken=${adminToken}&id=${id}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error);
       setNotices(notices.filter(n => n.id !== id));
     } catch (error: any) {
       alert('삭제 실패: ' + error.message);

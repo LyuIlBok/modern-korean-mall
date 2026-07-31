@@ -1,6 +1,6 @@
 'use client';
 
-import { Mail, Phone, MapPin, Instagram, Youtube, Facebook, ShieldCheck, Megaphone } from 'lucide-react';
+import { Mail, Phone, MapPin, ShieldCheck, Megaphone } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -30,11 +30,9 @@ export default function Footer() {
             <p className="text-sm text-muted leading-relaxed max-w-xs">
               {t.common.footerDesc}
             </p>
-            <div className="flex gap-4">
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="인스타그램 바로가기"><Instagram className="w-5 h-5" /></Link>
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="유튜브 바로가기"><Youtube className="w-5 h-5" /></Link>
-              <Link href="#" className="text-muted hover:text-charcoal transition-colors" aria-label="페이스북 바로가기"><Facebook className="w-5 h-5" /></Link>
-            </div>
+            {/* SNS 채널 운영 방향이 아직 정해지지 않아 실제 채널이 생기기 전까지는
+                빈 링크(#) 대신 아이콘을 숨겨둡니다. 채널 개설 후 여기에
+                실제 URL로 복원해 주세요. */}
           </div>
 
           {/* Quick Links */}
@@ -58,7 +56,12 @@ export default function Footer() {
           <div>
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">{t.common.customerCenter}</h4>
             <div className="space-y-4 text-xs text-muted tracking-wide">
-              <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {CONFIG.CONTACT_PHONE}</p>
+              {/* 대표번호가 아직 미확정(더미값)인 동안에는 고객에게 잘못된 번호를
+                  노출하지 않도록 이메일 문의만 표시합니다. CONFIG.CONTACT_PHONE을
+                  실제 번호로 교체하면 자동으로 다시 노출됩니다. */}
+              {CONFIG.CONTACT_PHONE !== '010-0000-0000' && (
+                <p className="flex items-center gap-2"><Phone className="w-3.5 h-3.5" /> {CONFIG.CONTACT_PHONE}</p>
+              )}
               <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {CONFIG.CONTACT_EMAIL}</p>
               <p className="leading-relaxed">
                 평일 10:00 - 17:00 <br/>
@@ -122,8 +125,8 @@ export default function Footer() {
           <div className="flex gap-6 text-[10px] text-muted uppercase tracking-widest items-center">
             <Link href="/support/notices" className="hover:text-charcoal transition-colors font-bold text-deep-sage underline underline-offset-4">공지사항 (Notice)</Link>
             <div className="w-px h-3 bg-border-light" />
-            <Link href="#" className="hover:text-charcoal transition-colors font-medium">{t.common.privacyPolicy}</Link>
-            <Link href="#" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</Link>
+            <Link href="/privacy" className="hover:text-charcoal transition-colors font-medium">{t.common.privacyPolicy}</Link>
+            <Link href="/terms" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</Link>
             <Link href="/support/refund" className="hover:text-charcoal transition-colors font-bold text-terracotta underline">{t.common.refundPolicy}</Link>
           </div>
           <p className="text-[10px] text-muted font-light tracking-tighter">

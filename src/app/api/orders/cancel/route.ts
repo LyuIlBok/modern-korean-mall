@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin, supabase as supabasePublic } from '@/lib/supabaseClient';
+import { supabase as supabasePublic } from '@/lib/supabaseClient';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,13 +47,19 @@ export async function POST(req: Request) {
 
     const { error: updateError } = await supabaseAdmin
       .from('orders')
-      .update({ 
+      .update({
         status: '주문취소',
         updated_at: new Date().toISOString()
       })
       .eq('id', orderId);
 
     if (updateError) throw updateError;
+
+    // 차감했던 재고를 되돌려줍니다. (reserve된 적 없으면 함수 내부에서 아무 것도 안 함)
+    const { error: restoreError } = await supabaseAdmin.rpc('restore_stock_for_order', { p_order_id: orderId });
+    if (restoreError) {
+      console.error('[Order Cancel] Stock restore failed:', restoreError.message);
+    }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
