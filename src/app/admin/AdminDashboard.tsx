@@ -9,7 +9,7 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -30,7 +30,7 @@ const SalesChart = dynamic(() => import('./SalesChart'), {
 
 export const viewport = { width: 'device-width', initialScale: 1 };
 
-type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock';
+type ActiveTab = 'products' | 'orders' | 'qna' | 'dashboard' | 'restock' | 'coupons';
 
 interface AdminProduct {
   id: string;
@@ -112,6 +112,18 @@ interface AdminQna {
   } | null;
 }
 
+interface AdminCoupon {
+  id: string;
+  code: string;
+  discount_type: 'fixed' | 'percent';
+  discount_amount: number;
+  min_order_amount: number;
+  valid_until: string | null;
+  created_at: string;
+  issued_count: number;
+  used_count: number;
+}
+
 interface SidebarItem {
   id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings';
   label: string;
@@ -127,6 +139,11 @@ export default function AdminDashboard() {
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
   const [qnaList, setQnaList] = useState<AdminQna[]>([]);
   const [qnaDrafts, setQnaDrafts] = useState<Record<string, string>>({});
+  const [adminUserId, setAdminUserId] = useState<string | null>(null);
+  const [couponList, setCouponList] = useState<AdminCoupon[]>([]);
+  const [couponForm, setCouponForm] = useState({ code: '', discount_type: 'fixed' as 'fixed' | 'percent', discount_amount: '', min_order_amount: '', valid_until: '' });
+  const [issueEmailDrafts, setIssueEmailDrafts] = useState<Record<string, string>>({});
+  const [isCouponLoading, setIsCouponLoading] = useState(false);
   const [userCount, setUserCount] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -158,7 +175,13 @@ export default function AdminDashboard() {
       }
 
       setIsAdmin(true);
-      
+      setAdminUserId(session.user.id);
+
+      fetch(`/api/admin/coupons?adminToken=${session.user.id}`)
+        .then(res => res.json())
+        .then(json => { if (json.success) setCouponList(json.data); })
+        .catch(err => console.error('Coupon fetch failed:', err));
+
       const [productsRes, ordersRes, alertsRes, userCountRes, qnaRes] = await Promise.all([
         supabase.from('products').select('*').order('created_at', { ascending: false }),
         supabase.from('orders').select('*, order_items(*, products(name, imageUrl))').order('created_at', { ascending: false }),
@@ -359,6 +382,104 @@ export default function AdminDashboard() {
     }
   };
 
+  const refreshCoupons = async () => {
+    if (!adminUserId) return;
+    const res = await fetch(`/api/admin/coupons?adminToken=${adminUserId}`);
+    const json = await res.json();
+    if (json.success) setCouponList(json.data);
+  };
+
+  const handleCreateCoupon = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!adminUserId) return;
+    if (!couponForm.code.trim() || !couponForm.discount_amount) {
+      alert('쿠폰 코드와 할인 금액을 입력해주세요.');
+      return;
+    }
+
+    setIsCouponLoading(true);
+    try {
+      const res = await fetch('/api/admin/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          adminToken: adminUserId,
+          couponData: {
+            code: couponForm.code,
+            discount_type: couponForm.discount_type,
+            discount_amount: Number(couponForm.discount_amount),
+            min_order_amount: couponForm.min_order_amount ? Number(couponForm.min_order_amount) : 0,
+            valid_until: couponForm.valid_until || null,
+          },
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || '쿠폰 생성에 실패했습니다.');
+        return;
+      }
+      setCouponForm({ code: '', discount_type: 'fixed', discount_amount: '', min_order_amount: '', valid_until: '' });
+      await refreshCoupons();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsCouponLoading(false);
+    }
+  };
+
+  const handleDeleteCoupon = async (coupon: AdminCoupon) => {
+    if (!adminUserId) return;
+    if (!confirm(`'${coupon.code}' 쿠폰을 삭제하시겠습니까?`)) return;
+
+    setIsCouponLoading(true);
+    try {
+      const res = await fetch(`/api/admin/coupons?id=${coupon.id}&adminToken=${adminUserId}`, { method: 'DELETE' });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || '쿠폰 삭제에 실패했습니다.');
+        return;
+      }
+      setCouponList(prev => prev.filter(c => c.id !== coupon.id));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsCouponLoading(false);
+    }
+  };
+
+  const handleIssueCoupon = async (coupon: AdminCoupon) => {
+    if (!adminUserId) return;
+    const email = (issueEmailDrafts[coupon.id] || '').trim();
+    if (!email) {
+      alert('지급할 회원의 이메일을 입력해주세요.');
+      return;
+    }
+
+    setIsCouponLoading(true);
+    try {
+      const res = await fetch('/api/admin/coupons/issue', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ adminToken: adminUserId, couponId: coupon.id, email }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || '쿠폰 지급에 실패했습니다.');
+        return;
+      }
+      setIssueEmailDrafts(prev => ({ ...prev, [coupon.id]: '' }));
+      await refreshCoupons();
+      alert(`${json.memberName || email}님에게 쿠폰을 지급했습니다.`);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsCouponLoading(false);
+    }
+  };
+
   const getStatusStyle = (status: string) => {
     switch (status) {
       case '결제완료': return 'bg-blue-50 text-blue-600 border-blue-100';
@@ -379,6 +500,7 @@ export default function AdminDashboard() {
     { id: 'orders', label: t?.admin?.navOrders || '주문 관리', icon: ShoppingCart },
     { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
     { id: 'qna', label: '상품 문의', icon: HelpCircle },
+    { id: 'coupons', label: '쿠폰 관리', icon: Ticket },
     { id: 'chat', label: t?.admin?.navChat || '실시간 상담', icon: MessageSquare, path: '/admin/chat' },
     { id: 'members', label: t?.admin?.navMembers || '회원 관리', icon: Users, path: '/admin/members' },
     { id: 'unified-members', label: '통합 회원 관리', icon: Users, path: '/admin/unified-members' },
@@ -748,6 +870,88 @@ export default function AdminDashboard() {
                             {qna.answer ? '답변 수정' : '답변 등록'}
                           </button>
                         </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </motion.div>
+          )}
+
+          {activeTab === 'coupons' && (
+            <motion.div key="coupons" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
+              <div className="space-y-4">
+                <h1 className="font-serif text-4xl">쿠폰 관리</h1>
+                <p className="text-muted text-sm font-light">쿠폰을 생성하고 회원에게 지급합니다.</p>
+              </div>
+
+              <form onSubmit={handleCreateCoupon} className="bg-white border border-border-light rounded-sm shadow-sm p-8 grid grid-cols-1 md:grid-cols-5 gap-4 items-end">
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold">쿠폰 코드</label>
+                  <input value={couponForm.code} onChange={(e) => setCouponForm(prev => ({ ...prev, code: e.target.value }))} placeholder="WELCOME10" className="w-full text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage" />
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold">할인 방식</label>
+                  <select value={couponForm.discount_type} onChange={(e) => setCouponForm(prev => ({ ...prev, discount_type: e.target.value as 'fixed' | 'percent' }))} className="w-full text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage">
+                    <option value="fixed">정액(원)</option>
+                    <option value="percent">정률(%)</option>
+                  </select>
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold">할인 금액/비율</label>
+                  <input type="number" value={couponForm.discount_amount} onChange={(e) => setCouponForm(prev => ({ ...prev, discount_amount: e.target.value }))} placeholder="5000" className="w-full text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage" />
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold">최소 주문금액</label>
+                  <input type="number" value={couponForm.min_order_amount} onChange={(e) => setCouponForm(prev => ({ ...prev, min_order_amount: e.target.value }))} placeholder="0" className="w-full text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage" />
+                </div>
+                <div className="space-y-2 md:col-span-1">
+                  <label className="text-[10px] uppercase tracking-widest text-muted font-bold">유효기한 (선택)</label>
+                  <input type="date" value={couponForm.valid_until} onChange={(e) => setCouponForm(prev => ({ ...prev, valid_until: e.target.value }))} className="w-full text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage" />
+                </div>
+                <button type="submit" disabled={isCouponLoading} className="md:col-span-5 bg-charcoal text-white text-xs font-medium px-6 py-3 rounded-sm hover:bg-deep-sage transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                  <Plus className="w-4 h-4" /> 쿠폰 생성
+                </button>
+              </form>
+
+              {couponList.length === 0 ? (
+                <div className="bg-white border border-border-light rounded-sm p-12 text-center text-muted text-sm">
+                  아직 생성된 쿠폰이 없습니다.
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {couponList.map((coupon) => (
+                    <div key={coupon.id} className="bg-white border border-border-light rounded-sm shadow-sm p-8 space-y-5">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <p className="font-mono text-lg font-bold text-charcoal">{coupon.code}</p>
+                          <p className="text-xs text-muted mt-1">
+                            {coupon.discount_type === 'percent' ? `${coupon.discount_amount}% 할인` : `${coupon.discount_amount.toLocaleString()}원 할인`}
+                            {coupon.min_order_amount > 0 && ` · ${coupon.min_order_amount.toLocaleString()}원 이상 구매 시`}
+                            {coupon.valid_until && ` · ~${new Date(coupon.valid_until).toLocaleDateString()}까지`}
+                          </p>
+                          <p className="text-[10px] text-muted mt-1">발급 {coupon.issued_count}건 · 사용 {coupon.used_count}건</p>
+                        </div>
+                        <button onClick={() => handleDeleteCoupon(coupon)} className="text-muted hover:text-terracotta transition-colors shrink-0">
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div className="flex gap-3">
+                        <input
+                          type="email"
+                          value={issueEmailDrafts[coupon.id] || ''}
+                          onChange={(e) => setIssueEmailDrafts(prev => ({ ...prev, [coupon.id]: e.target.value }))}
+                          placeholder="지급할 회원 이메일"
+                          className="flex-1 text-sm p-3 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage"
+                        />
+                        <button
+                          onClick={() => handleIssueCoupon(coupon)}
+                          disabled={isCouponLoading}
+                          className="bg-deep-sage text-white text-xs font-medium px-6 py-3 rounded-sm hover:bg-charcoal transition-all disabled:opacity-50 shrink-0"
+                        >
+                          지급
+                        </button>
                       </div>
                     </div>
                   ))}

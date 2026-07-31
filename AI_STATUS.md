@@ -63,7 +63,7 @@
 ## Claude-Code 로드맵 (프론트/관리자, 충돌 방지를 위해 미리 공유)
 
 1. ~~QnA 관리자 답변 UI 신설~~ — 완료 (아래 "최근 완료" 참고)
-2. 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" — 지금은 체크아웃 코드 검증(`api/coupons/verify`)만 있고 `user_coupons`에 지급하는 로직/화면이 전혀 없음.
+2. ~~쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함"~~ — 완료 (아래 "최근 완료" 참고)
 3. 리뷰 모더레이션(관리자 삭제) UI.
 4. "관리자/주문 관리 화면 이슈 많다" — 실사용 테스트로 구체 목록화 예정.
 
@@ -91,6 +91,7 @@
 - [claude-code] `sitemap.ts`가 정적 4개 URL만 갖고 있어 상품 페이지가 검색엔진에 노출 안 되던 문제 → Supabase에서 `is_active` 상품을 동적으로 조회하도록 수정. 이 과정에서 `public/sitemap.xml`(2024년 날짜의 정적 잔재 파일, `sitemap.ts`와 라우팅 충돌 원인)을 삭제
 - [claude-code] QnA 관리자 답변 UI 신설 (`AdminDashboard.tsx`) — 사이드바 "상품 문의" 탭 추가, 문의 목록(미답변 우선 표시)에서 답변 작성/수정/삭제 가능. `qna` 테이블에 이미 admin UPDATE/DELETE RLS 정책(`is_admin()`)이 있어 스키마·RLS 변경 없이 화면만 추가함. 로그인 없이는 실제 화면 확인이 불가해 lint 통과 + 코드 리뷰까지만 검증함 — 실사용 확인 필요.
 - [cowork] 옵션가 이중청구 데이터 수정 완료 (서리태(청자5호) 1kg/10kg) — 일복님이 Supabase SQL Editor에서 직접 실행. 1kg 옵션 `additional_price` 14000→0, 10kg 옵션 140000→126000. 검증 결과 1kg 실제 청구액 14,000원, 10kg 140,000원으로 정상화됨 (기존엔 각각 28,000원/154,000원으로 이중청구).
+- [claude-code] 쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함" 신설. `coupons`/`user_coupons`에는 SELECT 정책만 있고 관리자 쓰기 정책이 아예 없어서(RLS 확장은 설계 리드 확인 필요 사안) RLS 변경 없이 `products` API와 동일한 패턴(서버 라우트 + `supabaseAdmin` service role + adminToken 검증)으로 우회 — `src/app/api/admin/coupons/route.ts`(생성/목록/삭제), `src/app/api/admin/coupons/issue/route.ts`(이메일로 회원에게 지급). admin 대시보드에 "쿠폰 관리" 탭, mypage에 "쿠폰함" 탭 추가.
 
 ## 알려진 이슈 (아직 미배정)
 

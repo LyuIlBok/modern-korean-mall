@@ -12,7 +12,7 @@ import {
   MapPin, User, Save, Plus, Trash2, Star, Loader2, X, 
   ShoppingCart, ChevronRight, ClipboardCheck, MessageSquare, 
   Box, Camera, Edit2, Database, Crown, TrendingUp, ArrowUpRight,
-  ShieldCheck, Lock, Key, Eye, EyeOff, Image as ImageIcon
+  ShieldCheck, Lock, Key, Eye, EyeOff, Image as ImageIcon, Ticket
 } from 'lucide-react';
 import { useWishlistStore } from '@/store/useWishlistStore';
 import { useLanguageStore } from '@/store/useLanguageStore';
@@ -21,13 +21,26 @@ import ProductCard from '@/components/ProductCard';
 import OrderItemList from '@/components/mypage/OrderItemList';
 import Script from 'next/script';
 
-type ActiveTab = 'orders' | 'wishlist' | 'addresses' | 'profile';
+type ActiveTab = 'orders' | 'wishlist' | 'addresses' | 'profile' | 'coupons';
 
 // 등급별 기준 금액
 const TIER_THRESHOLDS = {
   VIP: 200000,
   VVIP: 500000
 };
+
+interface UserCoupon {
+  id: string;
+  is_used: boolean;
+  used_at: string | null;
+  coupons: {
+    code: string;
+    discount_type: 'fixed' | 'percent';
+    discount_amount: number;
+    min_order_amount: number;
+    valid_until: string | null;
+  } | null;
+}
 
 function MyPageContent() {
   const { t, language } = useLanguageStore();
@@ -42,6 +55,7 @@ function MyPageContent() {
   
   const [orders, setOrders] = useState<any[]>([]);
   const [addresses, setAddresses] = useState<any[]>([]);
+  const [userCoupons, setUserCoupons] = useState<UserCoupon[]>([]);
   const [profile, setProfile] = useState({ 
     full_name: '', 
     phone: '', 
@@ -134,6 +148,13 @@ function MyPageContent() {
         });
         setAddresses(sorted);
       }
+
+      const { data: couponData } = await supabase
+        .from('user_coupons')
+        .select('id, is_used, used_at, coupons(code, discount_type, discount_amount, min_order_amount, valid_until)')
+        .eq('user_id', currentUser.id)
+        .order('created_at', { ascending: false });
+      if (couponData) setUserCoupons(couponData as unknown as UserCoupon[]);
 
       await syncWithSupabase();
     } catch (err: any) { 
@@ -324,6 +345,7 @@ function MyPageContent() {
 
   const tabs = [
     { id: 'orders', label: t.mypage.orderHistory, icon: Package },
+    { id: 'coupons', label: '쿠폰함', icon: Ticket },
     { id: 'wishlist', label: t.mypage.wishlist, icon: Heart },
     { id: 'addresses', label: t.mypage.addresses, icon: MapPin },
     { id: 'profile', label: t.mypage.profile, icon: User },
@@ -420,6 +442,44 @@ function MyPageContent() {
               onCancelOrder={handleCancelOrder}
               cancellingId={cancellingId}
             />
+          )}
+
+          {activeTab === 'coupons' && (
+            <div className="space-y-8 max-w-3xl mx-auto">
+              <div className="space-y-3">
+                <h3 className="font-serif text-4xl text-charcoal tracking-tight">쿠폰함</h3>
+                <p className="text-lg text-muted font-medium opacity-80">보유하신 쿠폰 {userCoupons.filter(c => !c.is_used).length}장</p>
+              </div>
+
+              {userCoupons.length === 0 ? (
+                <div className="py-40 text-center bg-white border border-border-light rounded-sm flex flex-col items-center justify-center space-y-6 shadow-sm">
+                  <div className="w-20 h-20 bg-hanji-white rounded-full flex items-center justify-center text-muted/30 border border-border-light"><Ticket className="w-10 h-10" /></div>
+                  <p className="text-muted font-black text-2xl italic">보유 중인 쿠폰이 없습니다.</p>
+                </div>
+              ) : (
+                <div className="space-y-5">
+                  {userCoupons.map((uc) => {
+                    const expired = uc.coupons?.valid_until ? new Date(uc.coupons.valid_until) < new Date() : false;
+                    const disabled = uc.is_used || expired;
+                    return (
+                      <div key={uc.id} className={`p-8 bg-white border-2 rounded-sm flex items-center justify-between gap-6 ${disabled ? 'border-border-light opacity-50' : 'border-deep-sage'}`}>
+                        <div className="space-y-2">
+                          <p className="font-mono text-xl font-bold text-charcoal">{uc.coupons?.code}</p>
+                          <p className="text-sm text-muted">
+                            {uc.coupons?.discount_type === 'percent' ? `${uc.coupons?.discount_amount}% 할인` : `${uc.coupons?.discount_amount?.toLocaleString()}원 할인`}
+                            {!!uc.coupons?.min_order_amount && ` · ${uc.coupons.min_order_amount.toLocaleString()}원 이상 구매 시`}
+                            {uc.coupons?.valid_until && ` · ~${new Date(uc.coupons.valid_until).toLocaleDateString()}까지`}
+                          </p>
+                        </div>
+                        <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shrink-0 ${uc.is_used ? 'bg-charcoal/5 text-muted' : expired ? 'bg-terracotta/10 text-terracotta' : 'bg-deep-sage/10 text-deep-sage'}`}>
+                          {uc.is_used ? '사용완료' : expired ? '기간만료' : '사용가능'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           )}
 
           {activeTab === 'profile' && (
