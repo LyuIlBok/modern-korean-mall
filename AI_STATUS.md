@@ -78,6 +78,7 @@
 ## 대기 / 확인 필요 (사용자 결정 대기)
 
 - ~~[중요/보안] 결제 위조 가능 취약점~~ — **[claude-code] 2026-08-01 일복님 승인받아 Supabase MCP로 적용 완료.** `process_payment_webhook`/`restore_stock_for_order`에서 anon/authenticated EXECUTE 회수, `product-images` 스토리지 정책을 `is_admin()` 전용으로 교체, `Public Access` list 정책 제거, `handle_new_agri_user` search_path 고정. 적용 전 두 RPC가 코드베이스 전체에서 `supabaseAdmin.rpc(...)`(서버 전용)로만 호출되는 것을 grep으로 확인해서 회귀 없음 확인. `get_advisors`로 재확인 결과 두 함수 모두 더 이상 anon/authenticated 경고에 안 뜸.
+- [cowork] Supabase 보안 advisor 재점검 완료 — 결제위조 마이그레이션(클로드 코드가 적용) 이후 `get_advisors` 재확인 결과 남은 경고 4건은 모두 의도된 설계(`is_admin()`/`reserve_stock_for_order`가 anon/authenticated에서 호출 가능한 것 — RLS/체크아웃에 필요해서 의도적으로 열어둔 것, SQL 정의 확인함)이고, 1건(유출 비밀번호 보호 비활성화)은 Supabase 대시보드 Authentication 설정에서 토글 한 번이면 되는 항목이라 SQL로는 처리 불가 — 일복님이 대시보드에서 켜주시면 됩니다 (Authentication → Policies → Leaked Password Protection).
 - PortOne PG 등록 (KG이니시스 로그인 이슈로 월요일 고객센터 통화 예정)
 - 고객센터 전화번호 / SNS 채널 URL / 에스크로 인증 마크 — 운영 방향 미정으로 보류 중 (`src/lib/config.ts`의 `CONTACT_PHONE`이 더미값인 동안 자동으로 숨김 처리됨)
 
