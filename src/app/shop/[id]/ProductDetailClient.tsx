@@ -9,10 +9,10 @@ import { useWishlistStore } from '@/store/useWishlistStore';
 import { useChatStore } from '@/store/useChatStore';
 import Image from 'next/image';
 import Link from 'next/link';
-import { 
-  ArrowLeft, ShieldCheck, Heart, ChevronLeft, 
+import {
+  ArrowLeft, ShieldCheck, Heart, ChevronLeft,
   ChevronRight, ChevronDown, Plus, Minus, ShoppingBag, CreditCard, MessageSquare,
-  Star
+  Star, Bell, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
@@ -45,6 +45,10 @@ export default function ProductDetailClient({
   const [loadingOptions, setLoadingOptions] = useState(initialOptions.length === 0);
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
 
+  const [userId, setUserId] = useState<string | null>(null);
+  const [isRestockRequested, setIsRestockRequested] = useState(false);
+  const [isRestockSubmitting, setIsRestockSubmitting] = useState(false);
+
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
   const galleryImages = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
 
@@ -67,6 +71,48 @@ export default function ProductDetailClient({
 
     fetchOptions();
   }, [product.id, initialOptions]);
+
+  useEffect(() => {
+    if (!product.is_sold_out) return;
+
+    const checkRestockStatus = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user?.id) return;
+      setUserId(session.user.id);
+
+      const { data } = await supabase
+        .from('restock_alerts')
+        .select('id')
+        .eq('product_id', product.id)
+        .eq('user_id', session.user.id)
+        .maybeSingle();
+
+      if (data) setIsRestockRequested(true);
+    };
+
+    checkRestockStatus();
+  }, [product.id, product.is_sold_out]);
+
+  const handleRestockRequest = async () => {
+    if (!userId) {
+      router.push(`/login?redirectedFrom=/shop/${product.id}`);
+      return;
+    }
+    setIsRestockSubmitting(true);
+    try {
+      const { error } = await supabase
+        .from('restock_alerts')
+        .insert([{ product_id: product.id, user_id: userId }]);
+
+      if (error && error.code !== '23505') throw error; // 23505 = 이미 신청함(중복), 정상 처리
+      setIsRestockRequested(true);
+    } catch (err) {
+      console.error('Restock alert error:', err);
+      alert('재입고 알림 신청 중 오류가 발생했습니다.');
+    } finally {
+      setIsRestockSubmitting(false);
+    }
+  };
 
   const basePrice = Number(product.discount_rate || 0) > 0
     ? Math.floor(product.price * (1 - (product.discount_rate || 0) / 100))
@@ -351,8 +397,22 @@ export default function ProductDetailClient({
                   <CreditCard className="w-6 h-6 group-hover:scale-110 transition-transform" /> {t?.common?.buyNow || '바로 구매하기'}
                 </button>
               </div>
-              
-              <button 
+
+              {product.is_sold_out && (
+                <button
+                  onClick={handleRestockRequest}
+                  disabled={isRestockRequested || isRestockSubmitting}
+                  className="w-full py-5 bg-deep-sage/10 border border-deep-sage/30 text-deep-sage hover:bg-deep-sage hover:text-white transition-all font-medium rounded-sm flex items-center justify-center gap-3 disabled:opacity-70"
+                >
+                  {isRestockRequested ? (
+                    <><Check className="w-5 h-5" /> 재입고 알림 신청 완료</>
+                  ) : (
+                    <><Bell className="w-5 h-5" /> {isRestockSubmitting ? '신청 중...' : '재입고 알림 신청하기'}</>
+                  )}
+                </button>
+              )}
+
+              <button
                 onClick={handleProductInquiry}
                 className="w-full py-4 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 rounded-sm"
               >

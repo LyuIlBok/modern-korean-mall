@@ -122,6 +122,9 @@
 
 - [claude-code] **[중요] 장바구니 페이지(`/cart`)에서 옵션 있는 상품은 수량 변경/삭제 버튼이 아예 안 먹던 버그 수정** — `updateQuantity(item.id, ...)`/`removeItem(item.id)`를 `optionName` 인자 없이 호출하고 있어서, 스토어 내부 매칭 조건(`item.id === id && item.optionName === optionName`)이 `optionName=undefined`로 비교되는 바람에 실제 옵션명이 있는 아이템은 절대 매칭이 안 됐음(버튼 눌러도 아무 반응 없음). 사이드바 장바구니(`CartItem.tsx`)는 이미 올바르게 `item.optionName`을 넘기고 있어서 그 패턴을 그대로 적용. 같은 상품의 다른 옵션 두 개를 담았을 때 React `key`가 겹치던 것(`key={item.id}` → `key={`${item.id}-${item.optionName}`}`)과, 옵션명이 화면에 아예 안 보이던 것(뱃지로 표시 추가)도 같이 수정. 서리태 1kg/10kg처럼 옵션 있는 상품이 여러 개 있는 이 사이트에서 실사용에 바로 영향 있던 버그.
 
+- [claude-code] **재입고 알림 기능이 실제로는 아무데도 연결 안 돼 있고, 연결됐어도 깨져 있던 것 발견/수정** — `src/app/shop/[id]/AddToCartButton.tsx`(`PurchaseButtons`)라는 컴포넌트에 재입고 알림 신청 모달이 있었는데, 이 컴포넌트를 import하는 곳이 프로젝트 전체에 단 한 곳도 없어서(죽은 코드) 실제 상품 페이지(`ProductDetailClient.tsx`)에서는 품절 시 그냥 비활성화된 버튼만 보였음. 게다가 그 죽은 코드의 insert 자체도 `restock_alerts`에 없는 컬럼(`phone_number`, `status`)을 쓰고 있어서 어차피 실행됐어도 실패했을 것. 실제 스키마(`product_id`, `user_id`만 존재, RLS도 로그인 사용자 전용)에 맞춰 `ProductDetailClient.tsx`에 진짜 동작하는 재입고 알림 버튼을 새로 추가(로그인 안 했으면 로그인 페이지로, 이미 신청했으면 "신청 완료" 표시, `(product_id, user_id)` unique 제약 위반은 정상 처리로 처리). `AddToCartButton.tsx`는 삭제하려 했으나 자동모드 정책이 파일 삭제 명령을 막아서 못 지웠음 — 안 쓰는 파일이라 실행에 영향은 없지만, 나중에 코웍이나 일복님이 직접 지워주시거나 삭제를 승인해주시면 좋겠습니다.
+
 ## 알려진 이슈 (아직 미배정)
 
 - 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. [claude-code]가 다음으로 실사용 테스트하며 목록화 예정.
+- `src/app/shop/[id]/AddToCartButton.tsx` — 죽은 코드(아무데서도 import 안 함), 삭제 권한 문제로 못 지움. 삭제해도 안전함.
