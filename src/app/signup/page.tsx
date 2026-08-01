@@ -33,6 +33,7 @@ export default function SignupPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [isSuccess, setIsSuccess] = useState(false);
+  const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
   const router = useRouter();
 
   // 이메일 중복 체크 핸들러
@@ -122,10 +123,18 @@ export default function SignupPage() {
         setErrorMsg(getErrorMessage(error.message));
         return;
       }
-      
+
+      // Supabase Auth의 "이메일 인증 필수" 설정이 켜져 있으면 signUp이 성공해도
+      // session은 null로 옵니다(이메일 인증 링크를 눌러야 로그인 가능). 꺼져 있으면
+      // 바로 session이 생깁니다. 둘 다 화면에 같은 "가입 완료" 문구만 보여주고
+      // 있었는데, 이메일 인증이 필요한 경우엔 안내가 없으면 사용자가 왜 로그인이
+      // 안 되는지 몰라 헷갈릴 수 있어서 분기합니다.
       if (data.user) {
+        setNeedsEmailConfirmation(!data.session);
         setIsSuccess(true);
-        setTimeout(() => router.push('/login'), 4000);
+        if (data.session) {
+          setTimeout(() => router.push('/login'), 4000);
+        }
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -141,17 +150,39 @@ export default function SignupPage() {
         <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="text-center max-w-md w-full bg-white p-12 border border-border-light rounded-sm shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1.5 bg-deep-sage" />
           <div className="w-24 h-24 bg-deep-sage/10 text-deep-sage rounded-full flex items-center justify-center mx-auto mb-10">
-            <CheckCircle2 className="w-12 h-12" />
+            {needsEmailConfirmation ? <Mail className="w-12 h-12" /> : <CheckCircle2 className="w-12 h-12" />}
           </div>
-          <h1 className="font-serif text-4xl text-charcoal mb-6 tracking-tight">반갑습니다!</h1>
-          <div className="space-y-4 mb-12">
-            <p className="text-muted leading-relaxed font-light">
-              <span className="font-bold text-charcoal">{fullName}님</span>, 회원가입이 완료되었습니다.<br/>
-              자연의 결이 선사하는 정직한 결실을 만나보세요.
-            </p>
-            <p className="text-xs text-muted/60 italic font-light">잠시 후 로그인 페이지로 자동 이동합니다...</p>
-          </div>
-          <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-deep-sage/30" /></div>
+          {needsEmailConfirmation ? (
+            <>
+              <h1 className="font-serif text-4xl text-charcoal mb-6 tracking-tight">이메일을 확인해 주세요</h1>
+              <div className="space-y-4 mb-12">
+                <p className="text-muted leading-relaxed font-light">
+                  <span className="font-bold text-charcoal">{fullName}님</span>, <span className="font-bold text-charcoal">{email}</span>로<br/>
+                  인증 메일을 보내드렸습니다.<br/>
+                  메일함의 링크를 눌러야 로그인하실 수 있어요.
+                </p>
+                <p className="text-xs text-muted/60 italic font-light">메일이 안 보이면 스팸함도 확인해 주세요.</p>
+              </div>
+              <button
+                onClick={() => router.push('/login')}
+                className="text-sm text-deep-sage font-bold border-b border-deep-sage pb-0.5 hover:text-charcoal hover:border-charcoal transition-colors"
+              >
+                로그인 화면으로 이동
+              </button>
+            </>
+          ) : (
+            <>
+              <h1 className="font-serif text-4xl text-charcoal mb-6 tracking-tight">반갑습니다!</h1>
+              <div className="space-y-4 mb-12">
+                <p className="text-muted leading-relaxed font-light">
+                  <span className="font-bold text-charcoal">{fullName}님</span>, 회원가입이 완료되었습니다.<br/>
+                  자연의 결이 선사하는 정직한 결실을 만나보세요.
+                </p>
+                <p className="text-xs text-muted/60 italic font-light">잠시 후 로그인 페이지로 자동 이동합니다...</p>
+              </div>
+              <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-deep-sage/30" /></div>
+            </>
+          )}
         </motion.div>
       </div>
     );
