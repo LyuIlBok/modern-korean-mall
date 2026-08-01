@@ -162,12 +162,15 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
         is_sold_out: Number(formData.stock) <= 0
       };
 
-      // 1. Submit Product
+      // 상품 본문 + 옵션(추가/수정/삭제)을 한 요청으로 서버(service role)에 보내서
+      // 같이 처리합니다. 예전엔 옵션만 브라우저에서 직접 Supabase로 썼는데, 그
+      // 테이블의 RLS가 실제 관리자 판정 기준과 안 맞아서 조용히 실패하던 문제가
+      // 있었습니다(자세한 내용은 /api/admin/products/route.ts 주석 참고).
       const endpoint = '/api/admin/products';
       const method = isEditMode ? 'PATCH' : 'POST';
       const body = isEditMode
-        ? { productId: initialData?.id, productData: productPayload }
-        : { productData: productPayload };
+        ? { productId: initialData?.id, productData: productPayload, options, deletedOptionIds }
+        : { productData: productPayload, options };
 
       const res = await adminFetch(endpoint, {
         method,
@@ -177,40 +180,7 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
 
       const result = await res.json();
       if (!res.ok) throw new Error(result.error);
-      
-      const productId = isEditMode ? initialData?.id : result.id;
 
-      // 2. Handle Options Synchronization
-      if (productId) {
-        // 2a. Delete removed options
-        if (deletedOptionIds.length > 0) {
-          await supabase.from('product_options').delete().in('id', deletedOptionIds);
-        }
-
-        // 2b. Upsert remaining options (Generate UUIDs for new entries)
-        const optionsToUpsert = options.map(opt => {
-          const { id, ...rest } = opt;
-          // If ID is missing or temporary, generate a valid UUIDv4
-          const finalId = (!id || id === '' || id.startsWith('temp-')) 
-            ? crypto.randomUUID() 
-            : id;
-            
-          return { 
-            ...rest, 
-            id: finalId, 
-            product_id: productId 
-          };
-        });
-
-        if (optionsToUpsert.length > 0) {
-          const { error: upsertError } = await supabase
-            .from('product_options')
-            .upsert(optionsToUpsert, { onConflict: 'id' });
-          
-          if (upsertError) throw upsertError;
-        }
-      }
-      
       alert(isEditMode ? '상품과 옵션이 수정되었습니다.' : '상품과 옵션이 등록되었습니다.');
       router.push('/admin');
       router.refresh();
