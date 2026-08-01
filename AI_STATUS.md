@@ -65,7 +65,7 @@
 
 | 작업자 | 작업 내용 | 파일 | 시작일 |
 |---|---|---|---|
-| Claude-Code | 라이브 사이트 반응형/줄바꿈 버그 대응 완료 (아래 참고), 다음은 나머지 가독성 커밋 32개 파일 중 유사 패턴(밀집 flex 행) 추가 점검 여부 확인 대기 | `src/app/login/page.tsx` 등 | 2026-08-01 |
+| Claude-Code | 로그인 화면 라벨/보조텍스트 크기·명도 2차 개선 완료(아래 참고). 일복님 확인 후 다른 31개 파일에도 같은 패턴 확대 적용할지 결정 대기 | `src/app/login/page.tsx` | 2026-08-01 |
 | Cowork | 일복님이 GEMINI_API_KEY를 Vercel에 등록 완료, 바로 테스트해보고 싶어하셔서 QnA 탭에 "AI 초안" 버튼 최소 하나만 얹는 중 (전체 프론트 연동은 여전히 클로드 코드 몫, 이건 즉시 테스트용 최소 추가) | `src/app/admin/AdminDashboard.tsx` (QnA 섹션만, 다른 부분 안 건드림) | 2026-08-01 |
 
 **[claude-code 참고]** 작업 중 working tree에서 `src/lib/adminAuth.ts`(수정) + `src/app/api/ai/`, `src/app/api/admin/ai/`, `src/lib/gemini.ts`(신규, 미커밋)를 봤습니다 — 코웍이 AI 상담 기능(Phase 0, 위 "AI 고도화" 섹션) 착수한 것으로 보여 건드리지 않고 제 커밋(`77d9ad0`)에서 제외했습니다.
@@ -168,6 +168,7 @@ API 키만 발급되면 저(클로드 코드)가 회원가입 폼에 "인증번�
 
 - [claude-code] **리뷰 작성 컬럼명 불일치 수정** — `ProductTabs.tsx`(상품 상세 페이지 리뷰탭), `mypage/page.tsx`(주문내역 리뷰쓰기 모달) 둘 다 `reviews.image_url`(존재하지 않음, 실제로는 `photo_url`)로 insert하고 있어서 리뷰 등록이 항상 실패하던 것 수정. `mypage/page.tsx`는 스토리지 버킷명도 틀려있어서(`'reviews'`→`'review-images'`) 같이 수정. 사진 첨부 리뷰는 스토리지 RLS 정책이 아예 없어서 이 수정만으로는 아직 실패함(위 상호 검토 섹션에 코웍 앞으로 리포트).
 
+- [claude-code] **로그인 화면 라벨/보조텍스트 2차 가독성 개선** — 줄바꿈 버그를 고친 뒤 일복님이 실제 화면(Claude in Chrome으로 직접 확인)을 다시 보시고 "라벨/링크류가 여전히 작고 흐리다"고 지적하심. `EMAIL ADDRESS`/`PASSWORD` 등 라벨을 13px 연한 회색에서 15px 볼드 + `text-charcoal/70`으로, 아이디찾기/비밀번호찾기 링크와 `OR CONTINUE WITH`/하단 회원가입 안내문도 한 단계씩 키우고 진하게, 입력창 글자도 14px→16px로 올림. 로그인 화면을 시범 케이스로 먼저 처리 — 확인되면 지난 가독성 커밋(`fcb2c4a`) 대상 31개 파일에도 같은 기준으로 확대 적용 예정. **참고**: 이번에 "Browser 프리뷰 패널" 대신 "Claude in Chrome"(실제 크롬) 도구로 전환해서 실제 스크린샷으로 검증함 — 이전 세션 내내 시각적 검증이 안 됐던 문제가 이 도구로는 해결됨.
 - [claude-code] **라이브 사이트에서 실제로 제보된 로그인 화면 줄바꿈 깨짐 버그 수정** (일복님이 배포된 사이트 스크린샷으로 직접 발견) — 직전 가독성 개선 커밋(`fcb2c4a`)에서 `text-[10px]`를 `text-[13px]`로 일괄 확대하면서, `login/page.tsx`의 "Password 라벨 + 아이디찾기 | 비밀번호찾기 | 비회원주문조회" 한 줄짜리 좁은 `flex justify-between` 행이 카드 폭을 넘어 한글 낱말 중간에서 강제 개행되는 문제가 생김. Password 라벨을 Email 라벨처럼 입력창 위 별도 줄로 분리하고, 하단 링크 3개는 `flex-wrap` + `whitespace-nowrap`으로 재구성해 어떤 화면 폭에서도 낱말 단위로만 줄바꿈되도록 수정. 같은 "여러 개 링크/뱃지를 좁은 flex 행에 파이프(`|`)로 구분해 넣는" 패턴을 다른 가독성 커밋 대상 파일에서도 검색해서, `ProductTabs.tsx`(QnA 작성자명|날짜 뱃지)와 `mypage/page.tsx`(등급 진행바 Family/VIP/VVIP 라벨 3개)에도 동일한 위험이 있는 것을 찾아 `flex-wrap` 방어를 선제적으로 추가. `mypage/page.tsx`의 회원등급 카드 패딩도 `p-12`(모바일에서도 48px 고정)를 `p-6 sm:p-12`로 바꿔 모바일 여백 과다 문제 완화. `npx tsc --noEmit` 0 errors, eslint 신규 에러 없음(베이스라인 `any` 경고만 존재), `curl`로 서버 렌더링 HTML 직접 확인해 `whitespace-nowrap`/`flex-wrap` 클래스가 실제로 반영된 것 검증. **[한계]** 이번 세션 내내 브라우저 프리뷰 도구가 실제 화면을 못 띄우는 문제가 있어(뷰포트 리사이즈 후에도 `window.innerWidth`는 정상인데 페이지 콘텐츠가 `display:none` 컨테이너 안에 렌더링되는 재현 가능한 오류 확인, SSR HTML은 정상이라 도구 자체 문제로 판단) 실제 시각적 스크린샷으로 재확인은 못 했음 — 일복님이 배포 후 실제 화면으로 한 번 더 확인해주시면 좋겠습니다.
 
 ## 알려진 이슈 (아직 미배정)
