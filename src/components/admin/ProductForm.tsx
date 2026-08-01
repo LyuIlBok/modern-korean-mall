@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
-import { 
-  X, Plus, Loader2, CheckCircle, Save, Camera, 
-  Image as ImageIcon, Trash2, Package, Settings, ChevronLeft
+import {
+  X, Plus, Loader2, CheckCircle, Save, Camera,
+  Image as ImageIcon, Trash2, Package, Settings, ChevronLeft, Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import RichTextEditor from './RichTextEditor';
@@ -44,7 +44,8 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
   const router = useRouter();
   const { t } = useLanguageStore();
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [isAiDraftLoading, setIsAiDraftLoading] = useState(false);
+
   // Product State
   const [formData, setFormData] = useState<AdminProduct>(initialData || {
     name: '',
@@ -108,6 +109,40 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
       .getPublicUrl(filePath);
 
     return publicUrl;
+  };
+
+  // [AI 고도화 Phase 0 - 즉시 테스트용 최소 연동] 상품명/카테고리/원산지/제조사로
+  // Gemini 상품설명 초안을 생성해서 상세 설명 에디터에 채워줍니다. 자동 저장은
+  // 아니고, 검토/수정 후 직접 "저장" 버튼을 눌러야 반영됩니다.
+  const handleAiDescriptionDraft = async () => {
+    if (!formData.name?.trim()) {
+      alert('상품명을 먼저 입력해주세요.');
+      return;
+    }
+    setIsAiDraftLoading(true);
+    try {
+      const res = await adminFetch('/api/admin/ai/product-description', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: formData.name,
+          category: formData.category,
+          origin: formData.origin,
+          producer: formData.producer,
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'AI 초안 생성에 실패했습니다.');
+        return;
+      }
+      setFormData(prev => ({ ...prev, description: json.draft }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setIsAiDraftLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -322,7 +357,19 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
               </div>
 
               <div className="space-y-6">
-                <label className="text-xs text-muted uppercase tracking-widest font-black ml-1 block">{t?.admin?.detailedDescription || '상세 설명'}</label>
+                <div className="flex items-center justify-between ml-1">
+                  <label className="text-xs text-muted uppercase tracking-widest font-black block">{t?.admin?.detailedDescription || '상세 설명'}</label>
+                  <button
+                    type="button"
+                    onClick={handleAiDescriptionDraft}
+                    disabled={isAiDraftLoading}
+                    title="Gemini로 상품설명 초안 생성 (저장 전 검토 필요)"
+                    className="flex items-center gap-2 text-xs font-bold text-deep-sage border border-deep-sage px-4 py-2 rounded-sm hover:bg-deep-sage/10 transition-all disabled:opacity-50"
+                  >
+                    {isAiDraftLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                    AI 초안 생성
+                  </button>
+                </div>
                 <div className="min-h-[500px] border-2 border-border-light rounded-sm shadow-inner">
                   <RichTextEditor 
                     value={formData.description} 

@@ -9,7 +9,7 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket, Star
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket, Star, Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -155,6 +155,7 @@ export default function AdminDashboard() {
   const [restockAlerts, setRestockAlerts] = useState<AdminRestockAlert[]>([]);
   const [qnaList, setQnaList] = useState<AdminQna[]>([]);
   const [qnaDrafts, setQnaDrafts] = useState<Record<string, string>>({});
+  const [aiDraftLoadingId, setAiDraftLoadingId] = useState<string | null>(null);
   const [couponList, setCouponList] = useState<AdminCoupon[]>([]);
   const [couponForm, setCouponForm] = useState({ code: '', discount_type: 'fixed' as 'fixed' | 'percent', discount_amount: '', min_order_amount: '', valid_until: '' });
   const [issueEmailDrafts, setIssueEmailDrafts] = useState<Record<string, string>>({});
@@ -362,6 +363,31 @@ export default function AdminDashboard() {
       alert(`시스템 오류: ${err.message}`);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  // [AI 고도화 Phase 0 - 즉시 테스트용 최소 연동] QnA 답변 초안을 Gemini로 생성해서
+  // 답변 textarea에 채워줍니다. 자동 저장은 아니고, 관리자가 검토/수정 후
+  // "답변 등록" 버튼을 눌러야 실제로 저장됩니다. 백엔드는 src/app/api/admin/ai/qna-draft.
+  const handleAiQnaDraft = async (qna: AdminQna) => {
+    setAiDraftLoadingId(qna.id);
+    try {
+      const res = await adminFetch('/api/admin/ai/qna-draft', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ qnaId: qna.id }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        alert(json.error || 'AI 초안 생성에 실패했습니다.');
+        return;
+      }
+      setQnaDrafts(prev => ({ ...prev, [qna.id]: json.draft }));
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : '알 수 없는 에러가 발생했습니다.';
+      alert(`시스템 오류: ${msg}`);
+    } finally {
+      setAiDraftLoadingId(null);
     }
   };
 
@@ -929,7 +955,16 @@ export default function AdminDashboard() {
                           rows={3}
                           className="w-full text-sm p-4 border border-border-light rounded-sm focus:outline-none focus:border-deep-sage resize-none"
                         />
-                        <div className="flex justify-end">
+                        <div className="flex justify-end gap-3">
+                          <button
+                            onClick={() => handleAiQnaDraft(qna)}
+                            disabled={aiDraftLoadingId === qna.id}
+                            title="Gemini로 답변 초안 생성 (저장 전 검토 필요)"
+                            className="flex items-center gap-2 bg-white border border-deep-sage text-deep-sage text-xs font-medium px-5 py-3 rounded-sm hover:bg-deep-sage/10 transition-all disabled:opacity-50"
+                          >
+                            {aiDraftLoadingId === qna.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Sparkles className="w-3.5 h-3.5" />}
+                            AI 초안
+                          </button>
                           <button
                             onClick={() => handleAnswerQna(qna)}
                             disabled={isLoading}
