@@ -381,7 +381,7 @@ function MyPageContent() {
 
         {/* CRM Dashboard Widgets */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-20">
-          <div className="lg:col-span-2 bg-white border border-border-light p-12 rounded-sm shadow-sm relative overflow-hidden group hover:border-deep-sage transition-colors duration-500">
+          <div className="lg:col-span-2 bg-white border border-border-light p-6 sm:p-12 rounded-sm shadow-sm relative overflow-hidden group hover:border-deep-sage transition-colors duration-500">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity"><TrendingUp className="w-40 h-40" /></div>
             <div className="relative z-10 space-y-10">
               <div className="flex justify-between items-end">
@@ -403,10 +403,10 @@ function MyPageContent() {
                     className={`h-full shadow-lg ${profile.tier === 'VVIP' ? 'bg-purple-500' : 'bg-deep-sage'}`}
                   />
                 </div>
-                <div className="flex justify-between text-[13px] uppercase tracking-tighter font-black text-muted/60 px-1">
-                  <span className="opacity-100 text-charcoal/40">Family</span>
-                  <span className={profile.total_spent >= TIER_THRESHOLDS.VIP ? 'text-deep-sage opacity-100' : ''}>VIP (20만원)</span>
-                  <span className={profile.total_spent >= TIER_THRESHOLDS.VVIP ? 'text-purple-500 opacity-100' : ''}>VVIP (50만원)</span>
+                <div className="flex flex-wrap justify-between gap-x-2 gap-y-1 text-[13px] uppercase tracking-tight font-black text-muted/60 px-1">
+                  <span className="opacity-100 text-charcoal/40 whitespace-nowrap">Family</span>
+                  <span className={`whitespace-nowrap ${profile.total_spent >= TIER_THRESHOLDS.VIP ? 'text-deep-sage opacity-100' : ''}`}>VIP (20만원)</span>
+                  <span className={`whitespace-nowrap ${profile.total_spent >= TIER_THRESHOLDS.VVIP ? 'text-purple-500 opacity-100' : ''}`}>VVIP (50만원)</span>
                 </div>
               </div>
             </div>

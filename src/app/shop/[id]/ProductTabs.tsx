@@ -467,10 +467,10 @@ export default function ProductTabs({ product }: { product: Product }) {
                             {qna.answer ? '답변완료' : '답변대기'}
                           </span>
                         </div>
-                        <div className="flex items-center gap-2">
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
                           <p className="text-sm font-bold text-charcoal">{qna.user_name}</p>
                           <span className="text-[13px] text-muted opacity-40">|</span>
-                          <span className="text-[13px] text-muted">{new Date(qna.created_at).toLocaleDateString()}</span>
+                          <span className="text-[13px] text-muted whitespace-nowrap">{new Date(qna.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       {(user?.id === qna.user_id || isAdmin) && (

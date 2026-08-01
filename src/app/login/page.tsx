@@ -342,44 +342,42 @@ function LoginContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex justify-between items-center px-1">
-                    <label className="text-[13px] uppercase tracking-widest text-muted">Password</label>
-                    <div className="flex gap-3">
-                      <button 
-                        type="button" 
-                        onClick={() => { setIsFindId(true); setErrorMsg(''); }}
-                        className="text-[13px] text-muted hover:text-charcoal hover:underline"
-                      >
-                        아이디 찾기
-                      </button>
-                      <span className="text-[13px] text-border-light">|</span>
-                      <button 
-                        type="button" 
-                        onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
-                        className="text-[13px] text-muted hover:text-charcoal hover:underline"
-                      >
-                        비밀번호 찾기
-                      </button>
-                      <span className="text-[13px] text-border-light">|</span>
-                      <Link 
-                        href="/guest-order"
-                        className="text-[13px] text-deep-sage font-bold hover:underline"
-                      >
-                        비회원 주문조회
-                      </Link>
-                    </div>
-                  </div>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-                    <input 
+                    <input
                       required
-                      type="password" 
+                      type="password"
                       disabled={isAnyLoading}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
                       className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
                     />
+                  </div>
+                  <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-1.5 px-1 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => { setIsFindId(true); setErrorMsg(''); }}
+                      className="text-[13px] whitespace-nowrap text-muted hover:text-charcoal hover:underline"
+                    >
+                      아이디 찾기
+                    </button>
+                    <span className="text-[13px] text-border-light">|</span>
+                    <button
+                      type="button"
+                      onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
+                      className="text-[13px] whitespace-nowrap text-muted hover:text-charcoal hover:underline"
+                    >
+                      비밀번호 찾기
+                    </button>
+                    <span className="text-[13px] text-border-light">|</span>
+                    <Link
+                      href="/guest-order"
+                      className="text-[13px] whitespace-nowrap text-deep-sage font-bold hover:underline"
+                    >
+                      비회원 주문조회
+                    </Link>
                   </div>
                 </div>
 
