@@ -28,6 +28,7 @@ function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectedFrom = searchParams.get('redirectedFrom');
+  const authError = searchParams.get('error');
 
   useEffect(() => {
     const checkUser = async () => {
@@ -39,6 +40,14 @@ function LoginContent() {
     };
     checkUser();
   }, [router, redirectedFrom]);
+
+  useEffect(() => {
+    if (authError === 'oauth_denied') {
+      setErrorMsg('간편 로그인이 취소되었거나 거부되었습니다. 다시 시도해 주세요.');
+    } else if (authError === 'auth_failed') {
+      setErrorMsg('로그인 처리 중 문제가 발생했습니다. 다시 시도해 주세요.');
+    }
+  }, [authError]);
 
   /**
    * Supabase Auth 에러 메시지를 한국어로 번역합니다.
@@ -93,23 +102,46 @@ function LoginContent() {
   const syncGuestData = async (userId: string) => {
     try {
       // 1. Cart Sync
+      // 주의: cart_items 테이블은 option_name/option_price가 아니라 product_options.id를
+      // 참조하는 option_id 컬럼을 쓰고, (user_id, product_id, option_id)에 대한 unique
+      // 제약조건도 없습니다. 그래서 각 아이템마다 실제 option_id를 조회하고,
+      // upsert 대신 있으면 수량을 더하고 없으면 새로 넣는 방식으로 처리합니다.
       const cartStore = useCartStore.getState();
-      if (cartStore.items.length > 0) {
-        const cartItemsToInsert = cartStore.items.map(item => ({
-          user_id: userId,
-          product_id: item.id,
-          quantity: item.quantity,
-          option_name: item.optionName || null,
-          option_price: item.optionPrice || 0
-        }));
+      for (const item of cartStore.items) {
+        let optionId: string | null = null;
+        if (item.optionName) {
+          const { data: optionRow } = await supabase
+            .from('product_options')
+            .select('id')
+            .eq('product_id', item.id)
+            .eq('option_name', item.optionName)
+            .maybeSingle();
+          optionId = optionRow?.id ?? null;
+        }
 
-        // Insert into Supabase (Upsert or handle duplicates if needed)
-        // For simplicity using upsert if table has unique constraint on (user_id, product_id, option_name)
-        await supabase.from('cart_items').upsert(cartItemsToInsert, { 
-          onConflict: 'user_id, product_id, option_name' 
-        });
-        
-        // No clearCart here yet, we'll probably re-fetch server cart later
+        let existingQuery = supabase
+          .from('cart_items')
+          .select('id, quantity')
+          .eq('user_id', userId)
+          .eq('product_id', item.id);
+        existingQuery = optionId
+          ? existingQuery.eq('option_id', optionId)
+          : existingQuery.is('option_id', null);
+        const { data: existing } = await existingQuery.maybeSingle();
+
+        if (existing) {
+          await supabase
+            .from('cart_items')
+            .update({ quantity: existing.quantity + item.quantity })
+            .eq('id', existing.id);
+        } else {
+          await supabase.from('cart_items').insert({
+            user_id: userId,
+            product_id: item.id,
+            option_id: optionId,
+            quantity: item.quantity,
+          });
+        }
       }
 
       // 2. Wishlist Sync
@@ -425,8 +457,8 @@ function LoginContent() {
                   </div>
                   
                   <div className="space-y-3">
-                    <button 
-                      onClick={() => { setIsFindId(false); setFoundEmailMasked(null); setEmail(foundEmailMasked.replace(/\*/g, '')); }}
+                    <button
+                      onClick={() => { setIsFindId(false); setFoundEmailMasked(null); }}
                       className="w-full bg-charcoal text-white py-4 rounded-xl font-bold hover:bg-deep-sage transition-all shadow-lg text-sm"
                     >
                       로그인하러 가기
