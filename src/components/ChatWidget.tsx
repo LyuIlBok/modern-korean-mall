@@ -9,6 +9,7 @@ import {
   PackageCheck, Lock
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
+import { useCartStore } from '@/store/useCartStore';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -30,13 +31,15 @@ export default function ChatWidget() {
     autoSendMessage, autoSendMessageMetadata, triggerAutoSend,
     resetInitializing
   } = useChatStore();
-  
+  const { addItem } = useCartStore();
+
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
   const [chatError, setChatError] = useState<string | null>(null);
+  const [cartToast, setCartToast] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -213,6 +216,20 @@ export default function ChatWidget() {
         // alert()는 전체 화면을 막아버려서(자동화 테스트 중 탭이 응답 없음 상태가 되는 것도
         // 확인함) 채팅 안에서만 조용히 보이는 문구로 대체합니다.
         setChatError(result.error || 'AI 상담원 응답에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      } else if (result.action?.type === 'add_to_cart') {
+        // [AI 고도화 Phase 2] AI가 "장바구니에 담아줘" 요청을 처리한 결과입니다.
+        // 서버가 실시간 상품 목록과 대조해 이미 검증을 마친 상태라 그대로 담습니다.
+        addItem({
+          id: result.action.id,
+          name: result.action.name,
+          price: result.action.price,
+          imageUrl: result.action.imageUrl,
+          category: result.action.category,
+          shipping_fee: result.action.shipping_fee,
+          quantity: result.action.quantity,
+        });
+        setCartToast(`${result.action.name} ${result.action.quantity}개를 장바구니에 담았어요`);
+        setTimeout(() => setCartToast(null), 4000);
       }
     } catch (err) {
       console.error('Send error:', err);
@@ -341,6 +358,16 @@ export default function ChatWidget() {
               <div className="px-5 py-3 bg-terracotta/5 border-t border-terracotta/10 flex items-start gap-2">
                 <p className="text-[13px] text-terracotta leading-relaxed flex-1">{chatError}</p>
                 <button onClick={() => setChatError(null)} className="text-terracotta/60 hover:text-terracotta p-0.5" aria-label="오류 메시지 닫기">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
+            {cartToast && (
+              <div className="px-5 py-3 bg-deep-sage/5 border-t border-deep-sage/10 flex items-center gap-2">
+                <ShoppingBag className="w-4 h-4 text-deep-sage flex-shrink-0" />
+                <p className="text-[13px] text-deep-sage font-medium leading-relaxed flex-1">{cartToast}</p>
+                <button onClick={() => setCartToast(null)} className="text-deep-sage/60 hover:text-deep-sage p-0.5" aria-label="알림 닫기">
                   <X className="w-3.5 h-3.5" />
                 </button>
               </div>
