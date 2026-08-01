@@ -198,7 +198,19 @@ API 키만 발급되면 저(클로드 코드)가 회원가입 폼에 "인증번�
 
 **AI 고도화 — 진행한 것**
 - `chat_messages`에 `sender` 컬럼 추가(`'user'|'admin'|'ai'`), 기존 데이터는 `is_admin` 기준으로 채워 넣음 (`20260801_chat_messages_add_sender_column.sql`). 이제 AI 발화를 구분할 스키마 준비 끝. `is_admin` 컬럼은 하위호환 위해 당장 유지.
-- **막힌 부분**: `ANTHROPIC_API_KEY` 발급이 먼저입니다. 일복님이 console.anthropic.com에서 계정 생성 + 결제수단 등록 + API 키 발급을 하셔야 합니다. 발급 후: (1) 저나 클로드 코드에게 키를 전달하시거나, (2) Vercel 프로젝트 Settings → Environment Variables에 직접 `ANTHROPIC_API_KEY`로 등록해주시면 그 다음부터 Phase 0(AI 상담 + 상품설명 초안) 코드 작업을 시작할 수 있습니다. (참고: 지금 제 세션엔 Vercel MCP 연결이 끊겨 있어서 제가 직접 Vercel 환경변수를 등록할 수는 없는 상태입니다 — 일복님이나 클로드 코드가 등록해주셔야 합니다.)
+- **[업데이트 2026-08-01] Anthropic → Gemini로 변경, 일복님이 이미 API 키 발급 완료.** Gemini 무료 티어(카드 등록 불필요)로 진행하기로 하고, 일복님이 Google AI Studio에서 키를 이미 만드셨습니다. 이에 맞춰 백엔드를 구현했습니다:
+  - `src/lib/gemini.ts` — 서버 전용 Gemini 호출 헬퍼. `GEMINI_API_KEY`는 서버에서만 읽고(`NEXT_PUBLIC_` 아님), 클라이언트 컴포넌트에서 import 금지. systemInstruction/userContent를 분리해서 프롬프트 인젝션 방어(사용자 입력은 항상 "데이터"로만 전달).
+  - `src/lib/adminAuth.ts`에 `verifyUser()` 추가 — 관리자 아니어도 로그인한 회원이면 통과하는 인증 헬퍼(AI 채팅용).
+  - `src/app/api/admin/ai/product-description/route.ts` — 관리자 전용, 상품명/카테고리/원산지/특징으로 상품설명 초안 생성.
+  - `src/app/api/admin/ai/qna-draft/route.ts` — 관리자 전용, `qnaId`로 실제 질문을 서버에서 조회해(클라이언트가 임의 텍스트로 AI를 마음대로 못 쓰게) 답변 초안 생성.
+  - `src/app/api/ai/chat/route.ts` — 로그인 회원 전용 AI 상담 채팅. 사용자 메시지 저장 → 최근 대화 10개 맥락 + 사이트 정책 정보로 Gemini 호출 → AI 응답을 `sender='ai', is_admin=true`로 저장(기존 `ChatWidget.tsx`의 "상담원 응답" 표시 쪽에 자연스럽게 얹힘). 분당 8회 서버측 rate limit(클라이언트 우회 불가, DB 카운트 기준). Phase 0 범위라 실시간 상품 추천/재고 연동은 아직 없음(Phase 1 예정).
+  - `npx tsc --noEmit` 통과 확인.
+  - **테스트 못 한 부분**: 제 샌드박스 네트워크 정책이 `generativelanguage.googleapis.com`을 막고 있어서(`github.com`과 동일한 종류의 아웃바운드 차단, 우회 시도 안 함) 로컬에서 실제 API 호출까지는 확인 못 했습니다. Vercel 배포 환경은 이런 제약이 없어서 정상 동작할 것으로 예상하지만, 배포 후 실제 호출 테스트는 필요합니다.
+  - **[일복님이 하실 일]** Vercel 프로젝트 Settings → Environment Variables에 `GEMINI_API_KEY`로 (이미 발급받으신 키 값) 등록. 등록 후 재배포하면 위 3개 API가 살아납니다.
+  - **[코웍 → 클로드 코드]** 백엔드 API 3개 다 준비됐습니다. 프론트 연동 부탁드립니다(역할분담표상 "AI 챗봇 연동"이 원래 클코 담당이라 UI는 안 건드렸습니다):
+    - `AdminDashboard.tsx`(또는 `ProductForm.tsx`)에 "AI 초안 생성" 버튼 → `adminFetch('/api/admin/ai/product-description', {method:'POST', body:{name, category, origin, producer, keywords}})` → 응답 `draft`를 설명 필드에 채워넣기(자동저장 아님, 검토용).
+    - QnA 탭에 "AI 초안" 버튼 → `adminFetch('/api/admin/ai/qna-draft', {method:'POST', body:{qnaId}})` → `draft`를 답변 textarea에 채워넣기.
+    - `ChatWidget.tsx`의 `handleSend`에서 기존 `supabase.from('chat_messages').insert(...)` 대신(또는 그 이후) `fetch('/api/ai/chat', {method:'POST', headers:{Authorization:\`Bearer ${session.access_token}\`}, body:{message}})` 호출로 바꾸면 AI가 자동 응답합니다. 실시간 구독(`subscribeToMessages`)이 이미 있어서 AI 메시지도 INSERT 이벤트로 자동 반영될 겁니다. UI적으로 AI 메시지에 작은 "AI" 배지 정도 붙이면 좋을 것 같습니다(구분은 `sender` 컬럼으로 가능).
 
 **회원가입 이메일 인증 — 진행한 것**
 - `signup/page.tsx`는 이미 예전에(누가 했는지 불명, 아마 클로드 코드) 이메일 인증 필요/불필요 두 케이스를 다 올바르게 분기 처리하도록 짜여 있는 것 확인함(추가 코드 작업 불필요).

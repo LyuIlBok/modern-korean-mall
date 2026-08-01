@@ -41,3 +41,19 @@ export async function verifyAdmin(request: Request): Promise<AdminAuthResult | n
 
   return { userId: userData.user.id, email: profile.email ?? null };
 }
+
+/**
+ * [일반 로그인 사용자 인증 헬퍼]
+ * 관리자 권한은 요구하지 않고, 유효한 Supabase 세션(서명된 JWT)인지만 확인합니다.
+ * AI 상담 채팅처럼 "로그인한 회원이면 누구나" 호출해야 하는 API에 사용합니다.
+ */
+export async function verifyUser(request: Request): Promise<{ userId: string } | null> {
+  const authHeader = request.headers.get('authorization') ?? request.headers.get('Authorization');
+  const token = authHeader?.toLowerCase().startsWith('bearer ') ? authHeader.slice(7).trim() : null;
+  if (!token) return null;
+
+  const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
+  if (userError || !userData?.user) return null;
+
+  return { userId: userData.user.id };
+}
