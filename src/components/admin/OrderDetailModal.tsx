@@ -49,10 +49,20 @@ const STATUS_OPTIONS = [
   '취소됨'
 ];
 
+// 결제 웹훅이 시스템적으로만 설정하는 상태들. 관리자가 실수로 "정상 결제완료"로
+// 착각하고 다음 단계로 넘기지 않도록 별도로 경고 표시합니다.
+const NEEDS_REVIEW_STATUSES = ['입금대기', '결제실패', '금액불일치_확인필요'];
+
 export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDetailModalProps) {
   const [status, setStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
   const [isLoading, setIsLoading] = useState(false);
+  // STATUS_OPTIONS에 없는 상태(예: 금액불일치_확인필요)로 들어온 주문은, <select value>가
+  // 어떤 <option>과도 안 맞아서 화면엔 첫 번째 옵션("결제완료")이 정상 상태인 것처럼
+  // 보이던 버그가 있었습니다. 실제 현재 상태를 옵션 목록에 포함시켜 항상 정확히 보이게 합니다.
+  const selectOptions = STATUS_OPTIONS.includes(order.status)
+    ? STATUS_OPTIONS
+    : [order.status, ...STATUS_OPTIONS];
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -193,12 +203,17 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
               <section className="space-y-6 pt-6 border-t border-border-light">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-deep-sage">주문 상태 변경</label>
-                  <select 
+                  {NEEDS_REVIEW_STATUSES.includes(order.status) && (
+                    <p className="text-[13px] text-terracotta font-bold bg-terracotta/5 border border-terracotta/20 rounded-sm px-3 py-2">
+                      ⚠ 현재 상태가 &quot;{order.status}&quot;입니다 — 결제가 정상 확인되지 않은 주문일 수 있으니, 실제 입금/결제 여부를 먼저 확인한 뒤 상태를 변경해 주세요.
+                    </p>
+                  )}
+                  <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full bg-white border border-border-light p-4 rounded-sm text-sm focus:outline-none focus:border-deep-sage transition-all appearance-none cursor-pointer"
                   >
-                    {STATUS_OPTIONS.map(opt => (
+                    {selectOptions.map(opt => (
                       <option key={opt} value={opt}>{opt}</option>
                     ))}
                   </select>

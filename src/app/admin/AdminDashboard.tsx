@@ -829,6 +829,9 @@ export default function AdminDashboard() {
                 </div>
                 <select value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value)} className="bg-hanji-white/50 border border-border-light px-6 py-3 rounded-sm text-sm focus:outline-none">
                   <option value="전체">전체 상태</option>
+                  <option value="입금대기">입금대기</option>
+                  <option value="금액불일치_확인필요">금액불일치_확인필요</option>
+                  <option value="결제실패">결제실패</option>
                   <option value="결제완료">결제완료</option>
                   <option value="상품준비중">상품준비중</option>
                   <option value="배송중">배송중</option>

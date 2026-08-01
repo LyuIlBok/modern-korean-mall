@@ -42,7 +42,8 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('전체');
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-  
+  const [fetchError, setFetchError] = useState<string | null>(null);
+
   const router = useRouter();
 
   const fetchOrders = useCallback(async () => {
@@ -74,8 +75,12 @@ export default function AdminOrdersPage() {
 
       if (error) throw error;
       setOrders(data as Order[]);
+      setFetchError(null);
     } catch (error) {
+      // 조회 실패를 콘솔에만 찍으면 "주문이 0건"인 화면과 구분이 안 되니
+      // (실제로는 이런 조회 실패가 있었던 게 이번에 확인됨) 배너로 알림.
       console.error('Error fetching orders:', error);
+      setFetchError('주문 목록을 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     } finally {
       setLoading(false);
     }
@@ -118,7 +123,13 @@ export default function AdminOrdersPage() {
   return (
     <div className="min-h-screen bg-hanji-white font-sans p-8">
       <div className="max-w-7xl mx-auto space-y-8">
-        
+
+        {fetchError && (
+          <div className="bg-terracotta/5 border border-terracotta/20 text-terracotta text-sm font-medium rounded-sm px-6 py-4">
+            {fetchError}
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-sm shadow-sm border border-border-light">
           <div className="flex items-center gap-4">
@@ -154,6 +165,9 @@ export default function AdminOrdersPage() {
                 className="appearance-none bg-white border border-border-light pl-10 pr-10 py-2.5 rounded-sm text-sm focus:outline-none focus:border-deep-sage transition-all cursor-pointer min-w-[140px]"
               >
                 <option value="전체">전체 상태</option>
+                <option value="입금대기">입금대기</option>
+                <option value="금액불일치_확인필요">금액불일치_확인필요</option>
+                <option value="결제실패">결제실패</option>
                 <option value="결제완료">결제완료</option>
                 <option value="상품준비중">상품준비중</option>
                 <option value="배송중">배송중</option>
