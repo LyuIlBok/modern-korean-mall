@@ -134,3 +134,4 @@
 
 - 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. [claude-code]가 다음으로 실사용 테스트하며 목록화 예정.
 - `src/app/shop/[id]/AddToCartButton.tsx` — 죽은 코드(아무데서도 import 안 함), 삭제 권한 문제로 못 지움. 삭제해도 안전함.
+- [claude-code] 일복님 요청으로 카카오/네이버 로그인 제거, Google만 남김 — `login/page.tsx`에서 버튼/타입/미사용 import 정리. `src/app/api/auth/naver-profile/route.ts`(네이버 커스텀 OIDC용 프로필 변환 라우트)는 이제 프론트에서 안 부르니 죽은 코드가 됐지만 삭제 권한 문제로 안 지움. **[코웍한테]** Supabase 대시보드 Authentication > Providers에서 Kakao/Naver(custom OIDC) 프로바이더 자체도 비활성화해주시면 정리가 끝납니다(필수는 아니고, 프론트에서 이미 안 부르니 위험하지는 않음).

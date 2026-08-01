@@ -4,10 +4,9 @@ import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, Mail, Lock, Loader2, Chrome, MessageCircle, AlertCircle, User, Phone, Check, Send } from 'lucide-react';
+import { ArrowRight, Mail, Lock, Loader2, Chrome, AlertCircle, User, Phone, Check, Send } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import Image from 'next/image';
-import { Provider } from '@supabase/supabase-js';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
 
@@ -257,7 +256,7 @@ function LoginContent() {
     setPhone(formatted);
   };
 
-  const handleSocialLogin = async (e: React.MouseEvent, provider: 'google' | 'kakao' | 'naver') => {
+  const handleSocialLogin = async (e: React.MouseEvent, provider: 'google') => {
     e.preventDefault();
     if (socialLoading) return;
 
@@ -265,7 +264,7 @@ function LoginContent() {
 
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: (provider === 'naver' ? 'custom:naver' : provider) as Provider,
+        provider,
         options: {
           redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectedFrom || '/')}`,
           queryParams: {
@@ -411,35 +410,15 @@ function LoginContent() {
                 <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
-                <button 
-                  type="button"
-                  disabled={isAnyLoading}
-                  onClick={(e) => handleSocialLogin(e, 'google')}
-                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-                >
-                  {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
-                  Google
-                </button>
-                <button 
-                  type="button"
-                  disabled={isAnyLoading}
-                  onClick={(e) => handleSocialLogin(e, 'kakao')}
-                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#FEE500]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-                >
-                  {socialLoading === 'kakao' ? <Loader2 className="w-5 h-5 animate-spin text-[#3C1E1E]" /> : <MessageCircle className="w-5 h-5 text-[#3C1E1E] fill-[#FEE500]" />}
-                  Kakao
-                </button>
-                <button 
-                  type="button"
-                  disabled={isAnyLoading}
-                  onClick={(e) => handleSocialLogin(e, 'naver')}
-                  className="flex flex-col items-center justify-center gap-2 py-3 border border-border-light rounded-sm hover:bg-[#03C75A]/10 transition-all text-[10px] font-bold uppercase tracking-tighter disabled:opacity-50"
-                >
-                  {socialLoading === 'naver' ? <Loader2 className="w-5 h-5 animate-spin text-[#03C75A]" /> : <div className="w-5 h-5 bg-[#03C75A] rounded-full flex items-center justify-center text-white font-extrabold text-[10px]">N</div>}
-                  Naver
-                </button>
-              </div>
+              <button
+                type="button"
+                disabled={isAnyLoading}
+                onClick={(e) => handleSocialLogin(e, 'google')}
+                className="w-full flex items-center justify-center gap-3 py-3.5 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+              >
+                {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
+                Google로 계속하기
+              </button>
             </>
           ) : isFindId ? (
             <div className="space-y-6">
