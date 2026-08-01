@@ -23,6 +23,10 @@ interface UnifiedMember {
   word_app_tier: string | null;
   word_app_ai_generations: number | null;
   word_app_card_count: number;
+  word_app_graduated_count: number;
+  word_app_avg_stage: number | null;
+  word_app_due_today: number;
+  word_app_last_reviewed_at: string | null;
 }
 
 export default function UnifiedMembersPage() {
@@ -110,7 +114,18 @@ export default function UnifiedMembersPage() {
                   </td>
                   <td className="p-3">
                     {m.uses_word_app
-                      ? <span>{m.word_app_tier || '-'} · 카드 {m.word_app_card_count}개</span>
+                      ? (
+                        <div>
+                          <div>{m.word_app_tier || '-'} · 카드 {m.word_app_card_count}개 · 졸업 {m.word_app_graduated_count}개</div>
+                          {m.word_app_card_count > 0 && (
+                            <div className="text-xs text-muted mt-0.5">
+                              평균 단계 {m.word_app_avg_stage ?? '-'}
+                              {m.word_app_due_today > 0 && <span className="ml-1 text-terracotta">· 복습 대기 {m.word_app_due_today}개</span>}
+                              {m.word_app_last_reviewed_at && <span className="ml-1">· 최근 복습 {new Date(m.word_app_last_reviewed_at).toLocaleDateString()}</span>}
+                            </div>
+                          )}
+                        </div>
+                      )
                       : <span className="text-muted">미이용</span>}
                   </td>
                 </tr>
