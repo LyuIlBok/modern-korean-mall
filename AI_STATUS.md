@@ -82,6 +82,10 @@
 
   실제 악용하려면 JS 조작/API 직접 호출 능력이 필요해서 오늘 고친 것들(로그인 없이 URL만 알면 되던 것)보다는 문턱이 높지만, 성공하면 실질적인 금전 손실로 이어지는 결제 시스템 설계 이슈라 스키마/RPC 변경이 필요한 코웍 영역으로 판단해 제가 직접 손대지 않았습니다. (참고로 재고 예약/차감 자체는 `order_items`의 실제 quantity 기준이라 오버셀 문제는 아니고, 순수하게 "적게 내고 정상가 상품을 받는" 가격 위조 문제입니다.)
 
+**[claude-code → cowork] [중요] `reviews` 테이블이 0건이었던 이유를 찾음 — 리뷰 작성이 두 경로 모두 항상 실패하고 있었음** — 상품 상세 페이지(`ProductTabs.tsx`)와 마이페이지(`mypage/page.tsx`) 두 군데 리뷰 작성 폼이 전부 `reviews` 테이블에 없는 컬럼 `image_url`로 insert하고 있었음(실제 컬럼명은 `photo_url`). 사진을 첨부하든 안 하든 insert 자체가 스키마 에러로 거부되니, 이 사이트가 생긴 이후 리뷰가 단 하나도 정상 등록된 적이 없었던 것으로 보입니다. 컬럼명 불일치는 제가 코드에서 안전하게 고쳤습니다(`photo_url`로 통일). 그런데 고치면서 하나 더 발견했는데:
+  - `mypage/page.tsx`도 스토리지 버킷명이 틀려있었음(`'reviews'`라는 버킷은 존재하지 않고 실제로는 `'review-images'`) — 이것도 같이 고침.
+  - **[코웍한테 넘기는 부분]** `storage.objects`의 RLS 정책을 전부 조회해보니 `product-images` 버킷에 대한 정책 4개(Admin Upload/Update/Delete + service_role Write)만 있고, `review-images`/`shop_assets` 버킷에는 INSERT든 뭐든 정책이 **하나도 없습니다.** RLS가 기본적으로 전체 거부라서, 지금 상태로는 컬럼명을 고쳐도 "사진 첨부된 리뷰"는 여전히 스토리지 업로드 단계에서 RLS로 막혀 실패합니다(사진 없는 리뷰는 이제 정상 작동할 것). 로그인한 본인 소유 리뷰 이미지 업로드를 허용하는 정책(예: `bucket_id = 'review-images' AND auth.uid() IS NOT NULL`, 필요하면 파일 경로에 `auth.uid()` 포함시켜 본인 파일만 지우게)이 필요합니다 — 스토리지 정책 추가라 제가 직접 하지 않았습니다.
+
 ## 대기 / 확인 필요 (사용자 결정 대기)
 
 - ~~[중요/보안] 결제 위조 가능 취약점~~ — **[claude-code] 2026-08-01 일복님 승인받아 Supabase MCP로 적용 완료.** `process_payment_webhook`/`restore_stock_for_order`에서 anon/authenticated EXECUTE 회수, `product-images` 스토리지 정책을 `is_admin()` 전용으로 교체, `Public Access` list 정책 제거, `handle_new_agri_user` search_path 고정. 적용 전 두 RPC가 코드베이스 전체에서 `supabaseAdmin.rpc(...)`(서버 전용)로만 호출되는 것을 grep으로 확인해서 회귀 없음 확인. `get_advisors`로 재확인 결과 두 함수 모두 더 이상 anon/authenticated 경고에 안 뜸.
@@ -123,6 +127,8 @@
 - [claude-code] **[중요] 장바구니 페이지(`/cart`)에서 옵션 있는 상품은 수량 변경/삭제 버튼이 아예 안 먹던 버그 수정** — `updateQuantity(item.id, ...)`/`removeItem(item.id)`를 `optionName` 인자 없이 호출하고 있어서, 스토어 내부 매칭 조건(`item.id === id && item.optionName === optionName`)이 `optionName=undefined`로 비교되는 바람에 실제 옵션명이 있는 아이템은 절대 매칭이 안 됐음(버튼 눌러도 아무 반응 없음). 사이드바 장바구니(`CartItem.tsx`)는 이미 올바르게 `item.optionName`을 넘기고 있어서 그 패턴을 그대로 적용. 같은 상품의 다른 옵션 두 개를 담았을 때 React `key`가 겹치던 것(`key={item.id}` → `key={`${item.id}-${item.optionName}`}`)과, 옵션명이 화면에 아예 안 보이던 것(뱃지로 표시 추가)도 같이 수정. 서리태 1kg/10kg처럼 옵션 있는 상품이 여러 개 있는 이 사이트에서 실사용에 바로 영향 있던 버그.
 
 - [claude-code] **재입고 알림 기능이 실제로는 아무데도 연결 안 돼 있고, 연결됐어도 깨져 있던 것 발견/수정** — `src/app/shop/[id]/AddToCartButton.tsx`(`PurchaseButtons`)라는 컴포넌트에 재입고 알림 신청 모달이 있었는데, 이 컴포넌트를 import하는 곳이 프로젝트 전체에 단 한 곳도 없어서(죽은 코드) 실제 상품 페이지(`ProductDetailClient.tsx`)에서는 품절 시 그냥 비활성화된 버튼만 보였음. 게다가 그 죽은 코드의 insert 자체도 `restock_alerts`에 없는 컬럼(`phone_number`, `status`)을 쓰고 있어서 어차피 실행됐어도 실패했을 것. 실제 스키마(`product_id`, `user_id`만 존재, RLS도 로그인 사용자 전용)에 맞춰 `ProductDetailClient.tsx`에 진짜 동작하는 재입고 알림 버튼을 새로 추가(로그인 안 했으면 로그인 페이지로, 이미 신청했으면 "신청 완료" 표시, `(product_id, user_id)` unique 제약 위반은 정상 처리로 처리). `AddToCartButton.tsx`는 삭제하려 했으나 자동모드 정책이 파일 삭제 명령을 막아서 못 지웠음 — 안 쓰는 파일이라 실행에 영향은 없지만, 나중에 코웍이나 일복님이 직접 지워주시거나 삭제를 승인해주시면 좋겠습니다.
+
+- [claude-code] **리뷰 작성 컬럼명 불일치 수정** — `ProductTabs.tsx`(상품 상세 페이지 리뷰탭), `mypage/page.tsx`(주문내역 리뷰쓰기 모달) 둘 다 `reviews.image_url`(존재하지 않음, 실제로는 `photo_url`)로 insert하고 있어서 리뷰 등록이 항상 실패하던 것 수정. `mypage/page.tsx`는 스토리지 버킷명도 틀려있어서(`'reviews'`→`'review-images'`) 같이 수정. 사진 첨부 리뷰는 스토리지 RLS 정책이 아예 없어서 이 수정만으로는 아직 실패함(위 상호 검토 섹션에 코웍 앞으로 리포트).
 
 ## 알려진 이슈 (아직 미배정)
 

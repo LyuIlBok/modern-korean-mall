@@ -15,7 +15,7 @@ interface Review {
   user_name: string;
   rating: number;
   content: string;
-  image_url: string | null;
+  photo_url: string | null;
   created_at: string;
 }
 
@@ -118,7 +118,7 @@ export default function ProductTabs({ product }: { product: Product }) {
       reviews.filter(r => r.rating === s).length
     );
 
-    const photos = reviews.filter(r => r.image_url).map(r => r.image_url as string).slice(0, 8);
+    const photos = reviews.filter(r => r.photo_url).map(r => r.photo_url as string).slice(0, 8);
     
     return { avg, counts, total, photos };
   }, [reviews]);
@@ -158,7 +158,7 @@ export default function ProductTabs({ product }: { product: Product }) {
           user_name: user.user_metadata?.full_name || user.email?.split('@')[0] || '익명', 
           rating, 
           content: reviewText, 
-          image_url: imageUrl
+          photo_url: imageUrl
         }]);
       }
       fetchReviews();
@@ -382,9 +382,9 @@ export default function ProductTabs({ product }: { product: Product }) {
                       </div>
                     </div>
                     <div className="flex flex-col md:flex-row gap-8">
-                      {rev.image_url && (
+                      {rev.photo_url && (
                         <div className="relative w-full md:w-48 aspect-square md:aspect-[4/5] bg-hanji-white rounded-sm overflow-hidden border border-border-light flex-shrink-0 cursor-zoom-in">
-                          <Image src={rev.image_url} alt="Review" fill className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                          <Image src={rev.photo_url} alt="Review" fill className="object-cover transition-transform duration-700 group-hover:scale-110" />
                         </div>
                       )}
                       <div className="flex-1 space-y-4">

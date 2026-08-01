@@ -211,13 +211,13 @@ function MyPageContent() {
         const filePath = `review-images/${fileName}`;
 
         const { error: uploadError } = await supabase.storage
-          .from('reviews')
+          .from('review-images')
           .upload(filePath, reviewImage);
 
         if (uploadError) throw uploadError;
 
         const { data: { publicUrl } } = supabase.storage
-          .from('reviews')
+          .from('review-images')
           .getPublicUrl(filePath);
         
         imageUrl = publicUrl;
@@ -229,7 +229,7 @@ function MyPageContent() {
         user_name: profile.full_name || '회원',
         rating: reviewData.rating,
         content: reviewData.content,
-        image_url: imageUrl,
+        photo_url: imageUrl,
         is_verified: true
       });
 
