@@ -36,6 +36,7 @@ export default function ChatWidget() {
   const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [aiThinking, setAiThinking] = useState(false);
+  const [chatError, setChatError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -171,6 +172,7 @@ export default function ChatWidget() {
     setInput('');
     setLoading(true);
     setAiThinking(true);
+    setChatError(null);
 
     // Optimistic UI update
     const optimisticMsg: ChatMessage = {
@@ -208,12 +210,14 @@ export default function ChatWidget() {
         }
         // 그 외(AI 응답 생성 실패 등)는 사용자 메시지 자체는 이미 저장됐으므로
         // 낙관적 말풍선을 그대로 두고, 실시간 구독이 실제 행으로 교체하게 둡니다.
-        alert(result.error || 'AI 상담원 응답에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        // alert()는 전체 화면을 막아버려서(자동화 테스트 중 탭이 응답 없음 상태가 되는 것도
+        // 확인함) 채팅 안에서만 조용히 보이는 문구로 대체합니다.
+        setChatError(result.error || 'AI 상담원 응답에 실패했습니다. 잠시 후 다시 시도해 주세요.');
       }
     } catch (err) {
       console.error('Send error:', err);
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      alert('메시지 전송에 실패했습니다. 인터넷 연결을 확인해 주세요.');
+      setChatError('메시지 전송에 실패했습니다. 인터넷 연결을 확인해 주세요.');
     } finally {
       setLoading(false);
       setAiThinking(false);
@@ -332,6 +336,15 @@ export default function ChatWidget() {
                 </div>
               )}
             </div>
+
+            {chatError && (
+              <div className="px-5 py-3 bg-terracotta/5 border-t border-terracotta/10 flex items-start gap-2">
+                <p className="text-[13px] text-terracotta leading-relaxed flex-1">{chatError}</p>
+                <button onClick={() => setChatError(null)} className="text-terracotta/60 hover:text-terracotta p-0.5" aria-label="오류 메시지 닫기">
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
             {/* Input Area */}
             <form onSubmit={handleSend} className="p-5 bg-white border-t border-border-light flex gap-3 items-center">
