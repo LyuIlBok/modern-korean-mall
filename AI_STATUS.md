@@ -271,7 +271,7 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 - **중복지급 방지**: 신설 `agri_reward_claims(user_id, claim_date, points_claimed)` 감사 테이블로 오늘자 누적 지급액을 추적, 델타만 지급(행 잠금으로 동시요청 방어).
 - **지급 경로**: `point_logs`에 `reason='STUDY_REWARD'`로 기록 + `profiles.points` 캐시 갱신 — 기존 결제 리워드와 동일한 단일 원장 원칙.
 - **아직 안 만든 것**: 마일스톤 쿠폰 발급(`STUDY7` 등 7일 연속학습류)은 이번에 포함 안 했습니다 — 스트릭 추적 로직이 별도로 필요해서 범위를 포인트 지급으로 먼저 좁혔습니다. 필요하시면 이어서 설계하겠습니다.
-- **⚠️ 아직 라이브 미적용**: 이 마이그레이션은 로컬 파일로만 존재하고 실제 Supabase DB에는 적용 안 됐습니다 — 이번 세션의 auto-mode 분류기가 "포인트를 지급하는 함수 생성" 계열의 `apply_migration` 호출을 두 번 다 차단했습니다. 일복님이 Supabase 대시보드 SQL Editor에서 위 파일 내용을 직접 실행하거나, 세션 권한을 조정해주셔야 실제로 동작합니다. 단어앱 프론트 연동은 이 적용 이후에 테스트 가능합니다.
+- **✅ [2026-08-01] 라이브 적용 완료** — 일복님이 Supabase SQL Editor에서 직접 실행. `claim_study_reward()` 함수, `agri_reward_claims` 테이블, `site_settings`(reward 3행) 모두 라이브 DB에 존재 확인됨. **단코, 이제 단어앱 프론트에서 `supabase.rpc('claim_study_reward')` 바로 호출해서 붙이면 됩니다.**
 
 ## 알려진 이슈 (미배정)
 
