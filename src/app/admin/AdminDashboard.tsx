@@ -168,6 +168,8 @@ export default function AdminDashboard() {
 
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('전체');
+  const [orderSearchTerm, setOrderSearchTerm] = useState('');
+  const [orderStatusFilter, setOrderStatusFilter] = useState('전체');
 
   const [selectedOrder, setSelectedOrder] = useState<AdminOrder | null>(null);
 
@@ -299,6 +301,18 @@ export default function AdminDashboard() {
       return matchesSearch && matchesCategory;
     });
   }, [products, searchTerm, categoryFilter]);
+
+  const filteredOrders = useMemo(() => {
+    const q = orderSearchTerm.trim().toLowerCase();
+    return orders.filter(o => {
+      const matchesSearch = !q
+        || o.customer_name?.toLowerCase().includes(q)
+        || o.customer_phone?.includes(q)
+        || o.id.toLowerCase().includes(q);
+      const matchesStatus = orderStatusFilter === '전체' || o.status === orderStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [orders, orderSearchTerm, orderStatusFilter]);
 
   const handleDeleteProduct = async (product: AdminProduct) => {
     if (!confirm(`'${product.name}' 상품을 비활성화(숨김) 하시겠습니까? 주문 내역 유지를 위해 데이터는 삭제되지 않습니다.`)) return;
@@ -779,15 +793,34 @@ export default function AdminDashboard() {
             <motion.div key="orders" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-10">
               <div className="space-y-4">
                 <h1 className="font-serif text-4xl">{t?.admin?.navOrders || '주문 관리'}</h1>
-                <p className="text-muted text-sm font-light">전체 주문 {orders.length}건을 관리합니다.</p>
+                <p className="text-muted text-sm font-light">전체 주문 {orders.length}건 중 {filteredOrders.length}건 표시.</p>
               </div>
+
+              <div className="bg-white p-6 rounded-sm border border-border-light shadow-sm flex flex-col md:flex-row gap-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
+                  <input type="text" placeholder="고객명, 연락처, 주문 ID 검색..." value={orderSearchTerm} onChange={(e) => setOrderSearchTerm(e.target.value)} className="w-full bg-hanji-white/50 border border-border-light pl-12 pr-4 py-3 rounded-sm text-sm focus:outline-none focus:border-deep-sage" />
+                </div>
+                <select value={orderStatusFilter} onChange={(e) => setOrderStatusFilter(e.target.value)} className="bg-hanji-white/50 border border-border-light px-6 py-3 rounded-sm text-sm focus:outline-none">
+                  <option value="전체">전체 상태</option>
+                  <option value="결제완료">결제완료</option>
+                  <option value="상품준비중">상품준비중</option>
+                  <option value="배송중">배송중</option>
+                  <option value="배송완료">배송완료</option>
+                  <option value="취소됨">취소됨</option>
+                </select>
+              </div>
+
               <div className="bg-white border border-border-light rounded-sm overflow-hidden shadow-sm">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-hanji-white text-[10px] uppercase tracking-[0.2em] text-muted border-b border-border-light">
                     <tr><th className="px-8 py-6">주문 일시 / ID</th><th className="px-8 py-6">상품 정보</th><th className="px-8 py-6">결제 수단</th><th className="px-8 py-6 text-right">총 금액</th><th className="px-8 py-6 text-center">상태</th><th className="px-8 py-6 text-center">관리</th></tr>
                   </thead>
                   <tbody className="divide-y divide-border-light">
-                    {orders.map((o) => (
+                    {filteredOrders.length === 0 && (
+                      <tr><td colSpan={6} className="px-8 py-16 text-center text-muted text-sm">조건에 맞는 주문이 없습니다.</td></tr>
+                    )}
+                    {filteredOrders.map((o) => (
                       <tr key={o.id} className="hover:bg-hanji-white/30 transition-colors">
                         <td className="px-8 py-6"><div className="space-y-1"><p className="text-sm text-charcoal">{new Date(o.created_at).toLocaleString()}</p><p className="text-[10px] text-muted font-mono">{o.id.slice(0,8).toUpperCase()}</p></div></td>
                         <td className="px-8 py-6"><div className="space-y-1">{o.order_items?.map((item, idx) => (<p key={idx} className="text-xs text-charcoal">· {item.products?.name} ({item.quantity}개)</p>))}</div></td>

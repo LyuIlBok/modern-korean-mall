@@ -17,17 +17,9 @@
 - 반대로 **특정 화면 안에서 끝나는 UI/UX 작업**(관리자 화면 신설, 스타일링, 컴포넌트 구조)은 Claude-Code가 자율적으로 설계·진행하고, 완료 후 이 파일에 요약만 남기면 됩니다.
 - 의견 충돌 시 최종 결정은 Cowork-Claude가 하되, 근거를 이 파일이나 Slack에 남깁니다. 일복님이 언제든 뒤집을 수 있습니다.
 
-## 실시간 공유 채널 (Slack)
+## 실시간 공유 채널 (Slack) — 중단됨
 
-일복님이 진행상황을 실시간으로 보고 싶어하셔서 Slack 채널을 만들었습니다.
-
-- 채널: `#natural-texture-mall-dev` (channel_id: `C0BMDRTC1FE`)
-- 캔버스(요약 보드): https://boksfarm.slack.com/docs/T0BN13KNPU0/F0BMA5FGAHG
-- **코드 기준 원본은 항상 이 파일(`AI_STATUS.md`)입니다.** Slack은 사람이 보기 편한 요약/알림용.
-- Claude-Code가 Slack MCP에 연결돼 있다면 위 channel_id로 직접 메시지를 남겨도 됩니다. 연결이 안 되어 있으면 이 파일 갱신만으로 충분합니다 (일복님이 Slack에서 대신 확인하심).
-- [claude-code] Slack MCP 연결 확인, 채널에 합류 인사 + 오늘 완료분/백로그 공유 완료.
-- **메시지 태그 규칙**: 이 채널의 모든 메시지는 실제로는 일복님 본인 Slack 계정으로 전송됩니다 (개인 계정 연동이라 발신자를 봇으로 바꿀 수 없음). 누가 쓴 건지 구분하기 위해 메시지 맨 앞에 반드시 태그를 붙입니다: 코웍은 `🔧 코웍:`, 클로드 코드는 `🎨 클코:`.
-- 코웍은 이 채널을 3분마다 자동으로 확인하는 예약 작업(`slack-mall-command-check`)이 있습니다. 일복님이 여기 지시/승인을 남기면 몇 분 내로 확인 후 처리합니다 (Cowork 앱이 켜져 있어야 동작).
+**[일복님 결정, 2026-08-01] Slack을 통한 AI 간 실시간 소통/3분 폴링은 중단합니다.** 토큰 소모만 크고 실익이 적다는 판단. 코웍의 `slack-mall-command-check` 예약 작업은 삭제(확인 결과 이미 없음). 이제부터 두 AI 간 조율은 전적으로 이 파일(`AI_STATUS.md`) + git 커밋 로그로만 합니다. Slack 채널(`#natural-texture-mall-dev`)은 일복님이 필요할 때 직접 보는 용도로만 남겨두고, AI가 먼저 메시지를 보내지 않습니다.
 
 ## 협업 규칙
 
@@ -65,7 +57,7 @@
 1. ~~QnA 관리자 답변 UI 신설~~ — 완료 (아래 "최근 완료" 참고)
 2. ~~쿠폰 발급/관리 admin 화면 + mypage "내 쿠폰함"~~ — 완료 (아래 "최근 완료" 참고)
 3. ~~리뷰 모더레이션(관리자 삭제) UI~~ — 완료 (아래 "최근 완료" 참고)
-4. "관리자/주문 관리 화면 이슈 많다" — 실사용 테스트로 구체 목록화 예정.
+4. "관리자/주문 관리 화면 이슈 많다" — 로그인 세션이 없어 실사용 테스트 대신 코드 정적 감사로 진행 중. 1차로 주문 관리 탭에 검색/필터 부재 발견 → 수정 완료 (아래 "최근 완료" 참고). 계속 점검 예정.
 
 주로 `src/app/admin/*`, `src/components/*` 쪽이라 Cowork-Claude의 백엔드 작업과 파일이 거의 겹치지 않습니다.
 
@@ -108,6 +100,8 @@
 
 - [cowork] **쿠폰 퍼센트 할인 NaN 버그 발견/수정** — QnA/쿠폰/리뷰 관리자 화면 정적 리뷰 중 발견. `AdminDashboard.tsx`의 쿠폰 생성 폼은 `discount_type`이 `percent`든 `fixed`든 항상 `discount_amount` 컬럼 하나에만 값을 저장하는데(`discount_value` 컬럼은 애초에 쓰지 않음), `src/app/api/coupons/verify/route.ts`의 percent 분기는 `coupon.discount_value`를 읽고 있어서 실제 체크아웃에서 퍼센트 쿠폰을 적용하면 `discount_amount: NaN`이 반환되던 버그였습니다(정액 쿠폰은 우연히 정상 동작). `discount_amount`를 읽도록 통일하고, 할인액이 음수/NaN/주문금액 초과가 되지 않도록 방어 로직도 추가. `npx tsc --noEmit` 통과 확인.
 - [cowork] **QnA 답변/삭제, 리뷰 삭제를 서버 API로 통일** — 클로드 코드 로그(위 "최근 완료")에 `qna`/`reviews` 테이블에 이미 `is_admin()` 기반 RLS가 있다고 확인해주신 것 봤습니다(라이브 DB에는 있으나 마이그레이션 파일로는 기록 안 됨). 취약점은 아니지만, 클라이언트가 `supabase.from(...).update/delete`를 직접 호출하는 방식은 (1) 마이그레이션에 없는 RLS에만 의존해 추적이 안 되고 (2) 방금 정리한 나머지 관리자 API들(`verifyAdmin` + service_role) 패턴과 어긋나서, 일관성/감사 로그 차원에서 `src/app/api/admin/qna/route.ts`(PATCH/DELETE), `src/app/api/admin/reviews/route.ts`(DELETE) 신설 후 `AdminDashboard.tsx`의 `handleAnswerQna`/`handleDeleteQna`/`handleDeleteReview`를 `adminFetch`로 전환. 기존 RLS 정책은 손대지 않아서 회귀 위험 없음. `npx tsc --noEmit` 통과 확인.
+
+- [claude-code] 주문 관리 탭에 검색/필터가 전혀 없던 것 발견/수정 — 상품 관리 탭엔 검색+카테고리 필터가 있는데 주문 탭엔 없어서, 주문이 쌓일수록(현재 39건+) 특정 고객/상태를 찾기 어려운 실제 불편함이었음. 고객명·연락처·주문ID 검색 + 상태 필터 추가 (`filteredOrders`, 클라이언트 사이드, DB 변경 없음).
 
 ## 알려진 이슈 (아직 미배정)
 
