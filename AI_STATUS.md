@@ -86,6 +86,19 @@
   - `mypage/page.tsx`도 스토리지 버킷명이 틀려있었음(`'reviews'`라는 버킷은 존재하지 않고 실제로는 `'review-images'`) — 이것도 같이 고침.
   - **[코웍한테 넘기는 부분]** `storage.objects`의 RLS 정책을 전부 조회해보니 `product-images` 버킷에 대한 정책 4개(Admin Upload/Update/Delete + service_role Write)만 있고, `review-images`/`shop_assets` 버킷에는 INSERT든 뭐든 정책이 **하나도 없습니다.** RLS가 기본적으로 전체 거부라서, 지금 상태로는 컬럼명을 고쳐도 "사진 첨부된 리뷰"는 여전히 스토리지 업로드 단계에서 RLS로 막혀 실패합니다(사진 없는 리뷰는 이제 정상 작동할 것). 로그인한 본인 소유 리뷰 이미지 업로드를 허용하는 정책(예: `bucket_id = 'review-images' AND auth.uid() IS NOT NULL`, 필요하면 파일 경로에 `auth.uid()` 포함시켜 본인 파일만 지우게)이 필요합니다 — 스토리지 정책 추가라 제가 직접 하지 않았습니다.
 
+**[claude-code → cowork] [신규 기능 요청, 일복님 지시] 회원가입 시 휴대폰 SMS 실인증 추가** — 지금은 휴대폰 번호를 형식 검증만 하고 저장할 뿐, 실제로 본인 소유인지 확인하지 않습니다. 일복님이 실제 SMS 인증번호 발송 방식으로 강화를 원하십니다(비용 발생 감수하겠다고 확인함, 카카오 알림톡 인증도 검토했으나 업체 계약·템플릿 사전승인 등 SMS보다 셋업이 더 걸려서 SMS로 결정).
+
+이 작업은 코웍 영역(백엔드/DB/외부 서비스 연동)으로 판단해 제가 직접 구현하지 않았습니다 — 이유:
+  - Supabase Auth의 Phone 프로바이더를 쓰든 커스텀으로 만들든, **실제 SMS 발송은 유료 외부 업체 계정이 필요**합니다(국내: NHN Cloud SMS, Coolsms, 알리고, Solapi 등). 업체 선정·가입·API 키 발급은 일복님/코웍이 결정하셔야 하는 부분이라 제가 대신 할 수 없습니다.
+  - 인증번호 생성/저장/만료/재시도 제한(rate limit) 로직은 새 테이블 또는 Supabase Auth 설정이 필요해서 스키마 변경이 동반됩니다.
+
+**필요한 결정 사항:**
+  1. SMS 발송 업체 선택 (또는 Supabase 자체 Phone Auth 프로바이더로 Twilio 등 국제 업체 연동할지, 국내 업체로 커스텀 API 라우트를 만들지)
+  2. 업체 계정 생성 + API 키 발급 (일복님이 직접 가입해야 하는 부분)
+  3. 인증 방식: 회원가입 폼에서 "인증번호 받기" 버튼 → 6자리 코드 입력 → 확인 후 가입 완료, 형태로 진행할지
+
+API 키만 발급되면 저(클로드 코드)가 회원가입 폼에 "인증번호 받기/확인" UI를 붙이는 프론트 작업은 할 수 있습니다. 백엔드(발송 API 라우트, 인증코드 저장 테이블/만료 로직)는 코웍이 설계해주시면 좋겠습니다.
+
 ## 대기 / 확인 필요 (사용자 결정 대기)
 
 - ~~[중요/보안] 결제 위조 가능 취약점~~ — **[claude-code] 2026-08-01 일복님 승인받아 Supabase MCP로 적용 완료.** `process_payment_webhook`/`restore_stock_for_order`에서 anon/authenticated EXECUTE 회수, `product-images` 스토리지 정책을 `is_admin()` 전용으로 교체, `Public Access` list 정책 제거, `handle_new_agri_user` search_path 고정. 적용 전 두 RPC가 코드베이스 전체에서 `supabaseAdmin.rpc(...)`(서버 전용)로만 호출되는 것을 grep으로 확인해서 회귀 없음 확인. `get_advisors`로 재확인 결과 두 함수 모두 더 이상 anon/authenticated 경고에 안 뜸.
