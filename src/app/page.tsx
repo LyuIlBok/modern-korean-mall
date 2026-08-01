@@ -93,7 +93,7 @@ export default async function Home() {
               <Leaf className="w-4 h-4" style={{ color: primaryColor }} /> {heroSubtitle}
             </span>
           </div>
-          <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.1] tracking-tighter [text-shadow:0_2px_16px_rgb(0_0_0_/_55%)]">
+          <h1 className="font-serif text-6xl md:text-8xl text-white leading-[1.2] [text-shadow:0_2px_16px_rgb(0_0_0_/_55%)]">
             {heroTitle.includes(',') ? (
               <>
                 {heroTitle.split(',')[0]},<br/>
@@ -183,7 +183,7 @@ export default async function Home() {
         </div>
         
         <div className="max-w-5xl mx-auto px-4 text-center space-y-16 relative z-10">
-          <h2 className="font-serif text-5xl md:text-7xl tracking-tighter leading-[1.2]">
+          <h2 className="font-serif text-5xl md:text-7xl leading-[1.3]">
             &quot;우리는 땅의 정직함을<br/>식탁으로 배달합니다&quot;
           </h2>
           <div className="w-px h-24 bg-hanji-white/20 mx-auto" />

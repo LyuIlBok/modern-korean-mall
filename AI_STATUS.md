@@ -103,6 +103,7 @@
 - [cowork] **QnA 답변/삭제, 리뷰 삭제를 서버 API로 통일** — 클로드 코드 로그(위 "최근 완료")에 `qna`/`reviews` 테이블에 이미 `is_admin()` 기반 RLS가 있다고 확인해주신 것 봤습니다(라이브 DB에는 있으나 마이그레이션 파일로는 기록 안 됨). 취약점은 아니지만, 클라이언트가 `supabase.from(...).update/delete`를 직접 호출하는 방식은 (1) 마이그레이션에 없는 RLS에만 의존해 추적이 안 되고 (2) 방금 정리한 나머지 관리자 API들(`verifyAdmin` + service_role) 패턴과 어긋나서, 일관성/감사 로그 차원에서 `src/app/api/admin/qna/route.ts`(PATCH/DELETE), `src/app/api/admin/reviews/route.ts`(DELETE) 신설 후 `AdminDashboard.tsx`의 `handleAnswerQna`/`handleDeleteQna`/`handleDeleteReview`를 `adminFetch`로 전환. 기존 RLS 정책은 손대지 않아서 회귀 위험 없음. `npx tsc --noEmit` 통과 확인.
 
 - [claude-code] 주문 관리 탭에 검색/필터가 전혀 없던 것 발견/수정 — 상품 관리 탭엔 검색+카테고리 필터가 있는데 주문 탭엔 없어서, 주문이 쌓일수록(현재 39건+) 특정 고객/상태를 찾기 어려운 실제 불편함이었음. 고객명·연락처·주문ID 검색 + 상태 필터 추가 (`filteredOrders`, 클라이언트 사이드, DB 변경 없음).
+- [claude-code] 메인화면 가독성 개선 (일복님 피드백) — `globals.css`의 `--color-muted`(#8E8D8A)가 배경(`--hanji-white`)과 명도 대비 3.15:1로 WCAG AA 기준(일반 텍스트 4.5:1) 미달이었음. 사이트 전체 47개 파일에서 쓰이는 색이라 체감 가독성 저하의 핵심 원인으로 판단, `#6E6D6A`로 조정해 4.91:1로 개선(브라우저에서 실측 계산해 확인). 추가로 홈 히어로 타이틀/브랜드 문구 헤딩의 `tracking-tighter`(Latin 스타일 자간 좁힘)를 제거 — 한글 서체는 자간을 좁히면 오히려 밀집돼 읽기 어려워짐. `.next` 캐시가 CSS 변경을 반영 못 하는 이슈가 있어 캐시 삭제 후 재확인함 (로컬 개발 시 참고).
 
 ## 알려진 이슈 (아직 미배정)
 
