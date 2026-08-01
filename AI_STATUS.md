@@ -9,6 +9,34 @@
 
 **[2026-08-01] 런칭 전 정리 체크리스트(더미값/임시설정) Notion DB 신설**: https://app.notion.com/p/842d1c51ccba4e2d894e78f220cec874 — `CONTACT_EMAIL`/`CONTACT_PHONE`/PortOne 테스트 채널키/Resend 더미키/사이트 도메인/Supabase 대시보드 설정 등 "정식 오픈 전에 실제 값으로 바꿔야 하는 것들"을 코드 전수조사해서 항목화해둠. **새로 발견하는 더미값/TODO는 AI_STATUS.md에 길게 쓰지 말고 이 DB에 행 추가**해주세요 — 그래야 나중에 한 번에 훑어서 처리 가능합니다.
 
+## 🚀 [cowork] 다음 고도화 로드맵 4개 트랙 (2026-08-01, 일복님 지시)
+
+일복님이 4개 트랙 전부 진행 결정. 백엔드부터 만들 수 있는 두 트랙은 이번에 바로 구현·검증·커밋까지 끝냈고, 나머지 둘은 설계만 정리했습니다.
+
+**1) 개인화 추천 — 백엔드 완료, 프론트 연동 필요**
+- `product_views` 테이블(로그인 사용자의 상품 조회 기록, `(user_id, product_id)` unique로 재조회 시 upsert) + RLS
+- `GET/POST /api/products/recently-viewed` — 조회 기록/최근 본 상품 목록
+- `get_frequently_bought_together(product_id)` SQL RPC + `GET /api/products/[id]/frequently-bought-together` — 같은 결제완료류 주문에 함께 담긴 상품 빈도순 집계(별도 추천 테이블/알고리즘 없이 `order_items`만으로 계산)
+- **클코 몫**: 상품상세 페이지 진입 시 `POST recently-viewed` 호출 + "최근 본 상품"/"함께 구매한 상품" 섹션 UI
+
+**2) 관리자 분석 고도화 — 백엔드 완료, 프론트 연동 필요**
+- `get_admin_analytics_summary(days)` SQL RPC — 카테고리별 매출, 고객 세그먼트(신규/재구매/휴면), 재구매율을 한 번에 반환. `is_admin()` 이중 체크(RPC 자체 + API 라우트)
+- `GET /api/admin/analytics?days=90`
+- 만들면서 기존 `/api/admin/stats`가 `배송준비중` 상태(이미 결제된 주문)를 매출 집계에서 빠뜨리고 있던 것도 발견해서 같이 수정(`결제완료`,`배송완료`만 보고 있었음)
+- **클코 몫**: `/admin/analytics` 화면 신설, 차트/표로 시각화
+
+**3) 마케팅 자동화(장바구니 이탈 리마인드) — 설계 중 선행 문제 발견, 구현 보류**
+- `cart_items` 테이블을 실제 서버 장바구니로 쓰려고 봤더니, 현재는 **로그인 시 1회성으로만 동기화**되고(`login/page.tsx`의 `syncGuestData`) 이후 장바구니 추가/삭제나 결제 완료 시 전혀 갱신·삭제가 안 됩니다. 즉 이 테이블 기준으로 "이탈한 장바구니"를 찾으면 이미 결제 완료해서 실제로는 안 남아있어야 할 옛날 장바구니까지 리마인드 메일 대상에 잡히는 오탐 문제가 있습니다.
+- 이 기능을 제대로 만들려면 먼저 **장바구니 추가/삭제/결제완료 시점마다 `cart_items`를 실시간으로 갱신하는 프론트 작업**(클코 영역, `useCartStore`의 각 액션에 서버 동기화 추가)이 선행돼야 합니다. 그 전까지는 데이터가 신뢰할 수 없어서 리마인드 발송 로직을 만들지 않았습니다.
+- 갱신 로직이 붙으면: 24시간 이상 미결제 상태인 `cart_items` 보유 사용자 → Resend로 리마인드 메일 → 중복 발송 방지용 `cart_abandonment_reminders(user_id, last_sent_at)` 테이블 → Vercel Cron(`vercel.json`)으로 매일 1회 실행. 코드는 다음 세션에 바로 만들 수 있게 설계만 완료.
+
+**4) AI 챗봇 Phase 2(대화로 실주문) — 설계만, 구현 안 함**
+- 현재 챗봇은 완전 읽기 전용입니다(상품/본인 주문 조회만, function-calling 자체가 없음, 시스템 프롬프트가 "실제 처리 필요한 요청은 안내만 하고 아무 동작 안 함"이라고 명시).
+- 다음 단계 설계: Gemini function-calling으로 `add_to_cart(product_id, option, quantity)` 도구 하나만 우선 노출 → AI가 "장바구니에 담아드릴까요?" 확인 후 호출 → 프론트는 실제 결제(PortOne 팝업)는 여전히 사람이 직접 누르게 함(결제는 자동화 대상에서 제외 — PG 규정/보안상 AI가 결제를 대신 트리거하는 건 안 하는 게 맞다고 판단). 즉 "장바구니 담기"까지만 대화로, 최종 결제 버튼은 항상 사람 몫.
+- 작업량이 커서(도구 스키마 설계, 프롬프트 인젝션으로 인한 오작동 방지, ChatWidget에 "담았습니다" 카드 UI) 별도 세션으로 분리하는 걸 권장드립니다.
+
+이 섹션은 진행 상황 따라 계속 갱신합니다. Notion 요약 대시보드에도 반영해뒀습니다.
+
 - **Cowork-Claude**: 데스크톱 Cowork 세션. 백엔드/DB/보안/결제/배포/회원관리 담당, 설계 리드.
 - **Claude-Code**: VS Code 확장. 프론트엔드/UX·UI/관리자 기능 담당.
 - **단코**: 단어학습앱(AgriLeitner) 세션. 같은 Supabase 프로젝트를 공유하되 `agri_*` 테이블만 다룸.

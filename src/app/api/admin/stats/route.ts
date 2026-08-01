@@ -17,7 +17,9 @@ export async function GET(request: Request) {
     const { data: orders, error } = await supabaseAdmin
       .from('orders')
       .select('total_price, created_at, status')
-      .in('status', ['결제완료', '배송완료'])
+      // [cowork] '배송준비중'도 이미 결제된 주문인데 빠져있어서 최근 30일 매출이
+      // 과소집계되고 있었음(get_admin_analytics_summary RPC 만들면서 같은 문제 발견) — 추가.
+      .in('status', ['결제완료', '배송준비중', '배송완료'])
       .gte('created_at', thirtyDaysAgo.toISOString())
       .order('created_at', { ascending: true });
 
