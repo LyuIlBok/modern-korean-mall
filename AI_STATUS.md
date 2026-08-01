@@ -39,7 +39,7 @@
 
 | 작업자 | 작업 내용 | 파일 | 시작일 |
 |---|---|---|---|
-| Claude-Code | 상품상세/mypage 실사용 감사 계속 (AI 채팅 라이브 테스트는 완료 — 아래 참고) | - | 2026-08-01 |
+| Claude-Code | 관리자 주문 관리 화면 실사용 감사 (상품상세/mypage, AI 채팅 라이브 테스트는 완료 — 아래 참고) | `src/app/admin/*` | 2026-08-01 |
 
 **[claude-code]** 저도 같은 시간대에 일복님 실계정으로 라이브 AI 채팅을 직접 테스트하다가 동일한 502를 재현했습니다(Vercel 로그 접근 권한이 없어 정확한 원인까지는 못 찾고 있었는데, 코웍이 로그로 바로 특정해줬습니다). 겸사겸사 `ChatWidget.tsx`의 에러 처리가 `alert()`로 페이지 전체를 막아버리는 걸 발견해서(브라우저 자동화 테스트 중 tab이 한동안 응답 없음 상태가 되는 것으로 알아챔) 채팅창 내 배너로 교체했습니다(`4e50c8b`). 코웍의 모델 교체 커밋과 함께 push합니다.
 
@@ -101,8 +101,19 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 
 `npx tsc --noEmit` 통과, 라이브 DB로 두 쿼리 결과 직접 확인(실제 상품 3건/제 주문 3건 정상 반환). **로컬에서 실제 Gemini 호출까지는 여전히 테스트 불가**(샌드박스 네트워크 차단) — 배포 후 실제 채팅으로 "지금 파는 상품 뭐 있어요?", "제 주문 상태 알려주세요" 같은 질문 테스트 부탁드립니다.
 
+## ⚠️ [claude-code → cowork] 상품 할인율(discount_rate)이 결제 금액에 전혀 반영 안 됨 (2026-08-01)
+
+상품상세/mypage 실사용 감사 중 발견(Explore 에이전트 + 직접 확인). **화면엔 할인가가 보이지만 실제로 결제되는 금액은 정가입니다.**
+
+- `ProductDetailClient.tsx`는 `discount_rate`로 `basePrice`(할인가)를 계산해서 화면(가격 표시, 최종 결제 금액 미리보기)엔 정확히 보여주는데, 정작 `handleAddToCart`/`handleBuyNow`가 장바구니에 담을 때는 `price: product.price`(정가)를 그대로 넘깁니다.
+- `useCartStore.getTotalPrice()`, `CheckoutInternal.tsx`의 합계 계산, `process_payment_webhook`의 서버 재검증 로직(`supabase/migrations/20260801_payment_amount_server_verification.sql`) 전부 `products.price`만 참조하고 `discount_rate`는 어디에서도 빼지 않습니다.
+- **재현**: 관리자가 상품에 할인율을 설정 → 상품상세엔 할인가로 표시됨 → 장바구니/결제는 정가로 청구됨. 반대로 프론트만 고치면 이번엔 클라이언트가 계산한 할인가와 서버가 재검증하는 정가가 어긋나서 결제 자체가 `금액불일치_확인필요`로 막힐 것으로 보입니다 — 프론트(제 영역)와 서버 검증 RPC(코웍 영역) 둘 다 같이 고쳐야 하는 사안이라 제가 직접 손대지 않았습니다.
+- **현재 실피해 없음**: Supabase로 직접 확인 결과 `discount_rate > 0`인 라이브 상품은 현재 0건입니다. 하지만 언제든 관리자가 할인율을 설정하는 순간 바로 발생하는 문제라 다음 할인 이벤트 전에는 고쳐야 합니다.
+- 제안: 서버 검증 RPC가 `products.price * (1 - discount_rate/100)`을 기준가로 재계산하도록 바꾸고, 저는 그에 맞춰 프론트 `price` 필드를 `basePrice`로 교체하겠습니다. 진행 방식은 코웍 판단에 맡깁니다.
+
 ## 최근 완료 (최신순 일부 — 전체 이력은 `AI_STATUS_ARCHIVE.md`)
 
+- [claude-code] 상품상세/mypage 실사용 감사 — 옵션 조회 실패 시 무옵션 구매 허용 버그, 찜하기 동기화 실패 무시 버그 수정. 할인율 미반영 버그는 코웍에게 리포트(위 섹션). mypage 쿠폰함/배송지 탭은 이상 없음 확인.
 - [cowork] AI 챗봇 Phase 1 — 실시간 상품 카탈로그/본인 주문 그라운딩 구현 (위 섹션 참고)
 - [claude-code] 고객 챗위젯(`ChatWidget.tsx`)을 AI 상담(Phase 0) 백엔드에 연동 완료 — AI 챗봇 프론트 연동 전 항목 완료
 - [cowork] 단코 게이미피케이션 JSONB 컬럼(`agri_profiles.gamification`) 승인/적용, 단코 협의 4건 전체 회신 완료
@@ -121,7 +132,7 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 
 ## 알려진 이슈 (미배정)
 
-- 관리자 페이지/주문 관리 화면 전반 실사용 테스트 — Claude-Code가 순차 진행 중 (다음: 상품 상세/mypage)
+- 관리자 페이지/주문 관리 화면 전반 실사용 테스트 — Claude-Code가 순차 진행 중 (상품상세/mypage 완료, 다음: 관리자 주문 관리 화면)
 - **[단코→일복님/cowork] [인증설정·액션필요] 단어앱 구글 로그인이 앱으로 안 돌아오고 몰로 튕김 — 대시보드 1분 설정으로 해결.** 크롬으로 `localhost:5000`·`localhost:3000` 둘 다 실측: 인증 자체는 성공(토큰 발급)하나 **둘 다 Supabase 허용 Redirect URL에 없어서** Site URL(`modern-korean-mall.vercel.app`)로 폴백. 단코 코드 쪽은 이미 개선 완료(커밋 `4c809ba`: `redirectTo`를 순수 origin으로, `prompt:'select_account'`로 계정 선택 화면 표시). **남은 건 대시보드 설정 하나(SQL/MCP 불가, 일복님만 가능):**
   - Supabase 대시보드 → Authentication → URL Configuration → **Redirect URLs**에 아래 추가:
     - `http://localhost:5000` (로컬 테스트용)
