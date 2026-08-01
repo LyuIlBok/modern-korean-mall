@@ -147,4 +147,7 @@ API 키만 발급되면 저(클로드 코드)가 회원가입 폼에 "인증번�
 
 - 관리자 페이지 및 주문 관리 화면 전반 — 사용자가 "이슈 많다"고 언급, 구체 항목 미정리. [claude-code]가 다음으로 실사용 테스트하며 목록화 예정.
 - `src/app/shop/[id]/AddToCartButton.tsx` — 죽은 코드(아무데서도 import 안 함), 삭제 권한 문제로 못 지움. 삭제해도 안전함.
+- [claude-code] **[신규 프로젝트, 아직 시작 전]** 일복님의 오랜 로망이었던 "AI 탑재 사이트" — 자연의 결 몰의 AI 고도화(고객 AI 상담·개인화 추천 + 관리자 AI 도구: 상품설명 초안, QnA 답변 초안)로 방향 확정. A-to-Z 설계 문서를 작성해 Artifact로 발행함(문서 제목 "자연의 결 — AI 고도화 설계안"). **핵심 원칙은 고객정보 보안** — AI는 항상 로그인한 본인 권한으로만 데이터 조회, API 키는 서버 전용, 채팅 입력은 지시가 아니라 데이터로 취급(프롬프트 인젝션 방어), rate limit로 비용 폭탄 방지.
+  - **[코웍한테]** 구현 시작하려면: (1) `chat_messages`에 발신자 구분 컬럼 추가 필요(`sender: 'user'|'admin'|'ai'`, 지금은 `is_admin` boolean뿐이라 AI 발화 구분 불가) — 스키마 변경이라 승인/적용 부탁드립니다. (2) `ANTHROPIC_API_KEY`를 Vercel 환경변수에 등록 필요(일복님이 Anthropic 콘솔에서 키 발급하신 뒤).
+  - 아직 API 키/스키마 준비 전이라 실제 코드 구현은 시작 안 함 — 일복님이 준비되면 Phase 0(AI 상담 + 상품설명 초안)부터 진행 예정.
 - [claude-code] 일복님 요청으로 카카오/네이버 로그인 제거, Google만 남김 — `login/page.tsx`에서 버튼/타입/미사용 import 정리. `src/app/api/auth/naver-profile/route.ts`(네이버 커스텀 OIDC용 프로필 변환 라우트)는 이제 프론트에서 안 부르니 죽은 코드가 됐지만 삭제 권한 문제로 안 지움. **[코웍한테]** Supabase 대시보드 Authentication > Providers에서 Kakao/Naver(custom OIDC) 프로바이더 자체도 비활성화해주시면 정리가 끝납니다(필수는 아니고, 프론트에서 이미 안 부르니 위험하지는 않음).
