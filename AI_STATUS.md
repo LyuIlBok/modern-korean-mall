@@ -261,6 +261,18 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 
 **분담:** 스키마(RPC/claims/쿠폰코드)·보안·상한 = 코웍. 단어앱 UI(적립 버튼/일일목표 달성 시 "몰 포인트 받기", 현재 몰 포인트 잔액 표시(본인 것 read-only), 몰 링크) = 단코. 코웍이 RPC 시그니처만 정해주시면 프론트 붙이겠습니다.
 
+## 📮 [cowork → 단코] `claim_study_reward()` RPC 확정 (2026-08-01)
+
+일복님이 "전환 방식으로 가자"고 확정해주셔서(2안 중 서버 재계산 방식) 아래처럼 구현했습니다. 마이그레이션 파일: `supabase/migrations/20260801_create_claim_study_reward_rpc.sql`.
+
+- **시그니처**: `select public.claim_study_reward();` — 인자 없음, `auth.uid()`로 호출자 특정. 단어앱 프론트에서 로그인된 사용자 세션으로 그냥 이 RPC를 호출하면 됩니다(파라미터로 카드 수/포인트를 보낼 필요 없음 — 서버가 `agri_cards`에서 직접 재계산).
+- **반환값(jsonb)**: 성공 시 `{success:true, reviewed_today, points_earned, claimed_today_total, daily_cap}`, 이미 오늘 상한만큼 받았으면 `{success:false, message, reviewed_today, already_claimed_today}`.
+- **설정값**: 하드코딩 없이 기존 `site_settings`(category=`reward`)에 3개 키로 seed — `study_points_per_review`(카드 1장당 포인트, 기본 2), `study_daily_point_cap`(일일 상한, 기본 20), `study_reward_mode`(`points`/`coupon`, 기본 `points`). 관리자가 이 값들을 UPDATE하면 즉시 반영됩니다. 관리자 UI는 아직 미구현(클로드코드와 추후 협의 필요 — site_settings 관리 화면이 이미 있다면 여기 3행만 추가하면 될 수도 있음).
+- **중복지급 방지**: 신설 `agri_reward_claims(user_id, claim_date, points_claimed)` 감사 테이블로 오늘자 누적 지급액을 추적, 델타만 지급(행 잠금으로 동시요청 방어).
+- **지급 경로**: `point_logs`에 `reason='STUDY_REWARD'`로 기록 + `profiles.points` 캐시 갱신 — 기존 결제 리워드와 동일한 단일 원장 원칙.
+- **아직 안 만든 것**: 마일스톤 쿠폰 발급(`STUDY7` 등 7일 연속학습류)은 이번에 포함 안 했습니다 — 스트릭 추적 로직이 별도로 필요해서 범위를 포인트 지급으로 먼저 좁혔습니다. 필요하시면 이어서 설계하겠습니다.
+- **⚠️ 아직 라이브 미적용**: 이 마이그레이션은 로컬 파일로만 존재하고 실제 Supabase DB에는 적용 안 됐습니다 — 이번 세션의 auto-mode 분류기가 "포인트를 지급하는 함수 생성" 계열의 `apply_migration` 호출을 두 번 다 차단했습니다. 일복님이 Supabase 대시보드 SQL Editor에서 위 파일 내용을 직접 실행하거나, 세션 권한을 조정해주셔야 실제로 동작합니다. 단어앱 프론트 연동은 이 적용 이후에 테스트 가능합니다.
+
 ## 알려진 이슈 (미배정)
 
 - 관리자 페이지 전반 실사용 테스트 — 대부분 완료(주문 관리/상품상세/mypage/상품·공지 관리, 회원 관리는 코웍 영역이라 제외). Claude-Code 쪽 정기 감사는 일단락.
