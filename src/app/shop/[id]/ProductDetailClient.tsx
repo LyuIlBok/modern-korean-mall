@@ -206,7 +206,7 @@ export default function ProductDetailClient({
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full flex-1">
         {/* Navigation */}
         <div className="flex flex-col gap-2 mb-12">
-          <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors group text-xs uppercase tracking-widest w-fit">
+          <Link href="/shop" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors group text-sm uppercase tracking-widest w-fit">
             <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" /> {t?.common?.shop || 'Back to Shop'}
           </Link>
           <Breadcrumb items={breadcrumbItems} />
@@ -274,7 +274,7 @@ export default function ProductDetailClient({
           <div className="flex flex-col">
             <div className="mb-10 pb-10 border-b border-border-light">
               <div className="flex justify-between items-start mb-4">
-                <span className="text-xs font-bold text-deep-sage tracking-[0.3em] uppercase">{product.category}</span>
+                <span className="text-sm font-bold text-deep-sage tracking-[0.3em] uppercase">{product.category}</span>
                 <button onClick={() => toggleWish(product)} className={`p-2 transition-colors ${isWished ? 'text-terracotta' : 'text-muted hover:text-terracotta'}`}>
                   <Heart className={`w-6 h-6 ${isWished ? 'fill-current' : ''}`} />
                 </button>
@@ -285,8 +285,8 @@ export default function ProductDetailClient({
                 {Number(product.discount_rate || 0) > 0 ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-3">
-                      <span className="bg-terracotta text-white px-2 py-1 text-xs font-bold rounded-sm">{product.discount_rate}% OFF</span>
-                      <p className="text-muted line-through decoration-muted/50 text-xl font-light">{formatPrice(Number(product.price))}</p>
+                      <span className="bg-terracotta text-white px-2 py-1 text-sm font-bold rounded-sm">{product.discount_rate}% OFF</span>
+                      <p className="text-muted line-through decoration-muted/50 text-xl font-normal">{formatPrice(Number(product.price))}</p>
                     </div>
                     <p className="text-4xl font-serif text-terracotta font-extrabold">{formatPrice(Math.floor(product.price * (1 - (product.discount_rate || 0) / 100)))}</p>
                   </div>
@@ -306,19 +306,19 @@ export default function ProductDetailClient({
             {/* Product Specs */}
             <div className="space-y-4 mb-12">
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.origin || '원산지'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-sm">{t?.shop?.origin || '원산지'}</span>
                 <span className="col-span-2 text-charcoal font-medium">{product.origin || '경기도 연천군'}</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.producer || '제조사'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-sm">{t?.shop?.producer || '제조사'}</span>
                 <span className="col-span-2 text-charcoal font-medium">{product.producer || '농업회사법인 복이네농장(주)'}</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2">
-                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.admin?.distributor || '유통사'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-sm">{t?.admin?.distributor || '유통사'}</span>
                 <span className="col-span-2 text-charcoal font-medium">복이네농장</span>
               </div>
               <div className="grid grid-cols-3 text-sm py-2 border-b border-border-light/50 pb-4">
-                <span className="text-muted uppercase tracking-widest font-bold text-xs">{t?.shop?.shipping || '배송 안내'}</span>
+                <span className="text-muted uppercase tracking-widest font-bold text-sm">{t?.shop?.shipping || '배송 안내'}</span>
                 <span className="col-span-2 text-charcoal font-medium">
                   {Number(product.shipping_fee) === 0 
                     ? (t?.shop?.freeShipping || '무료배송') 
@@ -335,7 +335,7 @@ export default function ProductDetailClient({
               </div>
             ) : options.length > 0 && (
               <div className="space-y-4 mb-8">
-                <label className="text-xs text-muted uppercase tracking-[0.2em] font-bold ml-1">{t?.shop?.optionSelection || '옵션 선택'}</label>
+                <label className="text-sm text-muted uppercase tracking-[0.2em] font-bold ml-1">{t?.shop?.optionSelection || '옵션 선택'}</label>
                 <div className="relative">
                   <select 
                     value={selectedOption?.id || ''} 
@@ -376,7 +376,7 @@ export default function ProductDetailClient({
                 </div>
                 
                 <div className="pt-6 border-t border-border-light/50 flex justify-between items-end">
-                  <span className="text-xs text-muted uppercase tracking-widest font-black">{t?.shop?.totalAmount || '최종 결제 금액'}</span>
+                  <span className="text-sm text-muted uppercase tracking-widest font-black">{t?.shop?.totalAmount || '최종 결제 금액'}</span>
                   <p className="text-4xl font-serif text-charcoal font-black tracking-tighter">{formatPrice(totalPrice)}</p>
                 </div>
               </div>
@@ -414,7 +414,7 @@ export default function ProductDetailClient({
 
               <button
                 onClick={handleProductInquiry}
-                className="w-full py-4 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-xs font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 rounded-sm"
+                className="w-full py-4 border border-border-light text-muted hover:text-charcoal hover:border-charcoal transition-all text-sm font-bold uppercase tracking-[0.2em] flex items-center justify-center gap-2 rounded-sm"
               >
                 <MessageSquare className="w-4 h-4" /> 이 제품 상담하기
               </button>
@@ -430,9 +430,9 @@ export default function ProductDetailClient({
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
             <div>
               <h2 className="font-serif text-4xl text-charcoal">이런 산물은 어떠세요?</h2>
-              <p className="text-muted mt-2 font-light italic">Nature Texture&apos;s premium selection.</p>
+              <p className="text-muted mt-2 font-normal italic">Nature Texture&apos;s premium selection.</p>
             </div>
-            <Link href="/shop" className="text-deep-sage hover:text-charcoal transition-all border-b border-current pb-1 text-xs uppercase tracking-[0.3em] font-bold">Explore All</Link>
+            <Link href="/shop" className="text-deep-sage hover:text-charcoal transition-all border-b border-current pb-1 text-sm uppercase tracking-[0.3em] font-bold">Explore All</Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
             {relatedProducts.map((p: any) => <ProductCard key={p.id} product={p} />)}

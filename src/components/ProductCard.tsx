@@ -81,13 +81,13 @@ export default function ProductCard({ product }: { product: ProductWithRating })
 
           {!product.is_sold_out && discountRate > 0 && (
             <div className="absolute top-5 left-5 z-30 bg-terracotta text-white px-4 py-2 rounded-sm shadow-xl">
-              <span className="text-xs font-black tracking-tighter">{discountRate}% OFF</span>
+              <span className="text-sm font-black tracking-tighter">{discountRate}% OFF</span>
             </div>
           )}
 
           {!product.is_sold_out && rewardPoints > 0 && (
             <div className="absolute bottom-5 left-5 z-30 bg-deep-sage/90 backdrop-blur-md text-white px-4 py-2 rounded-full shadow-xl border border-white/20">
-              <span className="text-[10px] font-black flex items-center gap-2">
+              <span className="text-[13px] font-black flex items-center gap-2">
                 <Plus className="w-3 h-3" /> {rewardPoints.toLocaleString()}원 적립
               </span>
             </div>
@@ -130,12 +130,12 @@ export default function ProductCard({ product }: { product: ProductWithRating })
 
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-xs font-black text-terracotta/80 uppercase tracking-[0.2em]">{product.category}</span>
+            <span className="text-sm font-black text-terracotta/80 uppercase tracking-[0.2em]">{product.category}</span>
             {product.reviewCount !== undefined && product.reviewCount > 0 && (
               <div className="flex items-center gap-2 bg-terracotta/5 px-3 py-1 rounded-full">
                 <Star className="w-3.5 h-3.5 fill-terracotta text-terracotta" />
-                <span className="text-xs font-black text-charcoal">{product.avgRating?.toFixed(1)}</span>
-                <span className="text-[10px] text-muted font-bold">({product.reviewCount})</span>
+                <span className="text-sm font-black text-charcoal">{product.avgRating?.toFixed(1)}</span>
+                <span className="text-[13px] text-muted font-bold">({product.reviewCount})</span>
               </div>
             )}
           </div>
@@ -148,7 +148,7 @@ export default function ProductCard({ product }: { product: ProductWithRating })
             <div className="flex flex-col gap-1">
               {discountRate > 0 ? (
                 <div className="space-y-1">
-                  <p className="text-xs text-muted line-through decoration-muted/50 font-bold opacity-60">
+                  <p className="text-sm text-muted line-through decoration-muted/50 font-bold opacity-60">
                     ₩{product.price.toLocaleString()}
                   </p>
                   <p className="text-2xl font-serif font-black text-terracotta tracking-tight">
@@ -160,10 +160,10 @@ export default function ProductCard({ product }: { product: ProductWithRating })
                   ₩{product.price.toLocaleString()}
                 </p>
               )}
-              {!product.is_sold_out && <span className="text-[10px] text-deep-sage font-black uppercase tracking-widest bg-deep-sage/5 px-2 py-0.5 rounded-sm w-fit">Free Shipping</span>}
+              {!product.is_sold_out && <span className="text-[13px] text-deep-sage font-black uppercase tracking-widest bg-deep-sage/5 px-2 py-0.5 rounded-sm w-fit">Free Shipping</span>}
             </div>
             
-            <span className="text-[10px] text-muted/60 group-hover:text-deep-sage transition-colors font-black tracking-[0.2em] flex items-center gap-2 opacity-60 group-hover:opacity-100">
+            <span className="text-[13px] text-muted/60 group-hover:text-deep-sage transition-colors font-black tracking-[0.2em] flex items-center gap-2 opacity-60 group-hover:opacity-100">
               DETAILS <Plus className="w-4 h-4" />
             </span>
           </div>

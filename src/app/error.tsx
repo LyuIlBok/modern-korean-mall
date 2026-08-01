@@ -32,7 +32,7 @@ export default function Error({
             잠시 후 다시 시도해 주세요.
           </p>
           {process.env.NODE_ENV === 'development' && (
-            <div className="mt-4 p-3 bg-hanji-white text-[10px] text-left font-mono overflow-auto max-h-32 border border-border-light rounded text-terracotta">
+            <div className="mt-4 p-3 bg-hanji-white text-[13px] text-left font-mono overflow-auto max-h-32 border border-border-light rounded text-terracotta">
               {error.message}
             </div>
           )}

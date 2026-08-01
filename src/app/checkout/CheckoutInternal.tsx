@@ -386,7 +386,7 @@ export default function CheckoutInternal() {
         <div className="text-center space-y-6">
           <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center mx-auto shadow-sm border border-border-light"><ShoppingBag className="w-10 h-10 text-muted" /></div>
           <h2 className="font-serif text-2xl">{t.cart.empty}</h2>
-          <Link href="/shop" className="inline-block bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all font-bold uppercase tracking-widest text-xs">{t.mypage.goToShop}</Link>
+          <Link href="/shop" className="inline-block bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all font-bold uppercase tracking-widest text-sm">{t.mypage.goToShop}</Link>
         </div>
       </div>
     );
@@ -440,7 +440,7 @@ export default function CheckoutInternal() {
             </Link>
             <h1 className="font-serif text-5xl text-charcoal tracking-tight">{t.checkout.title || '주문서 작성'}</h1>
           </div>
-          <div className="flex items-center gap-2 text-deep-sage font-bold text-xs uppercase tracking-[0.3em]">
+          <div className="flex items-center gap-2 text-deep-sage font-bold text-sm uppercase tracking-[0.3em]">
             <ShieldCheck className="w-5 h-5" /> Secure Checkout
           </div>
         </header>
@@ -459,7 +459,7 @@ export default function CheckoutInternal() {
               {/* Saved Addresses */}
               {savedAddresses.length > 0 && (
                 <div className="space-y-4">
-                  <p className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.savedAddress}</p>
+                  <p className="text-sm uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.savedAddress}</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {savedAddresses.map((addr) => (
                       <button
@@ -470,10 +470,10 @@ export default function CheckoutInternal() {
                       >
                         <div className="flex justify-between items-start mb-2">
                           <span className="text-sm font-bold text-charcoal">{addr.address_name}</span>
-                          {addr.is_default && <span className="text-[10px] bg-deep-sage text-white px-2 py-0.5 rounded-full uppercase font-extrabold">{t.mypage.defaultAddress}</span>}
+                          {addr.is_default && <span className="text-[13px] bg-deep-sage text-white px-2 py-0.5 rounded-full uppercase font-extrabold">{t.mypage.defaultAddress}</span>}
                         </div>
                         <p className="text-sm text-muted mb-1">{addr.receiver_name} | {addr.receiver_phone}</p>
-                        <p className="text-xs text-muted leading-relaxed line-clamp-1">({addr.postcode}) {addr.address} {addr.detail_address}</p>
+                        <p className="text-sm text-muted leading-relaxed line-clamp-1">({addr.postcode}) {addr.address} {addr.detail_address}</p>
                         <div className="absolute bottom-0 right-0 p-3 opacity-0 group-hover:opacity-100 transition-opacity">
                           <CheckCircle className="w-5 h-5 text-deep-sage" />
                         </div>
@@ -485,7 +485,7 @@ export default function CheckoutInternal() {
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-white p-10 rounded-sm border border-border-light shadow-sm">
                 <div className="space-y-3 md:col-span-2">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.name}</label>
+                  <label className="text-sm uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.name}</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
                     <input 
@@ -497,12 +497,12 @@ export default function CheckoutInternal() {
                       placeholder={t.checkout.name} 
                     />
                   </div>
-                  {errors.name && <p className="text-xs text-terracotta font-medium ml-1">{errors.name}</p>}
-                  {!errors.name && <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>}
+                  {errors.name && <p className="text-sm text-terracotta font-medium ml-1">{errors.name}</p>}
+                  {!errors.name && <p className="text-sm text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>}
                 </div>
                 
                 <div className="space-y-3">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.phone}</label>
+                  <label className="text-sm uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.phone}</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
                     <input 
@@ -514,12 +514,12 @@ export default function CheckoutInternal() {
                       placeholder="010-0000-0000" 
                     />
                   </div>
-                  {errors.phone && <p className="text-xs text-terracotta font-medium ml-1">{errors.phone}</p>}
-                  {!errors.phone && <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>}
+                  {errors.phone && <p className="text-sm text-terracotta font-medium ml-1">{errors.phone}</p>}
+                  {!errors.phone && <p className="text-sm text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>}
                 </div>
 
                 <div className="space-y-3">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">Email</label>
+                  <label className="text-sm uppercase tracking-widest text-muted font-bold ml-1">Email</label>
                   {savedAddresses.length > 0 && formData.email ? (
                     <div className="w-full bg-hanji-white/10 border border-border-light px-4 py-5 rounded-sm text-base text-muted font-mono">{formData.email}</div>
                   ) : (
@@ -536,22 +536,22 @@ export default function CheckoutInternal() {
                       />
                     </div>
                   )}
-                  {errors.email && <p className="text-xs text-terracotta font-medium ml-1">{errors.email}</p>}
+                  {errors.email && <p className="text-sm text-terracotta font-medium ml-1">{errors.email}</p>}
                 </div>
 
                 <div className="space-y-3 md:col-span-2 pt-4">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.address}</label>
+                  <label className="text-sm uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.address}</label>
                   <div className="flex gap-2 mb-3">
                     <input required value={formData.postcode} readOnly className="w-40 bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base font-mono" placeholder={t.checkout.postcode} />
-                    <button type="button" onClick={() => setIsAddressModalOpen(true)} className="bg-charcoal text-white px-8 py-5 rounded-sm text-xs uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
+                    <button type="button" onClick={() => setIsAddressModalOpen(true)} className="bg-charcoal text-white px-8 py-5 rounded-sm text-sm uppercase font-bold tracking-widest hover:bg-deep-sage transition-all">{t.checkout.searchAddress}</button>
                   </div>
                   <input required value={formData.address} readOnly className="w-full bg-hanji-white/50 border border-border-light px-4 py-5 rounded-sm text-base mb-3 shadow-inner" placeholder={t.checkout.address} />
                   <input required value={formData.detailAddress} onChange={e => setProfileData({...formData, detailAddress: e.target.value})} className="w-full border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all shadow-sm" placeholder={t.checkout.detailAddress} />
-                  <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.addressHelp}</p>
+                  <p className="text-sm text-muted/60 ml-1 italic">{t.checkout.addressHelp}</p>
                 </div>
 
                 <div className="space-y-3 md:col-span-2 pt-4">
-                  <label className="text-xs uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo || '배송 요청사항'}</label>
+                  <label className="text-sm uppercase tracking-widest text-muted font-bold ml-1">{t.checkout.memo || '배송 요청사항'}</label>
                   <textarea rows={3} value={formData.memo} onChange={e => setProfileData({...formData, memo: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-4 py-5 rounded-sm text-base focus:border-deep-sage outline-none transition-all resize-none" placeholder={t.checkout.memoPlaceholder || '배송 시 요청사항이 있으시면 적어주세요.'} />
                 </div>
               </div>
@@ -567,22 +567,22 @@ export default function CheckoutInternal() {
               <div className="grid grid-cols-2 gap-6">
                 <button type="button" onClick={() => setPaymentMethod('card')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'card' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'card' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><CreditCard className="w-8 h-8" /></div>
-                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard || '신용카드'}</span>
+                  <span className={`text-sm uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'card' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.creditCard || '신용카드'}</span>
                 </button>
                 <button type="button" onClick={() => setPaymentMethod('transfer')} className={`p-10 border-2 rounded-sm transition-all flex flex-col items-center gap-6 group shadow-sm ${paymentMethod === 'transfer' ? 'border-deep-sage bg-deep-sage/5' : 'border-border-light bg-white hover:border-muted'}`}>
                   <div className={`w-16 h-16 rounded-full flex items-center justify-center transition-colors ${paymentMethod === 'transfer' ? 'bg-deep-sage text-white' : 'bg-hanji-white text-muted group-hover:text-charcoal'}`}><Wallet className="w-8 h-8" /></div>
-                  <span className={`text-xs uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer || '무통장 입금'}</span>
+                  <span className={`text-sm uppercase font-extrabold tracking-[0.2em] ${paymentMethod === 'transfer' ? 'text-charcoal' : 'text-muted'}`}>{t.checkout.bankTransfer || '무통장 입금'}</span>
                 </button>
               </div>
 
               {paymentMethod === 'transfer' && (
                 <div className="p-8 bg-deep-sage/5 border-2 border-deep-sage/30 rounded-sm space-y-2">
-                  <p className="text-xs font-bold text-deep-sage uppercase tracking-widest mb-2">입금 계좌 안내</p>
+                  <p className="text-sm font-bold text-deep-sage uppercase tracking-widest mb-2">입금 계좌 안내</p>
                   <p className="text-sm text-charcoal">
                     <span className="font-bold">{CONFIG.BANK_ACCOUNT.bankName}</span>{' '}
                     {CONFIG.BANK_ACCOUNT.accountNumber} ({CONFIG.BANK_ACCOUNT.accountHolder})
                   </p>
-                  <p className="text-xs text-muted leading-relaxed">
+                  <p className="text-sm text-muted leading-relaxed">
                     주문 접수 후 24시간 이내에 위 계좌로 입금해주세요. 입금자명이 주문자명과 다를 경우 고객센터로 알려주시면 확인이 더 빨라집니다.
                   </p>
                 </div>
@@ -605,7 +605,7 @@ export default function CheckoutInternal() {
 
               {/* Coupon Section */}
               <div className="pt-12 border-t border-white/10 space-y-6 relative z-10">
-                <p className="text-xs uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-4 h-4" /> {t.checkout.coupon || '쿠폰 할인'}</p>
+                <p className="text-sm uppercase tracking-widest text-white/40 font-bold flex items-center gap-2"><Tag className="w-4 h-4" /> {t.checkout.coupon || '쿠폰 할인'}</p>
                 <div className="flex gap-3">
                   <div className="relative flex-1">
                     <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-white/30" />
@@ -621,18 +621,18 @@ export default function CheckoutInternal() {
                     type="button"
                     disabled={isCouponApplied || couponLoading || !couponCode}
                     onClick={handleApplyCoupon}
-                    className="bg-white text-charcoal px-8 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all disabled:opacity-20 flex items-center gap-2 shadow-lg"
+                    className="bg-white text-charcoal px-8 rounded-sm text-sm font-bold uppercase tracking-widest hover:bg-deep-sage hover:text-white transition-all disabled:opacity-20 flex items-center gap-2 shadow-lg"
                   >
                     {couponLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : isCouponApplied ? <Check className="w-4 h-4" /> : (t.checkout.apply || '적용')}
                   </button>
                 </div>
-                {couponError && <p className="text-xs text-terracotta italic font-medium">{couponError}</p>}
+                {couponError && <p className="text-sm text-terracotta italic font-medium">{couponError}</p>}
                 {isCouponApplied && <p className="text-sm text-deep-sage flex items-center gap-2 font-bold bg-white/5 p-3 rounded-sm border border-deep-sage/20"><CheckCircle className="w-4 h-4" /> {t.checkout.coupon} {t.checkout.apply}되었습니다.</p>}
               </div>
 
               <div className="pt-12 border-t border-white/10 space-y-6 relative z-10 font-medium">
-                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.subtotal || '상품 금액'}</span><span>₩{subtotal.toLocaleString()}</span></div>
-                <div className="flex justify-between text-sm text-white/60 font-light italic"><span>{t.checkout.shipping || '배송비'}</span><span>{shipping === 0 ? (t.checkout.free || '무료') : `₩${shipping.toLocaleString()}`}</span></div>
+                <div className="flex justify-between text-sm text-white/60 font-normal italic"><span>{t.checkout.subtotal || '상품 금액'}</span><span>₩{subtotal.toLocaleString()}</span></div>
+                <div className="flex justify-between text-sm text-white/60 font-normal italic"><span>{t.checkout.shipping || '배송비'}</span><span>{shipping === 0 ? (t.checkout.free || '무료') : `₩${shipping.toLocaleString()}`}</span></div>
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-sm text-terracotta font-bold italic">
                     <span>{t.checkout.discount || '할인 금액'}</span>

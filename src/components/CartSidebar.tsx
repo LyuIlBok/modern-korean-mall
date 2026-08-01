@@ -46,7 +46,7 @@ export default function CartSidebar() {
                 <ShoppingBag className="w-6 h-6 text-deep-sage" />
                 <h2 className="font-serif text-2xl text-charcoal">
                   {t.cart.title}
-                  <span className="ml-3 text-base font-sans text-muted font-light">({items.length})</span>
+                  <span className="ml-3 text-base font-sans text-muted font-normal">({items.length})</span>
                 </h2>
               </div>
               <button 
@@ -93,7 +93,7 @@ export default function CartSidebar() {
                     <span className="font-serif text-xl font-bold">{t.cart.total}</span>
                     <span className="font-serif text-4xl text-charcoal font-black">₩{total.toLocaleString()}</span>
                   </div>
-                  <p className="text-xs text-center text-deep-sage bg-deep-sage/5 py-2 rounded-sm font-bold uppercase tracking-widest">{t.cart.freeShippingInfo}</p>
+                  <p className="text-sm text-center text-deep-sage bg-deep-sage/5 py-2 rounded-sm font-bold uppercase tracking-widest">{t.cart.freeShippingInfo}</p>
                 </div>
                 <Link 
                   href="/checkout" 

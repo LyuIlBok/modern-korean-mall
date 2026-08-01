@@ -29,7 +29,7 @@ export default function AboutPage() {
         <div className="absolute inset-0 bg-black/20" />
         <div className="relative z-10 text-center px-4 space-y-6">
           <MotionDivMinimal>
-            <span className="text-white/80 text-xs font-bold tracking-[0.5em] uppercase mb-4 block">Our Heritage</span>
+            <span className="text-white/80 text-sm font-bold tracking-[0.5em] uppercase mb-4 block">Our Heritage</span>
             <h1 className="font-serif text-5xl md:text-7xl text-white leading-tight mb-8">땅의 정직함을<br/>식탁으로 전합니다</h1>
             <div className="w-24 h-1 bg-white/30 mx-auto" />
           </MotionDivMinimal>
@@ -44,7 +44,7 @@ export default function AboutPage() {
               <Leaf className="w-8 h-8 text-deep-sage" />
             </div>
             <h2 className="font-serif text-4xl text-charcoal leading-snug">자연이 빚어낸 결을<br/>그대로 담다</h2>
-            <p className="text-muted leading-relaxed font-light text-lg">
+            <p className="text-muted leading-relaxed font-normal text-lg">
               &apos;자연의 결&apos;은 경기도 연천의 비옥한 토양 위에서 시작되었습니다. 
               우리는 인위적인 기술보다 기다림의 미학을 믿습니다. 
               계절의 흐름에 따라 대지가 빚어낸 본연의 맛과 향을 보존하기 위해 
@@ -65,7 +65,7 @@ export default function AboutPage() {
               <Heart className="w-8 h-8 text-terracotta" />
             </div>
             <h2 className="font-serif text-4xl text-charcoal leading-snug">사람과 자연을 잇는<br/>정직한 가교</h2>
-            <p className="text-muted leading-relaxed font-light text-lg">
+            <p className="text-muted leading-relaxed font-normal text-lg">
               농부와 소비자가 서로의 이름을 기억하는 곳. 
               우리는 단순한 거래를 넘어 신뢰를 배달합니다. 
               복이네농장이 지켜온 수십 년의 노하우는 
@@ -85,28 +85,28 @@ export default function AboutPage() {
                 <Sun className="w-8 h-8 text-deep-sage-light" />
               </div>
               <h4 className="font-serif text-xl">기다림의 철학</h4>
-              <p className="text-white/50 text-sm font-light leading-relaxed">자연의 속도에 맞춰 가장 완벽하게 익었을 때 수확합니다.</p>
+              <p className="text-white/50 text-sm font-normal leading-relaxed">자연의 속도에 맞춰 가장 완벽하게 익었을 때 수확합니다.</p>
             </div>
             <div className="space-y-6">
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
                 <Droplets className="w-8 h-8 text-deep-sage-light" />
               </div>
               <h4 className="font-serif text-xl">맑은 생명력</h4>
-              <p className="text-white/50 text-sm font-light leading-relaxed">연천의 맑은 물과 공기가 키워낸 깨끗한 산물만을 고집합니다.</p>
+              <p className="text-white/50 text-sm font-normal leading-relaxed">연천의 맑은 물과 공기가 키워낸 깨끗한 산물만을 고집합니다.</p>
             </div>
             <div className="space-y-6">
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
                 <Leaf className="w-8 h-8 text-deep-sage-light" />
               </div>
               <h4 className="font-serif text-xl">순수한 결</h4>
-              <p className="text-white/50 text-sm font-light leading-relaxed">인위적인 가공을 배제하고 원물 본연의 가치를 지켜냅니다.</p>
+              <p className="text-white/50 text-sm font-normal leading-relaxed">인위적인 가공을 배제하고 원물 본연의 가치를 지켜냅니다.</p>
             </div>
             <div className="space-y-6">
               <div className="w-16 h-16 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-8 border border-white/10">
                 <Heart className="w-8 h-8 text-deep-sage-light" />
               </div>
               <h4 className="font-serif text-xl">상생의 가치</h4>
-              <p className="text-white/50 text-sm font-light leading-relaxed">지역 사회와 함께 성장하며 지속 가능한 농업을 실천합니다.</p>
+              <p className="text-white/50 text-sm font-normal leading-relaxed">지역 사회와 함께 성장하며 지속 가능한 농업을 실천합니다.</p>
             </div>
           </div>
         </div>

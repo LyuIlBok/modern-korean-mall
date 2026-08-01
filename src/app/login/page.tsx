@@ -326,7 +326,7 @@ function LoginContent() {
             <>
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                     <input 
@@ -343,27 +343,27 @@ function LoginContent() {
 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center px-1">
-                    <label className="text-[10px] uppercase tracking-widest text-muted">Password</label>
+                    <label className="text-[13px] uppercase tracking-widest text-muted">Password</label>
                     <div className="flex gap-3">
                       <button 
                         type="button" 
                         onClick={() => { setIsFindId(true); setErrorMsg(''); }}
-                        className="text-[10px] text-muted hover:text-charcoal hover:underline"
+                        className="text-[13px] text-muted hover:text-charcoal hover:underline"
                       >
                         아이디 찾기
                       </button>
-                      <span className="text-[10px] text-border-light">|</span>
+                      <span className="text-[13px] text-border-light">|</span>
                       <button 
                         type="button" 
                         onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
-                        className="text-[10px] text-muted hover:text-charcoal hover:underline"
+                        className="text-[13px] text-muted hover:text-charcoal hover:underline"
                       >
                         비밀번호 찾기
                       </button>
-                      <span className="text-[10px] text-border-light">|</span>
+                      <span className="text-[13px] text-border-light">|</span>
                       <Link 
                         href="/guest-order"
-                        className="text-[10px] text-deep-sage font-bold hover:underline"
+                        className="text-[13px] text-deep-sage font-bold hover:underline"
                       >
                         비회원 주문조회
                       </Link>
@@ -390,7 +390,7 @@ function LoginContent() {
                     className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
                   >
                     <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
-                    <p className="text-xs text-terracotta font-medium leading-relaxed">
+                    <p className="text-sm text-terracotta font-medium leading-relaxed">
                       {errorMsg}
                     </p>
                   </motion.div>
@@ -407,14 +407,14 @@ function LoginContent() {
 
               <div className="relative my-10 text-center">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-light"></div></div>
-                <span className="relative bg-white px-4 text-[10px] text-muted uppercase tracking-widest">Or Continue With</span>
+                <span className="relative bg-white px-4 text-[13px] text-muted uppercase tracking-widest">Or Continue With</span>
               </div>
 
               <button
                 type="button"
                 disabled={isAnyLoading}
                 onClick={(e) => handleSocialLogin(e, 'google')}
-                className="w-full flex items-center justify-center gap-3 py-3.5 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-xs font-bold uppercase tracking-widest disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 py-3.5 border border-border-light rounded-sm hover:bg-hanji-white transition-colors text-sm font-bold uppercase tracking-widest disabled:opacity-50"
               >
                 {socialLoading === 'google' ? <Loader2 className="w-5 h-5 animate-spin text-[#4285F4]" /> : <Chrome className="w-5 h-5 text-[#4285F4]" />}
                 Google로 계속하기
@@ -445,7 +445,7 @@ function LoginContent() {
                     <button 
                       disabled={emailSent || isLoading}
                       onClick={handleSendFullIdEmail}
-                      className="w-full flex items-center justify-center gap-2 text-xs text-muted font-bold py-2 hover:text-charcoal transition-colors disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 text-sm text-muted font-bold py-2 hover:text-charcoal transition-colors disabled:opacity-50"
                     >
                       {emailSent ? <Check className="w-3.5 h-3.5" /> : <Send className="w-3.5 h-3.5" />}
                       {emailSent ? '발송 완료' : '전체 아이디 이메일로 받기'}
@@ -456,7 +456,7 @@ function LoginContent() {
                 <form onSubmit={handleFindId} className="space-y-8">
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Full Name</label>
+                      <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Full Name</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                         <input 
@@ -471,7 +471,7 @@ function LoginContent() {
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Phone Number</label>
+                      <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Phone Number</label>
                       <div className="relative">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                         <input 
@@ -495,7 +495,7 @@ function LoginContent() {
                       className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
                     >
                       <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
-                      <p className="text-xs text-terracotta font-medium leading-relaxed">
+                      <p className="text-sm text-terracotta font-medium leading-relaxed">
                         {errorMsg}
                       </p>
                     </motion.div>
@@ -512,7 +512,7 @@ function LoginContent() {
                     <button 
                       type="button"
                       onClick={() => setIsFindId(false)}
-                      className="w-full text-xs text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
+                      className="w-full text-sm text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
                     >
                       Back to Login
                     </button>
@@ -544,7 +544,7 @@ function LoginContent() {
               ) : (
                 <form onSubmit={handlePasswordReset} className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                    <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Email Address</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                       <input 
@@ -566,7 +566,7 @@ function LoginContent() {
                       className="flex items-center gap-3 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10"
                     >
                       <AlertCircle className="w-4 h-4 text-terracotta flex-shrink-0" />
-                      <p className="text-xs text-terracotta font-medium leading-relaxed">
+                      <p className="text-sm text-terracotta font-medium leading-relaxed">
                         {errorMsg}
                       </p>
                     </motion.div>
@@ -583,7 +583,7 @@ function LoginContent() {
                     <button 
                       type="button"
                       onClick={() => setIsForgotPassword(false)}
-                      className="w-full text-xs text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
+                      className="w-full text-sm text-muted hover:text-charcoal transition-colors uppercase tracking-widest font-bold"
                     >
                       Back to Login
                     </button>

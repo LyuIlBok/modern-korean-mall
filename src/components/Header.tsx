@@ -139,8 +139,8 @@ export default function Header() {
             </button>
             
             <div className="hidden lg:flex items-center ml-4 bg-white border border-border-light rounded-full p-0.5 shadow-sm">
-              <button onClick={() => setLanguage('ko')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="한국어 변경">KO</button>
-              <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-[9px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="Change to English">EN</button>
+              <button onClick={() => setLanguage('ko')} className={`px-3 py-1 text-[13px] font-bold rounded-full transition-all ${language === 'ko' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="한국어 변경">KO</button>
+              <button onClick={() => setLanguage('en')} className={`px-3 py-1 text-[13px] font-bold rounded-full transition-all ${language === 'en' ? 'bg-charcoal text-white' : 'text-muted hover:text-charcoal'}`} aria-label="Change to English">EN</button>
             </div>
           </div>
 
@@ -152,7 +152,7 @@ export default function Header() {
 
           <nav className="hidden md:flex gap-8">
             {navLinks.map(link => (
-              <Link key={link.key} href={link.href} className="text-xs text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-medium">
+              <Link key={link.key} href={link.href} className="text-sm text-charcoal/80 hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-medium">
                 {link.name}
               </Link>
             ))}
@@ -167,16 +167,16 @@ export default function Header() {
             {user ? (
               <div className="flex items-center gap-1 sm:gap-3">
                 <Link href="/mypage" className="p-2.5 rounded-full text-charcoal/60 hover:text-charcoal hover:bg-hanji-white transition-colors hidden sm:block" title="마이페이지" aria-label="마이페이지"><User className="w-5 h-5" /></Link>
-                <button onClick={handleLogout} className="text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter px-1" aria-label="로그아웃">{t?.common?.logout || 'Logout'}</button>
+                <button onClick={handleLogout} className="text-[13px] text-muted hover:text-terracotta transition-colors uppercase tracking-tighter px-1" aria-label="로그아웃">{t?.common?.logout || 'Logout'}</button>
               </div>
             ) : (
-              <Link href="/login" className="text-[10px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest px-1" aria-label="로그인">{t?.common?.login || 'Login'}</Link>
+              <Link href="/login" className="text-[13px] text-charcoal/60 hover:text-charcoal transition-colors uppercase tracking-widest px-1" aria-label="로그인">{t?.common?.login || 'Login'}</Link>
             )}
 
             <button onClick={() => toggleCart(true)} className="relative p-2.5 rounded-full text-charcoal/80 hover:text-terracotta hover:bg-hanji-white transition-colors" aria-label="장바구니 열기">
               <ShoppingBag className="w-6 h-6" />
               {itemCount > 0 && (
-                <span className="absolute top-0.5 right-0.5 bg-terracotta text-white text-[10px] font-medium w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{itemCount}</span>
+                <span className="absolute top-0.5 right-0.5 bg-terracotta text-white text-[13px] font-medium w-4 h-4 flex items-center justify-center rounded-full shadow-sm">{itemCount}</span>
               )}
             </button>
           </div>
@@ -209,7 +209,7 @@ export default function Header() {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
                   <div>
-                    <h4 className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-muted font-bold mb-6">
+                    <h4 className="flex items-center gap-2 text-[13px] uppercase tracking-[0.3em] text-muted font-bold mb-6">
                       <TrendingUp className="w-3 h-3" /> Popular Keywords
                     </h4>
                     <div className="flex flex-wrap gap-2">
@@ -217,7 +217,7 @@ export default function Header() {
                         <button 
                           key={word} 
                           onClick={() => quickSearch(word)}
-                          className="px-4 py-2 bg-hanji-white hover:bg-deep-sage hover:text-white border border-border-light rounded-full text-xs transition-all duration-300"
+                          className="px-4 py-2 bg-hanji-white hover:bg-deep-sage hover:text-white border border-border-light rounded-full text-sm transition-all duration-300"
                         >
                           {word}
                         </button>
@@ -225,17 +225,17 @@ export default function Header() {
                     </div>
                   </div>
                   <div>
-                    <h4 className="flex items-center gap-2 text-[10px] uppercase tracking-[0.3em] text-muted font-bold mb-6">
+                    <h4 className="flex items-center gap-2 text-[13px] uppercase tracking-[0.3em] text-muted font-bold mb-6">
                       <Sparkles className="w-3 h-3" /> Recommended
                     </h4>
                     <div className="space-y-4">
                       <button onClick={() => quickSearch('Produce')} className="flex items-center justify-between w-full group text-left">
                         <span className="font-serif text-lg group-hover:text-deep-sage transition-colors">{t?.shop?.category1 || 'Produce'}</span>
-                        <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">EXPLORE →</span>
+                        <span className="text-[13px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">EXPLORE →</span>
                       </button>
                       <button onClick={() => quickSearch('Materials')} className="flex items-center justify-between w-full group text-left border-t border-border-light pt-4">
                         <span className="font-serif text-lg group-hover:text-deep-sage transition-colors">{t?.shop?.category2 || 'Materials'}</span>
-                        <span className="text-[10px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">EXPLORE →</span>
+                        <span className="text-[13px] text-muted opacity-0 group-hover:opacity-100 transition-opacity">EXPLORE →</span>
                       </button>
                     </div>
                   </div>
@@ -264,11 +264,11 @@ export default function Header() {
               <nav className="flex-1 px-6 py-12 space-y-8">
                 {navLinks.map((link) => (
                   <Link key={link.key} href={link.href} onClick={() => setIsMenuOpen(false)} className="block text-2xl font-serif text-charcoal hover:text-deep-sage transition-colors">
-                    {link.name}<span className="block text-[10px] uppercase tracking-[0.2em] text-muted mt-1 font-sans">{link.key}</span>
+                    {link.name}<span className="block text-[13px] uppercase tracking-[0.2em] text-muted mt-1 font-sans">{link.key}</span>
                   </Link>
                 ))}
                 <div className="pt-8 border-t border-border-light">
-                  <p className="text-[10px] uppercase tracking-widest text-muted mb-4">Language</p>
+                  <p className="text-[13px] uppercase tracking-widest text-muted mb-4">Language</p>
                   <div className="flex gap-4">
                     <button onClick={() => setLanguage('ko')} className={`text-sm font-medium ${language === 'ko' ? 'text-charcoal border-b border-charcoal' : 'text-muted'}`}>한국어 (KO)</button>
                     <button onClick={() => setLanguage('en')} className={`text-sm font-medium ${language === 'en' ? 'text-charcoal border-b border-charcoal' : 'text-muted'}`}>English (EN)</button>
@@ -278,7 +278,7 @@ export default function Header() {
               <div className="p-6 border-t border-border-light">
                 {user ? (
                   <div className="flex flex-col gap-4">
-                    <p className="text-xs text-muted">{user.email}</p>
+                    <p className="text-sm text-muted">{user.email}</p>
                     <button onClick={() => { handleLogout(); setIsMenuOpen(false); }} className="text-sm font-medium text-terracotta w-fit">{t?.common?.logout || 'Logout'}</button>
                   </div>
                 ) : (

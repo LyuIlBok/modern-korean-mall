@@ -38,7 +38,7 @@ export default function Footer() {
           {/* Quick Links */}
           <div>
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">Menu</h4>
-            <ul className="space-y-4 text-xs text-muted tracking-wide">
+            <ul className="space-y-4 text-sm text-muted tracking-wide">
               {/* 공지사항을 최상단으로 이동 및 강조 */}
               <li>
                 <Link href="/support/notices" className="text-deep-sage font-bold hover:text-charcoal transition-colors flex items-center gap-1.5 underline underline-offset-4">
@@ -55,7 +55,7 @@ export default function Footer() {
           {/* Support Info */}
           <div>
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">{t.common.customerCenter}</h4>
-            <div className="space-y-4 text-xs text-muted tracking-wide">
+            <div className="space-y-4 text-sm text-muted tracking-wide">
               {/* 대표번호가 아직 미확정(더미값)인 동안에는 고객에게 잘못된 번호를
                   노출하지 않도록 이메일 문의만 표시합니다. CONFIG.CONTACT_PHONE을
                   실제 번호로 교체하면 자동으로 다시 노출됩니다. */}
@@ -74,7 +74,7 @@ export default function Footer() {
           {/* Business Info */}
           <div className="lg:col-span-1">
             <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6">{t.common.businessInfo}</h4>
-            <div className="space-y-2 text-[11px] text-muted leading-relaxed font-light">
+            <div className="space-y-2 text-[13px] text-muted leading-relaxed font-normal">
               <p><span className="font-medium text-charcoal/70">상호명:</span> 농업회사법인 복이네농장(주)</p>
               <p><span className="font-medium text-charcoal/70">대표자:</span> 유일복</p>
               <p><span className="font-medium text-charcoal/70">사업자등록번호:</span> 763-88-03163</p>
@@ -88,7 +88,7 @@ export default function Footer() {
         {/* Shipping / Refund Policy (PG Screening Requirement) */}
         <div className="mb-12 p-8 bg-hanji-white border border-border-light rounded-sm">
           <h4 className="font-serif text-sm text-charcoal uppercase tracking-widest mb-6 border-b border-border-light pb-2">배송/교환/환불 규정 (Shipping & Refund Policy)</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[11px] text-muted leading-relaxed">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 text-[13px] text-muted leading-relaxed">
             <div className="space-y-2">
               <p className="font-bold text-charcoal">배송 안내</p>
               <p>결제 완료 후 평균 2~3일 이내 발송 (주말/공휴일 제외)</p>
@@ -111,25 +111,25 @@ export default function Footer() {
               <ShieldCheck className="w-6 h-6 text-deep-sage" />
             </div>
             <div>
-              <p className="text-[11px] font-bold text-charcoal">{t.common.escrowTitle}</p>
-              <p className="text-[10px] text-muted leading-relaxed">{t.common.escrowDesc}</p>
+              <p className="text-[13px] font-bold text-charcoal">{t.common.escrowTitle}</p>
+              <p className="text-[13px] text-muted leading-relaxed">{t.common.escrowDesc}</p>
             </div>
           </div>
-          <Link href="/support/notices" className="flex items-center gap-2 px-6 py-3 bg-charcoal text-white rounded-sm text-[10px] font-bold uppercase tracking-widest hover:bg-deep-sage transition-all shadow-md">
+          <Link href="/support/notices" className="flex items-center gap-2 px-6 py-3 bg-charcoal text-white rounded-sm text-[13px] font-bold uppercase tracking-widest hover:bg-deep-sage transition-all shadow-md">
             <Megaphone className="w-3.5 h-3.5" /> 최신 공지 확인하기
           </Link>
         </div>
 
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border-light flex flex-col md:flex-row justify-between items-center gap-6">
-          <div className="flex gap-6 text-[10px] text-muted uppercase tracking-widest items-center">
+          <div className="flex gap-6 text-[13px] text-muted uppercase tracking-widest items-center">
             <Link href="/support/notices" className="hover:text-charcoal transition-colors font-bold text-deep-sage underline underline-offset-4">공지사항 (Notice)</Link>
             <div className="w-px h-3 bg-border-light" />
             <Link href="/privacy" className="hover:text-charcoal transition-colors font-medium">{t.common.privacyPolicy}</Link>
             <Link href="/terms" className="hover:text-charcoal transition-colors">{t.common.termsOfService}</Link>
             <Link href="/support/refund" className="hover:text-charcoal transition-colors font-bold text-terracotta underline">{t.common.refundPolicy}</Link>
           </div>
-          <p className="text-[10px] text-muted font-light tracking-tighter">
+          <p className="text-[13px] text-muted font-normal tracking-tighter">
             &copy; {currentYear} NATURE TEXTURE (복이네농장). All rights reserved.
           </p>
         </div>

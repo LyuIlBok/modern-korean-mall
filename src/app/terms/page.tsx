@@ -62,13 +62,13 @@ export default function TermsOfServicePage() {
   return (
     <div className="flex-1 bg-hanji-white py-20 px-4 sm:px-6 lg:px-8 min-h-screen">
       <div className="max-w-3xl mx-auto">
-        <Link href="/" className="inline-flex items-center gap-2 text-muted hover:text-charcoal mb-12 transition-colors text-xs uppercase tracking-widest">
+        <Link href="/" className="inline-flex items-center gap-2 text-muted hover:text-charcoal mb-12 transition-colors text-sm uppercase tracking-widest">
           <ArrowLeft className="w-4 h-4" /> Back to Home
         </Link>
 
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-12 border border-border-light rounded-sm shadow-sm">
           <h1 className="font-serif text-4xl mb-4 text-charcoal border-b border-border-light pb-8">이용약관</h1>
-          <p className="text-xs text-muted mb-12">시행일자: 2026년 8월 1일</p>
+          <p className="text-sm text-muted mb-12">시행일자: 2026년 8월 1일</p>
 
           <div className="space-y-10 text-sm text-charcoal/80 leading-relaxed">
             {ARTICLES.map((a) => (
@@ -77,13 +77,13 @@ export default function TermsOfServicePage() {
                   <FileText className="w-4 h-4" />
                   <h2 className="font-serif text-lg font-bold text-charcoal">{a.title}</h2>
                 </div>
-                <p className="font-light">{a.body}</p>
+                <p className="font-normal">{a.body}</p>
               </section>
             ))}
 
             <section className="bg-hanji-white p-6 border border-border-light rounded-sm">
               <h2 className="font-serif text-lg font-bold mb-4">문의처</h2>
-              <div className="space-y-1 font-light">
+              <div className="space-y-1 font-normal">
                 <p>상호: 농업회사법인 복이네농장(주)</p>
                 <p>이메일: {CONFIG.CONTACT_EMAIL}</p>
                 {CONFIG.CONTACT_PHONE !== '010-0000-0000' && <p>전화: {CONFIG.CONTACT_PHONE}</p>}

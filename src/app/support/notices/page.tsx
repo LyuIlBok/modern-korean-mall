@@ -60,7 +60,7 @@ export default function NoticesPage() {
         {/* Navigation */}
         <button 
           onClick={() => router.back()} 
-          className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-16 group text-[10px] uppercase tracking-widest font-bold"
+          className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-16 group text-[13px] uppercase tracking-widest font-bold"
         >
           <ArrowLeft className="w-3.5 h-3.5 transition-transform group-hover:-translate-x-1" /> Back
         </button>
@@ -68,10 +68,10 @@ export default function NoticesPage() {
         <header className="mb-20 space-y-6">
           <div className="inline-flex items-center gap-3 bg-charcoal text-white px-4 py-2 rounded-full">
             <Megaphone className="w-4 h-4" />
-            <span className="text-[10px] font-bold uppercase tracking-widest">Official Channel</span>
+            <span className="text-[13px] font-bold uppercase tracking-widest">Official Channel</span>
           </div>
           <h1 className="font-serif text-5xl text-charcoal tracking-tight">공지 및 업데이트</h1>
-          <p className="text-muted font-light italic max-w-xl leading-relaxed">
+          <p className="text-muted font-normal italic max-w-xl leading-relaxed">
             자연의 결이 전해드리는 정직한 소식과 새로운 기능 업데이트를 확인해 보세요.
           </p>
         </header>
@@ -79,7 +79,7 @@ export default function NoticesPage() {
         {loading ? (
           <div className="py-20 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-deep-sage" /></div>
         ) : notices.length === 0 ? (
-          <div className="py-32 text-center border-y border-border-light border-dashed italic text-muted font-light">등록된 소식이 없습니다.</div>
+          <div className="py-32 text-center border-y border-border-light border-dashed italic text-muted font-normal">등록된 소식이 없습니다.</div>
         ) : (
           <div className="space-y-8">
             {notices.map((notice, idx) => (
@@ -97,22 +97,22 @@ export default function NoticesPage() {
                         {getCategoryIcon(notice.category)}
                       </div>
                       <div className="space-y-1">
-                        <span className="text-[9px] font-bold uppercase tracking-[0.2em] text-muted">{getCategoryLabel(notice.category)}</span>
+                        <span className="text-[13px] font-bold uppercase tracking-[0.2em] text-muted">{getCategoryLabel(notice.category)}</span>
                         <h2 className="text-2xl font-serif text-charcoal leading-tight">{notice.title}</h2>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2 text-[10px] text-muted font-mono uppercase tracking-tighter opacity-60">
+                    <div className="flex items-center gap-2 text-[13px] text-muted font-mono uppercase tracking-tighter opacity-60">
                       <Clock className="w-3 h-3" /> {new Date(notice.created_at).toLocaleDateString()}
                     </div>
                   </div>
 
-                  <div className="text-sm text-charcoal/80 leading-relaxed whitespace-pre-wrap font-light italic-patch">
+                  <div className="text-sm text-charcoal/80 leading-relaxed whitespace-pre-wrap font-normal italic-patch">
                     {notice.content}
                   </div>
 
                   {notice.category === 'UPDATE' && (
                     <div className="pt-8 border-t border-hanji-white flex justify-end">
-                      <div className="flex items-center gap-2 text-[9px] font-bold uppercase tracking-widest text-deep-sage opacity-40 group-hover:opacity-100 transition-opacity">
+                      <div className="flex items-center gap-2 text-[13px] font-bold uppercase tracking-widest text-deep-sage opacity-40 group-hover:opacity-100 transition-opacity">
                         Patch Applied <Package className="w-3 h-3" />
                       </div>
                     </div>

@@ -26,19 +26,19 @@ function OrderSuccessContent() {
         </div>
 
         <h1 className="font-serif text-4xl text-charcoal mb-4">주문이 완료되었습니다</h1>
-        <p className="text-muted font-light leading-relaxed mb-8">
+        <p className="text-muted font-normal leading-relaxed mb-8">
           복이네농장의 정직한 산물을 선택해 주셔서 감사합니다.<br />
           정성껏 준비하여 신선하게 배송해 드리겠습니다.
         </p>
 
         {isTransfer && (
           <div className="mb-8 p-6 bg-deep-sage/5 border-2 border-deep-sage/30 rounded-sm text-left space-y-2">
-            <p className="text-xs font-bold text-deep-sage uppercase tracking-widest mb-2">입금 계좌 안내</p>
+            <p className="text-sm font-bold text-deep-sage uppercase tracking-widest mb-2">입금 계좌 안내</p>
             <p className="text-sm text-charcoal">
               <span className="font-bold">{CONFIG.BANK_ACCOUNT.bankName}</span>{' '}
               {CONFIG.BANK_ACCOUNT.accountNumber} ({CONFIG.BANK_ACCOUNT.accountHolder})
             </p>
-            <p className="text-xs text-muted leading-relaxed">
+            <p className="text-sm text-muted leading-relaxed">
               24시간 이내 미입금 시 주문이 자동 취소될 수 있습니다. 입금자명이 주문자명과 다르면 고객센터로 알려주세요.
             </p>
           </div>

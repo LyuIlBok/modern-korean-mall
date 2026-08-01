@@ -233,7 +233,7 @@ export default function ProductTabs({ product }: { product: Product }) {
           <div className="space-y-24 animate-in fade-in slide-in-from-bottom-4 duration-700">
             {/* Database Rich Text Description */}
             <div 
-              className="prose prose-slate max-w-none text-charcoal/80 leading-relaxed font-light text-lg"
+              className="prose prose-slate max-w-none text-charcoal/80 leading-relaxed font-normal text-lg"
               dangerouslySetInnerHTML={{ __html: product.description }}
             />
 
@@ -249,20 +249,20 @@ export default function ProductTabs({ product }: { product: Product }) {
                 ))
               ) : (
                 <div className="py-32 text-center border-y border-border-light border-dashed">
-                  <p className="text-muted italic font-light font-serif text-xl">상세 설명 이미지를 준비 중입니다.</p>
+                  <p className="text-muted italic font-normal font-serif text-xl">상세 설명 이미지를 준비 중입니다.</p>
                 </div>
               )}
             </div>
 
             {/* Brand Marketing Section */}
             <div className="max-w-2xl mx-auto text-center space-y-8 pt-24 border-t border-border-light">
-              <span className="text-deep-sage text-xs font-bold tracking-[0.4em] uppercase">The Sincerity of Nature</span>
+              <span className="text-deep-sage text-sm font-bold tracking-[0.4em] uppercase">The Sincerity of Nature</span>
               <h3 className="font-serif text-4xl md:text-5xl text-charcoal tracking-tight leading-tight">자연의 결이 약속하는<br/>가장 순수한 결실</h3>
-              <p className="text-xl text-charcoal/60 leading-relaxed font-light italic">&quot;우리는 꾸밈없는 자연의 산물을 전하기 위해<br/>오늘도 정직한 땀방울을 흘립니다.&quot;</p>
+              <p className="text-xl text-charcoal/60 leading-relaxed font-normal italic">&quot;우리는 꾸밈없는 자연의 산물을 전하기 위해<br/>오늘도 정직한 땀방울을 흘립니다.&quot;</p>
               <div className="pt-8 flex justify-center gap-12">
-                <div className="text-center"><p className="text-3xl font-serif text-charcoal">100%</p><p className="text-[10px] text-muted uppercase mt-2">Organic</p></div>
+                <div className="text-center"><p className="text-3xl font-serif text-charcoal">100%</p><p className="text-[13px] text-muted uppercase mt-2">Organic</p></div>
                 <div className="w-px h-12 bg-border-light"></div>
-                <div className="text-center"><p className="text-3xl font-serif text-charcoal">Direct</p><p className="text-[10px] text-muted uppercase mt-2">Farm to Table</p></div>
+                <div className="text-center"><p className="text-3xl font-serif text-charcoal">Direct</p><p className="text-[13px] text-muted uppercase mt-2">Farm to Table</p></div>
               </div>
             </div>
           </div>
@@ -283,7 +283,7 @@ export default function ProductTabs({ product }: { product: Product }) {
               
               <div className="space-y-3 px-0 md:px-8 border-x-0 md:border-x border-border-light/50">
                 {[5, 4, 3, 2, 1].map((s, i) => (
-                  <div key={s} className="flex items-center gap-4 text-xs">
+                  <div key={s} className="flex items-center gap-4 text-sm">
                     <span className="w-8 text-muted font-serif">{s}점</span>
                     <div className="flex-1 h-1.5 bg-hanji-white rounded-full overflow-hidden">
                       <motion.div initial={{ width: 0 }} animate={{ width: `${(stats.counts[i] / (stats.total || 1)) * 100}%` }} transition={{ duration: 1, delay: 0.2 }} className="h-full bg-deep-sage" />
@@ -294,7 +294,7 @@ export default function ProductTabs({ product }: { product: Product }) {
               </div>
 
               <div className="space-y-6">
-                <div className="flex justify-between items-center"><p className="text-xs font-bold text-charcoal">포토 리뷰 모아보기</p><ArrowRight className="w-4 h-4 text-muted" /></div>
+                <div className="flex justify-between items-center"><p className="text-sm font-bold text-charcoal">포토 리뷰 모아보기</p><ArrowRight className="w-4 h-4 text-muted" /></div>
                 <div className="grid grid-cols-4 gap-2">
                   {stats.photos.length > 0 ? stats.photos.map((p, i) => (
                     <div key={i} className="relative aspect-square rounded-sm overflow-hidden border border-border-light bg-hanji-white"><Image src={p} alt="" fill className="object-cover" /></div>
@@ -308,7 +308,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                 <button onClick={() => setSortBy('latest')} className={`font-medium transition-colors ${sortBy === 'latest' ? 'text-charcoal' : 'text-muted'}`}>최신순</button>
                 <button onClick={() => setSortBy('rating')} className={`font-medium transition-colors ${sortBy === 'rating' ? 'text-charcoal' : 'text-muted'}`}>평점순</button>
               </div>
-              <button className="flex items-center gap-2 text-xs text-muted hover:text-charcoal"><Filter className="w-3.5 h-3.5" /> 필터</button>
+              <button className="flex items-center gap-2 text-sm text-muted hover:text-charcoal"><Filter className="w-3.5 h-3.5" /> 필터</button>
             </div>
 
             {user && (
@@ -319,7 +319,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                       <button key={s} type="button" onClick={() => setRating(s)} className="p-1 transition-transform hover:scale-110"><Star className={`w-6 h-6 ${rating >= s ? 'fill-terracotta text-terracotta' : 'text-border-light'}`} /></button>
                     ))}
                   </div>
-                  <span className="text-[10px] text-muted uppercase font-bold tracking-widest">{editingReviewId ? 'Edit Review' : 'Write Review'}</span>
+                  <span className="text-[13px] text-muted uppercase font-bold tracking-widest">{editingReviewId ? 'Edit Review' : 'Write Review'}</span>
                 </div>
                 <textarea value={reviewText} onChange={(e) => setReviewText(e.target.value)} placeholder="상품에 대한 솔직한 후기를 들려주세요. 사진을 포함하면 포인트가 적립됩니다." className="w-full h-32 bg-white border border-border-light p-5 text-[15px] focus:outline-none focus:border-deep-sage resize-none rounded-sm mb-6" />
                 <div className="flex items-center justify-between">
@@ -331,7 +331,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                       </>
                     ) : (
                       <label className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-hanji-white transition-colors">
-                        <Camera className="w-6 h-6 text-muted/40" /><span className="text-[9px] text-muted font-bold mt-1">PHOTO</span>
+                        <Camera className="w-6 h-6 text-muted/40" /><span className="text-[13px] text-muted font-bold mt-1">PHOTO</span>
                         <input type="file" accept="image/*" onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
@@ -355,7 +355,7 @@ export default function ProductTabs({ product }: { product: Product }) {
               {isReviewLoading ? (
                 <div className="text-center py-20"><Loader2 className="w-8 h-8 animate-spin text-deep-sage mx-auto" /></div>
               ) : reviews.length === 0 ? (
-                <div className="text-center py-32 bg-hanji-white/30 border border-dashed border-border-light rounded-sm"><p className="text-muted italic font-light">아직 작성된 후기가 없습니다. 첫 번째 산물의 주인공이 되어보세요.</p></div>
+                <div className="text-center py-32 bg-hanji-white/30 border border-dashed border-border-light rounded-sm"><p className="text-muted italic font-normal">아직 작성된 후기가 없습니다. 첫 번째 산물의 주인공이 되어보세요.</p></div>
               ) : (
                 sortedReviews.map((rev) => (
                   <motion.div layout key={rev.id} className="border-b border-border-light pb-12 last:border-none group">
@@ -371,7 +371,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                           </div>
                         </div>
                       </div>
-                      <div className="flex items-center gap-4 text-[11px] text-muted">
+                      <div className="flex items-center gap-4 text-[13px] text-muted">
                         {user?.id === rev.user_id && (
                           <div className="flex gap-3 opacity-0 group-hover:opacity-100 transition-opacity">
                             <button onClick={() => { setEditingReviewId(rev.id); setReviewText(rev.content); setRating(rev.rating); }} className="hover:text-deep-sage flex items-center gap-1"><Edit3 className="w-3.5 h-3.5" /> 수정</button>
@@ -388,9 +388,9 @@ export default function ProductTabs({ product }: { product: Product }) {
                         </div>
                       )}
                       <div className="flex-1 space-y-4">
-                        <p className="text-charcoal/80 text-[16px] leading-relaxed whitespace-pre-line font-light">{rev.content}</p>
+                        <p className="text-charcoal/80 text-[16px] leading-relaxed whitespace-pre-line font-normal">{rev.content}</p>
                         <div className="flex gap-4 pt-4">
-                          <button className="text-[10px] text-muted flex items-center gap-1.5 hover:text-deep-sage"><Check className="w-3.5 h-3.5" /> 이 후기가 도움이 되었나요? 0</button>
+                          <button className="text-[13px] text-muted flex items-center gap-1.5 hover:text-deep-sage"><Check className="w-3.5 h-3.5" /> 이 후기가 도움이 되었나요? 0</button>
                         </div>
                       </div>
                     </div>
@@ -406,9 +406,9 @@ export default function ProductTabs({ product }: { product: Product }) {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b border-border-light pb-8">
               <div className="space-y-2">
                 <h3 className="font-serif text-3xl text-charcoal">상품 문의</h3>
-                <p className="text-sm text-muted font-light">상품에 대해 궁금한 점을 남겨주시면 성실히 답변해 드립니다.</p>
+                <p className="text-sm text-muted font-normal">상품에 대해 궁금한 점을 남겨주시면 성실히 답변해 드립니다.</p>
               </div>
-              {!user && <p className="text-xs text-terracotta font-medium">로그인 후 문의를 등록할 수 있습니다.</p>}
+              {!user && <p className="text-sm text-terracotta font-medium">로그인 후 문의를 등록할 수 있습니다.</p>}
             </div>
 
             {user && (
@@ -420,7 +420,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                         key={type} 
                         type="button" 
                         onClick={() => setQnaType(type)}
-                        className={`px-4 py-2 rounded-full text-xs font-bold transition-all border ${qnaType === type ? 'bg-charcoal text-white border-charcoal' : 'bg-white text-muted border-border-light hover:border-deep-sage'}`}
+                        className={`px-4 py-2 rounded-full text-sm font-bold transition-all border ${qnaType === type ? 'bg-charcoal text-white border-charcoal' : 'bg-white text-muted border-border-light hover:border-deep-sage'}`}
                       >
                         {type}
                       </button>
@@ -428,7 +428,7 @@ export default function ProductTabs({ product }: { product: Product }) {
                   </div>
                   <label className="flex items-center gap-2 cursor-pointer ml-auto">
                     <input type="checkbox" checked={isSecret} onChange={e => setIsSecret(e.target.checked)} className="w-4 h-4 accent-charcoal" />
-                    <span className="text-xs text-muted font-medium">비밀글로 문의하기</span>
+                    <span className="text-sm text-muted font-medium">비밀글로 문의하기</span>
                   </label>
                 </div>
                 
@@ -455,22 +455,22 @@ export default function ProductTabs({ product }: { product: Product }) {
               {isQnaLoading ? (
                 <div className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin text-deep-sage mx-auto" /></div>
               ) : qnaList.length === 0 ? (
-                <div className="py-32 text-center text-muted italic font-light">등록된 문의가 없습니다.</div>
+                <div className="py-32 text-center text-muted italic font-normal">등록된 문의가 없습니다.</div>
               ) : (
                 qnaList.map((qna) => (
                   <div key={qna.id} className="p-8 space-y-6 group">
                     <div className="flex justify-between items-start">
                       <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                          <span className="px-2 py-0.5 bg-charcoal/5 text-charcoal/60 text-[10px] font-bold rounded-sm border border-charcoal/10 uppercase tracking-tighter">{qna.question_type}</span>
-                          <span className={`px-2 py-0.5 text-[10px] font-bold rounded-sm border uppercase tracking-tighter ${qna.answer ? 'bg-deep-sage/10 text-deep-sage border-deep-sage/20' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                          <span className="px-2 py-0.5 bg-charcoal/5 text-charcoal/60 text-[13px] font-bold rounded-sm border border-charcoal/10 uppercase tracking-tighter">{qna.question_type}</span>
+                          <span className={`px-2 py-0.5 text-[13px] font-bold rounded-sm border uppercase tracking-tighter ${qna.answer ? 'bg-deep-sage/10 text-deep-sage border-deep-sage/20' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                             {qna.answer ? '답변완료' : '답변대기'}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
                           <p className="text-sm font-bold text-charcoal">{qna.user_name}</p>
-                          <span className="text-[10px] text-muted opacity-40">|</span>
-                          <span className="text-[10px] text-muted">{new Date(qna.created_at).toLocaleDateString()}</span>
+                          <span className="text-[13px] text-muted opacity-40">|</span>
+                          <span className="text-[13px] text-muted">{new Date(qna.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
                       {(user?.id === qna.user_id || isAdmin) && (
@@ -488,11 +488,11 @@ export default function ProductTabs({ product }: { product: Product }) {
 
                     {qna.answer && (qna.is_secret === false || user?.id === qna.user_id || isAdmin) && (
                       <div className="mt-6 p-6 bg-hanji-white/50 rounded-sm border border-border-light space-y-3">
-                        <div className="flex items-center gap-2 text-deep-sage font-bold text-[11px] uppercase tracking-widest">
+                        <div className="flex items-center gap-2 text-deep-sage font-bold text-[13px] uppercase tracking-widest">
                           <MessageSquare className="w-3.5 h-3.5" /> Admin Response
                         </div>
                         <p className="text-sm text-charcoal/70 leading-relaxed whitespace-pre-line">{qna.answer}</p>
-                        {qna.answered_at && <p className="text-[10px] text-muted text-right opacity-60">{new Date(qna.answered_at).toLocaleDateString()} 답변됨</p>}
+                        {qna.answered_at && <p className="text-[13px] text-muted text-right opacity-60">{new Date(qna.answered_at).toLocaleDateString()} 답변됨</p>}
                       </div>
                     )}
                   </div>

@@ -125,7 +125,7 @@ export default function ProductFilterBar() {
               {q && (
                 <button type="button" onClick={() => { setQ(''); updateParams({ q: null }); }} className="p-2 text-muted hover:text-charcoal"><X className="w-4 h-4" /></button>
               )}
-              <button type="submit" className="bg-charcoal text-white px-5 py-2 rounded-sm text-xs font-bold uppercase tracking-widest hover:bg-deep-sage transition-all">Search</button>
+              <button type="submit" className="bg-charcoal text-white px-5 py-2 rounded-sm text-sm font-bold uppercase tracking-widest hover:bg-deep-sage transition-all">Search</button>
             </div>
           </form>
 
@@ -141,7 +141,7 @@ export default function ProductFilterBar() {
                 <div className="p-6">
                   <div className="flex items-center gap-2 mb-6 pb-3 border-b border-border-light">
                     <TrendingUp className="w-4 h-4 text-deep-sage" />
-                    <span className="text-[10px] uppercase tracking-widest font-bold text-charcoal">실시간 인기 검색어</span>
+                    <span className="text-[13px] uppercase tracking-widest font-bold text-charcoal">실시간 인기 검색어</span>
                   </div>
                   <div className="space-y-1">
                     {trending.length > 0 ? trending.map((item, idx) => (
@@ -155,18 +155,18 @@ export default function ProductFilterBar() {
                           <span className="text-charcoal group-hover:text-deep-sage transition-colors">{item.keyword}</span>
                         </div>
                         {idx < 2 && (
-                          <div className="flex items-center gap-1 text-[10px] text-terracotta font-bold uppercase tracking-tighter bg-terracotta/5 px-2 py-0.5 rounded-full">
+                          <div className="flex items-center gap-1 text-[13px] text-terracotta font-bold uppercase tracking-tighter bg-terracotta/5 px-2 py-0.5 rounded-full">
                             <Flame className="w-3 h-3 fill-current" /> Hot
                           </div>
                         )}
                       </button>
                     )) : (
-                      <div className="py-10 text-center text-xs text-muted italic font-light">최근 검색 데이터가 없습니다.</div>
+                      <div className="py-10 text-center text-sm text-muted italic font-normal">최근 검색 데이터가 없습니다.</div>
                     )}
                   </div>
                 </div>
                 <div className="bg-hanji-white/50 p-4 text-center">
-                  <p className="text-[10px] text-muted tracking-tight font-light italic">복이네농장에서 지금 가장 많이 찾는 상품들입니다.</p>
+                  <p className="text-[13px] text-muted tracking-tight font-normal italic">복이네농장에서 지금 가장 많이 찾는 상품들입니다.</p>
                 </div>
               </motion.div>
             )}
@@ -200,7 +200,7 @@ export default function ProductFilterBar() {
                         updateParams({ sort: opt.value });
                         setIsSortOpen(false);
                       }}
-                      className={`w-full text-left px-6 py-3.5 text-xs hover:bg-hanji-white transition-colors ${activeSort === opt.value ? 'text-deep-sage font-bold bg-deep-sage/5' : 'text-muted'}`}
+                      className={`w-full text-left px-6 py-3.5 text-sm hover:bg-hanji-white transition-colors ${activeSort === opt.value ? 'text-deep-sage font-bold bg-deep-sage/5' : 'text-muted'}`}
                     >
                       {opt.label}
                     </button>
@@ -222,7 +222,7 @@ export default function ProductFilterBar() {
                 setActiveCategory(cat);
                 updateParams({ category: cat });
               }}
-              className={`px-8 py-2.5 rounded-full text-xs tracking-widest uppercase transition-all border ${
+              className={`px-8 py-2.5 rounded-full text-sm tracking-widest uppercase transition-all border ${
                 activeCategory === cat 
                   ? 'bg-charcoal text-white border-charcoal shadow-lg font-bold' 
                   : 'bg-white text-muted border-border-light hover:border-deep-sage hover:text-deep-sage'
@@ -235,7 +235,7 @@ export default function ProductFilterBar() {
 
         <button 
           onClick={handleReset}
-          className="flex items-center gap-2 text-[10px] text-muted hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-bold"
+          className="flex items-center gap-2 text-[13px] text-muted hover:text-terracotta transition-colors uppercase tracking-[0.2em] font-bold"
         >
           <RotateCcw className="w-3 h-3" /> Reset Filters
         </button>

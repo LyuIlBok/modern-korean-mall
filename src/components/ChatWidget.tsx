@@ -231,7 +231,7 @@ export default function ChatWidget() {
                 <Lock className="w-10 h-10 text-deep-sage" />
               </div>
               <h3 className="font-serif text-2xl text-charcoal mb-4 tracking-tight">회원 전용 서비스</h3>
-              <p className="text-muted text-base leading-relaxed mb-10 font-light">1:1 상담은 회원님들께만 제공되는 서비스입니다.<br/>로그인 후 더 자세한 상담을 받아보세요.</p>
+              <p className="text-muted text-base leading-relaxed mb-10 font-normal">1:1 상담은 회원님들께만 제공되는 서비스입니다.<br/>로그인 후 더 자세한 상담을 받아보세요.</p>
               <div className="space-y-3">
                 <button onClick={() => { setShowLoginModal(false); router.push('/login'); }} className="w-full bg-charcoal text-white py-4 rounded-xl font-bold hover:bg-deep-sage transition-all">로그인하러 가기</button>
                 <button onClick={() => setShowLoginModal(false)} className="w-full text-sm text-muted font-medium py-2">나중에 하기</button>
@@ -257,7 +257,7 @@ export default function ChatWidget() {
                 </div>
                 <div>
                   <h3 className="font-serif text-xl leading-none tracking-tight">실시간 1:1 상담</h3>
-                  <p className="text-[10px] opacity-60 mt-2 uppercase tracking-[0.2em] font-bold">Nature&apos;s Essence Support</p>
+                  <p className="text-[13px] opacity-60 mt-2 uppercase tracking-[0.2em] font-bold">Nature&apos;s Essence Support</p>
                 </div>
               </div>
               <button onClick={() => toggleChat(false)} className="hover:bg-white/10 rounded-full p-2 relative z-10"><X className="w-6 h-6" /></button>
@@ -272,19 +272,19 @@ export default function ChatWidget() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-charcoal font-medium">안녕하세요! 복이네 농장입니다.</p>
-                    <p className="text-[12px] text-muted leading-relaxed font-light">최대한 빠르게 답변해 드릴게요.</p>
+                    <p className="text-[12px] text-muted leading-relaxed font-normal">최대한 빠르게 답변해 드릴게요.</p>
                   </div>
                 </div>
               )}
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.is_admin ? 'justify-start' : 'justify-end'}`}>
                   <div className={`flex flex-col ${msg.is_admin ? 'items-start' : 'items-end'} max-w-[85%]`}>
-                    <div className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed ${msg.is_admin ? 'bg-white text-charcoal border border-border-light rounded-tl-none font-light' : 'bg-deep-sage text-white rounded-tr-none font-medium'}`}>
+                    <div className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed ${msg.is_admin ? 'bg-white text-charcoal border border-border-light rounded-tl-none font-normal' : 'bg-deep-sage text-white rounded-tr-none font-medium'}`}>
                       {msg.message}
                     </div>
                     <div className="flex items-center gap-2 mt-1.5 opacity-40 px-1">
-                      {!msg.is_admin && msg.is_read && <span className="text-[9px] text-deep-sage font-bold">읽음</span>}
-                      <span className="text-[9px]">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      {!msg.is_admin && msg.is_read && <span className="text-[13px] text-deep-sage font-bold">읽음</span>}
+                      <span className="text-[13px]">{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                   </div>
                 </div>
@@ -312,7 +312,7 @@ export default function ChatWidget() {
           {isOpen ? <X className="w-7 h-7" key="x" /> : <MessageCircle className="w-8 h-8" key="msg" />}
         </AnimatePresence>
         {!isOpen && unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-terracotta text-white text-[10px] font-bold w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
+          <span className="absolute -top-1 -right-1 bg-terracotta text-white text-[13px] font-bold w-6 h-6 rounded-full border-2 border-white flex items-center justify-center shadow-lg">
             {unreadCount}
           </span>
         )}

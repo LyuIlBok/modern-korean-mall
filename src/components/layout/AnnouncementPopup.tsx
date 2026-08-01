@@ -78,21 +78,21 @@ export default function AnnouncementPopup() {
               <div className="bg-white/10 p-2 rounded-full backdrop-blur-md border border-white/20">
                 <Sparkles className="w-5 h-5 text-amber-300" />
               </div>
-              <span className="text-[10px] font-bold uppercase tracking-[0.3em] text-white/60">Official Announcement</span>
+              <span className="text-[13px] font-bold uppercase tracking-[0.3em] text-white/60">Official Announcement</span>
             </div>
             <h2 className="font-serif text-3xl leading-tight relative z-10">{notice.title}</h2>
           </div>
 
           {/* Content Area */}
           <div className="p-10 space-y-8 bg-hanji-white/30">
-            <div className="text-sm text-charcoal/80 leading-relaxed whitespace-pre-wrap font-light max-h-[30vh] overflow-y-auto custom-scrollbar pr-2">
+            <div className="text-sm text-charcoal/80 leading-relaxed whitespace-pre-wrap font-normal max-h-[30vh] overflow-y-auto custom-scrollbar pr-2">
               {notice.content}
             </div>
             
             <Link 
               href="/support/notices" 
               onClick={() => setIsVisible(false)}
-              className="flex items-center justify-center gap-2 w-full py-4 border border-border-light text-muted hover:text-charcoal hover:bg-white transition-all text-[10px] uppercase font-bold tracking-widest rounded-sm shadow-sm"
+              className="flex items-center justify-center gap-2 w-full py-4 border border-border-light text-muted hover:text-charcoal hover:bg-white transition-all text-[13px] uppercase font-bold tracking-widest rounded-sm shadow-sm"
             >
               View Patch Notes <ExternalLink className="w-3.5 h-3.5" />
             </Link>
@@ -102,13 +102,13 @@ export default function AnnouncementPopup() {
           <div className="flex border-t border-border-light bg-white">
             <button 
               onClick={handleCloseToday}
-              className="flex-1 py-5 text-[10px] font-bold text-muted hover:bg-hanji-white transition-colors uppercase tracking-widest border-r border-border-light"
+              className="flex-1 py-5 text-[13px] font-bold text-muted hover:bg-hanji-white transition-colors uppercase tracking-widest border-r border-border-light"
             >
               오늘 하루 보지 않기
             </button>
             <button 
               onClick={() => setIsVisible(false)}
-              className="flex-1 py-5 text-[10px] font-bold text-charcoal hover:bg-hanji-white transition-colors uppercase tracking-widest"
+              className="flex-1 py-5 text-[13px] font-bold text-charcoal hover:bg-hanji-white transition-colors uppercase tracking-widest"
             >
               닫기
             </button>

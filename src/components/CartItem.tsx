@@ -52,7 +52,7 @@ export default function CartItem({ item }: { item: CartItemType }) {
                   <select 
                     value={options.find(o => o.option_name === item.optionName)?.id || ''}
                     onChange={(e) => handleOptionChange(e.target.value)}
-                    className="w-full bg-white border border-border-light pl-4 pr-10 py-2 rounded-full text-xs font-bold text-muted appearance-none cursor-pointer hover:border-deep-sage transition-all focus:outline-none shadow-sm"
+                    className="w-full bg-white border border-border-light pl-4 pr-10 py-2 rounded-full text-sm font-bold text-muted appearance-none cursor-pointer hover:border-deep-sage transition-all focus:outline-none shadow-sm"
                   >
                     {options.map(opt => {
                       const isSoldOut = opt.stock <= 0 || !opt.is_active;
@@ -68,10 +68,10 @@ export default function CartItem({ item }: { item: CartItemType }) {
               ) : isLoadingOptions ? (
                 <div className="flex items-center gap-2 py-1">
                   <Loader2 className="w-4 h-4 animate-spin text-muted" />
-                  <span className="text-xs text-muted font-medium">옵션 불러오는 중...</span>
+                  <span className="text-sm text-muted font-medium">옵션 불러오는 중...</span>
                 </div>
               ) : (
-                <p className="text-xs text-muted italic font-medium opacity-60">기본 옵션</p>
+                <p className="text-sm text-muted italic font-medium opacity-60">기본 옵션</p>
               )}
             </div>
             <button 

@@ -61,13 +61,13 @@ function GuestOrderContent() {
   return (
     <div className="min-h-screen bg-hanji-white py-24 px-4">
       <div className="max-w-3xl mx-auto">
-        <Link href="/login" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-12 text-xs uppercase tracking-widest font-bold">
+        <Link href="/login" className="inline-flex items-center gap-2 text-muted hover:text-charcoal transition-colors mb-12 text-sm uppercase tracking-widest font-bold">
           <ArrowLeft className="w-4 h-4" /> Back to Login
         </Link>
 
         <header className="mb-16 space-y-4">
           <h1 className="font-serif text-5xl text-charcoal tracking-tight">비회원 주문조회</h1>
-          <p className="text-muted font-light">주문 시 발송된 이메일의 주문번호와 이메일 주소를 입력해 주세요.</p>
+          <p className="text-muted font-normal">주문 시 발송된 이메일의 주문번호와 이메일 주소를 입력해 주세요.</p>
         </header>
 
         {!order ? (
@@ -79,7 +79,7 @@ function GuestOrderContent() {
             <form onSubmit={handleSearch} className="space-y-8">
               <div className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Order Number</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Order Number</label>
                   <div className="relative">
                     <Hash className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
                     <input 
@@ -94,7 +94,7 @@ function GuestOrderContent() {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted/30" />
                     <input 
@@ -136,9 +136,9 @@ function GuestOrderContent() {
             {/* Order Header Card */}
             <div className="bg-white p-10 rounded-sm border border-border-light shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
               <div className="space-y-1">
-                <p className="text-[10px] uppercase tracking-widest text-muted font-bold">Order ID</p>
+                <p className="text-[13px] uppercase tracking-widest text-muted font-bold">Order ID</p>
                 <h2 className="font-mono text-xl text-charcoal">{order.id}</h2>
-                <p className="text-xs text-muted">{new Date(order.created_at).toLocaleString()}</p>
+                <p className="text-sm text-muted">{new Date(order.created_at).toLocaleString()}</p>
               </div>
               <div className={`px-6 py-3 rounded-full font-bold text-sm ${getStatusColor(order.status)}`}>
                 {order.status}
@@ -157,8 +157,8 @@ function GuestOrderContent() {
                   <div key={item.id} className="p-8 flex items-center justify-between group">
                     <div className="space-y-1">
                       <p className="font-serif text-lg text-charcoal group-hover:text-deep-sage transition-colors">{item.product_name}</p>
-                      {item.option_name && <p className="text-xs text-muted">Option: {item.option_name}</p>}
-                      <p className="text-xs text-muted font-medium">{item.quantity}개 | {formatPrice(item.price)}</p>
+                      {item.option_name && <p className="text-sm text-muted">Option: {item.option_name}</p>}
+                      <p className="text-sm text-muted font-medium">{item.quantity}개 | {formatPrice(item.price)}</p>
                     </div>
                     <div className="text-right">
                       <p className="font-serif text-xl font-bold">{formatPrice(item.price * item.quantity)}</p>
@@ -179,20 +179,20 @@ function GuestOrderContent() {
                   <Truck className="w-5 h-5 text-deep-sage" /> 배송 정보
                 </h3>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">수령인</span>
                     <span className="col-span-2 text-charcoal">{order.customer_name}</span>
                   </div>
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">연락처</span>
                     <span className="col-span-2 text-charcoal font-mono">{order.customer_phone}</span>
                   </div>
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">배송지</span>
                     <span className="col-span-2 text-charcoal leading-relaxed">{order.address}</span>
                   </div>
                   {order.memo && (
-                    <div className="grid grid-cols-3 text-xs">
+                    <div className="grid grid-cols-3 text-sm">
                       <span className="text-muted font-bold">요청사항</span>
                       <span className="col-span-2 text-charcoal italic">&quot;{order.memo}&quot;</span>
                     </div>
@@ -205,15 +205,15 @@ function GuestOrderContent() {
                   <CreditCard className="w-5 h-5 text-deep-sage" /> 결제 정보
                 </h3>
                 <div className="space-y-4">
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">결제수단</span>
                     <span className="col-span-2 text-charcoal uppercase">{order.payment_method === 'card' ? '신용카드' : '무통장입금'}</span>
                   </div>
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">결제금액</span>
                     <span className="col-span-2 text-charcoal font-bold">{formatPrice(order.total_price)}</span>
                   </div>
-                  <div className="grid grid-cols-3 text-xs">
+                  <div className="grid grid-cols-3 text-sm">
                     <span className="text-muted font-bold">결제상태</span>
                     <span className="col-span-2 font-bold text-deep-sage">{order.status}</span>
                   </div>

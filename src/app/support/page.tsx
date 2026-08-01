@@ -98,7 +98,7 @@ export default function SupportPage() {
             </div>
             <div>
               <h1 className="font-serif text-lg text-charcoal">자연의 결 대화방</h1>
-              <p className="text-[10px] text-deep-sage uppercase tracking-widest font-medium">1:1 Customer Support</p>
+              <p className="text-[13px] text-deep-sage uppercase tracking-widest font-medium">1:1 Customer Support</p>
             </div>
           </div>
         </div>
@@ -110,7 +110,7 @@ export default function SupportPage() {
         className="flex-1 overflow-y-auto p-6 space-y-6 scroll-smooth"
       >
         <div className="text-center mb-8">
-          <span className="text-[10px] bg-border-light/30 text-muted px-3 py-1 rounded-full uppercase tracking-tighter">
+          <span className="text-[13px] bg-border-light/30 text-muted px-3 py-1 rounded-full uppercase tracking-tighter">
             상담원이 연결되었습니다
           </span>
         </div>
@@ -137,7 +137,7 @@ export default function SupportPage() {
                   }`}>
                     {msg.content}
                   </div>
-                  <p className={`text-[9px] text-muted ${msg.is_admin ? 'text-left' : 'text-right'}`}>
+                  <p className={`text-[13px] text-muted ${msg.is_admin ? 'text-left' : 'text-right'}`}>
                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
@@ -165,7 +165,7 @@ export default function SupportPage() {
             {isSending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
           </button>
         </form>
-        <p className="text-[10px] text-center text-muted mt-4 font-light">
+        <p className="text-[13px] text-center text-muted mt-4 font-normal">
           * 보통 1시간 내외로 답변을 드리며, 야간 및 공휴일에는 답변이 다소 늦어질 수 있습니다.
         </p>
       </div>

@@ -129,7 +129,7 @@ export default async function ShopPage(props: {
         <header className="mb-24 space-y-8">
           <div className="flex items-center gap-6 text-deep-sage mb-2">
             <div className="w-16 h-px bg-current opacity-40"></div>
-            <span className="text-xs uppercase tracking-[0.6em] font-black">Nature&apos;s Essence Market</span>
+            <span className="text-sm uppercase tracking-[0.6em] font-black">Nature&apos;s Essence Market</span>
           </div>
           <h1 className="font-serif text-6xl md:text-7xl text-charcoal tracking-tighter">만물상</h1>
           <p className="text-muted font-medium text-2xl max-w-3xl leading-relaxed opacity-80">

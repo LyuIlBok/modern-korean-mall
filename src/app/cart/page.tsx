@@ -64,10 +64,10 @@ export default function CartPage() {
                     <div>
                       <div className="flex justify-between items-start mb-4">
                         <div>
-                          <span className="text-[10px] text-terracotta uppercase tracking-widest font-bold">{item.category}</span>
+                          <span className="text-[13px] text-terracotta uppercase tracking-widest font-bold">{item.category}</span>
                           <h3 className="font-serif text-2xl text-charcoal mt-1">{item.name}</h3>
                           {item.optionName && (
-                            <span className="inline-block mt-1 px-2 py-0.5 bg-hanji-white border border-border-light rounded-full text-[11px] text-muted font-bold">
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-hanji-white border border-border-light rounded-full text-[13px] text-muted font-bold">
                               {item.optionName}
                             </span>
                           )}
@@ -79,7 +79,7 @@ export default function CartPage() {
                       {/* description은 관리자 상품등록 화면의 리치텍스트 에디터에서 HTML로
                           저장돼요. 그대로 찍으면 <p>...</p> 태그가 글자 그대로 보였어서
                           태그만 제거한 일반 텍스트로 보여줍니다. */}
-                      <p className="text-sm text-muted font-light line-clamp-2 max-w-md">{item.description?.replace(/<[^>]*>?/gm, '')}</p>
+                      <p className="text-sm text-muted font-normal line-clamp-2 max-w-md">{item.description?.replace(/<[^>]*>?/gm, '')}</p>
                     </div>
 
                     <div className="flex items-center justify-between mt-8 sm:mt-0">
@@ -122,7 +122,7 @@ export default function CartPage() {
               <Link href="/checkout" className="block w-full bg-charcoal text-white py-5 rounded-sm hover:bg-deep-sage transition-all duration-500 text-center font-medium tracking-[0.2em] uppercase text-sm shadow-lg group">
                 {t.cart.checkoutBtn}
               </Link>
-              <p className="text-[11px] text-center text-muted mt-6 leading-relaxed font-light italic">
+              <p className="text-[13px] text-center text-muted mt-6 leading-relaxed font-normal italic">
                 * {t.cart.freeShippingInfo}
               </p>
             </div>

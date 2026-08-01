@@ -366,7 +366,7 @@ function MyPageContent() {
             <div>
               <div className="flex items-center gap-4 mb-2">
                 <h1 className="font-serif text-4xl font-bold text-charcoal tracking-tight">{profile.full_name || user.email?.split('@')[0]}님</h1>
-                <span className={`px-3 py-1 rounded-full text-[10px] font-black tracking-widest uppercase border-2 ${profile.tier === 'VVIP' ? 'bg-purple-50 text-purple-600 border-purple-200' : profile.tier === 'VIP' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-charcoal/5 text-charcoal/40 border-charcoal/10'}`}>
+                <span className={`px-3 py-1 rounded-full text-[13px] font-black tracking-widest uppercase border-2 ${profile.tier === 'VVIP' ? 'bg-purple-50 text-purple-600 border-purple-200' : profile.tier === 'VIP' ? 'bg-amber-50 text-amber-600 border-amber-200' : 'bg-charcoal/5 text-charcoal/40 border-charcoal/10'}`}>
                   {profile.tier}
                 </span>
               </div>
@@ -374,8 +374,8 @@ function MyPageContent() {
             </div>
           </div>
           <div className="flex gap-4">
-            {isAdmin && <Link href="/admin" className="px-6 py-3 bg-charcoal text-white rounded-full text-xs font-black uppercase tracking-widest hover:bg-deep-sage transition-all shadow-xl flex items-center gap-3">Admin Dashboard <ArrowUpRight className="w-4 h-4" /></Link>}
-            <button onClick={handleLogout} className="px-8 py-3 border-2 border-border-light text-xs uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-3 font-black"><LogOut className="w-4 h-4" /> Logout</button>
+            {isAdmin && <Link href="/admin" className="px-6 py-3 bg-charcoal text-white rounded-full text-sm font-black uppercase tracking-widest hover:bg-deep-sage transition-all shadow-xl flex items-center gap-3">Admin Dashboard <ArrowUpRight className="w-4 h-4" /></Link>}
+            <button onClick={handleLogout} className="px-8 py-3 border-2 border-border-light text-sm uppercase tracking-[0.2em] hover:bg-terracotta hover:text-white hover:border-terracotta transition-all rounded-sm flex items-center gap-3 font-black"><LogOut className="w-4 h-4" /> Logout</button>
           </div>
         </div>
 
@@ -386,7 +386,7 @@ function MyPageContent() {
             <div className="relative z-10 space-y-10">
               <div className="flex justify-between items-end">
                 <div className="space-y-3">
-                  <p className="text-xs text-muted uppercase tracking-[0.2em] font-black">Membership Tier Status</p>
+                  <p className="text-sm text-muted uppercase tracking-[0.2em] font-black">Membership Tier Status</p>
                   <h3 className="font-serif text-3xl text-charcoal">현재 <span className="text-deep-sage font-black underline underline-offset-8 decoration-deep-sage/30">{profile.tier}</span> 등급입니다</h3>
                 </div>
                 {tierProgress.nextTier !== 'MAX' && (
@@ -403,7 +403,7 @@ function MyPageContent() {
                     className={`h-full shadow-lg ${profile.tier === 'VVIP' ? 'bg-purple-500' : 'bg-deep-sage'}`}
                   />
                 </div>
-                <div className="flex justify-between text-[10px] uppercase tracking-tighter font-black text-muted/60 px-1">
+                <div className="flex justify-between text-[13px] uppercase tracking-tighter font-black text-muted/60 px-1">
                   <span className="opacity-100 text-charcoal/40">Family</span>
                   <span className={profile.total_spent >= TIER_THRESHOLDS.VIP ? 'text-deep-sage opacity-100' : ''}>VIP (20만원)</span>
                   <span className={profile.total_spent >= TIER_THRESHOLDS.VVIP ? 'text-purple-500 opacity-100' : ''}>VVIP (50만원)</span>
@@ -415,10 +415,10 @@ function MyPageContent() {
           <div className="bg-charcoal p-12 rounded-sm shadow-2xl flex flex-col justify-between group cursor-pointer hover:bg-deep-sage transition-all duration-700 relative overflow-hidden">
             <div className="absolute -bottom-6 -right-6 opacity-10 group-hover:scale-110 transition-transform duration-700"><Database className="w-40 h-40 text-white" /></div>
             <div className="space-y-3 relative z-10">
-              <p className="text-xs text-white/40 uppercase tracking-[0.2em] font-black">Total Reward Points</p>
+              <p className="text-sm text-white/40 uppercase tracking-[0.2em] font-black">Total Reward Points</p>
               <h3 className="font-serif text-6xl text-white font-bold tracking-tight">₩{profile.points.toLocaleString()}</h3>
             </div>
-            <div className="flex items-center gap-3 text-white/60 text-[10px] uppercase tracking-widest font-black mt-10 group-hover:text-white transition-colors relative z-10">
+            <div className="flex items-center gap-3 text-white/60 text-[13px] uppercase tracking-widest font-black mt-10 group-hover:text-white transition-colors relative z-10">
               {language === 'ko' ? '상점으로 가기' : 'Go to Store'} <ChevronRight className="w-4 h-4" />
             </div>
           </div>
@@ -471,7 +471,7 @@ function MyPageContent() {
                             {uc.coupons?.valid_until && ` · ~${new Date(uc.coupons.valid_until).toLocaleDateString()}까지`}
                           </p>
                         </div>
-                        <span className={`px-4 py-2 rounded-full text-xs font-black uppercase tracking-widest shrink-0 ${uc.is_used ? 'bg-charcoal/5 text-muted' : expired ? 'bg-terracotta/10 text-terracotta' : 'bg-deep-sage/10 text-deep-sage'}`}>
+                        <span className={`px-4 py-2 rounded-full text-sm font-black uppercase tracking-widest shrink-0 ${uc.is_used ? 'bg-charcoal/5 text-muted' : expired ? 'bg-terracotta/10 text-terracotta' : 'bg-deep-sage/10 text-deep-sage'}`}>
                           {uc.is_used ? '사용완료' : expired ? '기간만료' : '사용가능'}
                         </span>
                       </div>
@@ -505,7 +505,7 @@ function MyPageContent() {
                     </div>
                     <form onSubmit={handleVerifyPassword} className="space-y-8 text-left max-w-md mx-auto">
                       <div className="space-y-4">
-                        <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1">Current Password</label>
+                        <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1">Current Password</label>
                         <input 
                           type="password"
                           required
@@ -548,17 +548,17 @@ function MyPageContent() {
                     <form onSubmit={handleUpdateProfile} className="space-y-12">
                       <div className="space-y-10">
                         <div className="space-y-4">
-                          <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1">{t.checkout.name}</label>
+                          <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1">{t.checkout.name}</label>
                           <input required value={profile.full_name} onChange={(e) => setProfile({...profile, full_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" placeholder="성함을 입력해 주세요" />
-                          <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>
+                          <p className="text-sm text-muted/60 ml-1 italic">{t.checkout.nameHelp}</p>
                         </div>
                         <div className="space-y-4">
-                          <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1">{t.checkout.phone}</label>
+                          <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1">{t.checkout.phone}</label>
                           <input required value={profile.phone} onChange={(e) => setProfile({...profile, phone: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" placeholder="01000000000" />
-                          <p className="text-xs text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>
+                          <p className="text-sm text-muted/60 ml-1 italic">{t.checkout.phoneHelp}</p>
                         </div>
                         <div className="space-y-4 opacity-60 bg-hanji-white/20 p-6 rounded-sm border border-border-light border-dashed">
-                          <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1">Email Address</label>
+                          <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1">Email Address</label>
                           <div className="w-full text-lg font-mono text-charcoal/60 mt-2">{user.email}</div>
                         </div>
                       </div>
@@ -588,7 +588,7 @@ function MyPageContent() {
                   <h3 className="font-serif text-4xl text-charcoal tracking-tight">배송지 관리</h3>
                   <p className="text-lg text-muted font-medium opacity-80">주문 시 사용할 배송지 정보를 관리합니다.</p>
                 </div>
-                <button onClick={() => { setEditingAddrId(null); setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false }); setIsAddrModalOpen(true); }} className="bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all text-xs uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl font-black">
+                <button onClick={() => { setEditingAddrId(null); setNewAddr({ address_name: '', receiver_name: '', receiver_phone: '', postcode: '', address: '', detail_address: '', is_default: false }); setIsAddrModalOpen(true); }} className="bg-charcoal text-white px-10 py-4 rounded-sm hover:bg-deep-sage transition-all text-sm uppercase tracking-[0.2em] flex items-center gap-3 shadow-xl font-black">
                   <Plus className="w-5 h-5" /> {t.mypage.addAddress}
                 </button>
               </div>
@@ -606,7 +606,7 @@ function MyPageContent() {
                         <div className="space-y-3">
                           <div className="flex items-center gap-4">
                             <span className="font-serif text-3xl text-charcoal font-bold tracking-tight">{addr.address_name}</span>
-                            {addr.is_default && <span className="bg-deep-sage text-white text-[10px] px-3 py-1 rounded-full uppercase font-black tracking-widest shadow-md">{t.mypage.defaultAddress}</span>}
+                            {addr.is_default && <span className="bg-deep-sage text-white text-[13px] px-3 py-1 rounded-full uppercase font-black tracking-widest shadow-md">{t.mypage.defaultAddress}</span>}
                           </div>
                           <p className="text-sm text-muted font-bold uppercase tracking-widest opacity-60">{addr.receiver_name}</p>
                         </div>
@@ -620,7 +620,7 @@ function MyPageContent() {
                         <p className="opacity-60">({addr.postcode}) {addr.address}</p>
                         <p className="text-xl font-serif text-charcoal">{addr.detail_address}</p>
                       </div>
-                      {!addr.is_default && (<button onClick={async () => { await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id); await supabase.from('addresses').update({ is_default: true }).eq('id', addr.id); fetchData(); }} className="w-full py-4 border-2 border-border-light text-xs text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-3 rounded-sm uppercase tracking-widest font-black font-sans hover:bg-deep-sage/5">{t.mypage.setDefault}</button>)}
+                      {!addr.is_default && (<button onClick={async () => { await supabase.from('addresses').update({ is_default: false }).eq('user_id', user.id); await supabase.from('addresses').update({ is_default: true }).eq('id', addr.id); fetchData(); }} className="w-full py-4 border-2 border-border-light text-sm text-muted hover:border-deep-sage hover:text-deep-sage transition-all flex items-center justify-center gap-3 rounded-sm uppercase tracking-widest font-black font-sans hover:bg-deep-sage/5">{t.mypage.setDefault}</button>)}
                     </div>
                   ))}
                 </div>
@@ -661,14 +661,14 @@ function MyPageContent() {
                   <Image src={selectedProduct.imageUrl || ''} alt="" fill className="object-cover" />
                 </div>
                 <div className="space-y-2">
-                  <p className="text-[10px] text-muted uppercase tracking-[0.3em] font-black opacity-60">Review Target</p>
+                  <p className="text-[13px] text-muted uppercase tracking-[0.3em] font-black opacity-60">Review Target</p>
                   <h4 className="text-2xl font-serif text-charcoal font-bold leading-tight">{selectedProduct.name}</h4>
                 </div>
               </div>
 
               <form onSubmit={handleReviewSubmit} className="space-y-16">
                 <div className="text-center space-y-8">
-                  <p className="text-xs text-muted uppercase tracking-[0.4em] font-black">Rate your experience</p>
+                  <p className="text-sm text-muted uppercase tracking-[0.4em] font-black">Rate your experience</p>
                   <div className="flex justify-center gap-6">
                     {[1, 2, 3, 4, 5].map((star) => (
                       <button key={star} type="button" onClick={() => setReviewData({...reviewData, rating: star})} className={`transition-all duration-300 ${reviewData.rating >= star ? 'text-amber-400 scale-125' : 'text-border-light hover:text-amber-200'}`}>
@@ -679,7 +679,7 @@ function MyPageContent() {
                 </div>
 
                 <div className="space-y-4">
-                  <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1 flex items-center gap-3">
+                  <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1 flex items-center gap-3">
                     <ImageIcon className="w-4 h-4" /> Photo Review (Optional)
                   </label>
                   <div className="flex gap-6 items-end">
@@ -689,19 +689,19 @@ function MyPageContent() {
                       ) : (
                         <>
                           <Camera className="w-8 h-8 text-muted/40 mb-2 group-hover:text-deep-sage transition-colors" />
-                          <span className="text-[10px] font-black text-muted/60 uppercase group-hover:text-deep-sage transition-colors">Add Photo</span>
+                          <span className="text-[13px] font-black text-muted/60 uppercase group-hover:text-deep-sage transition-colors">Add Photo</span>
                         </>
                       )}
                       <input type="file" accept="image/*" onChange={handleReviewImageChange} className="absolute inset-0 opacity-0 cursor-pointer" />
                     </div>
                     {reviewPreview && (
-                      <button type="button" onClick={() => { setReviewImage(null); setReviewPreview(null); }} className="text-xs text-terracotta font-black uppercase tracking-widest pb-2 hover:underline">Remove Image</button>
+                      <button type="button" onClick={() => { setReviewImage(null); setReviewPreview(null); }} className="text-sm text-terracotta font-black uppercase tracking-widest pb-2 hover:underline">Remove Image</button>
                     )}
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <label className="text-xs text-muted uppercase tracking-[0.2em] font-black ml-1">Write your review</label>
+                  <label className="text-sm text-muted uppercase tracking-[0.2em] font-black ml-1">Write your review</label>
                   <textarea required value={reviewData.content} onChange={(e) => setReviewData({...reviewData, content: e.target.value})} placeholder="상품에 대한 진솔한 후기를 남겨주세요. 회원님의 소중한 의견은 큰 힘이 됩니다." rows={6} className="w-full bg-hanji-white/30 border border-border-light px-8 py-6 rounded-sm text-lg focus:border-deep-sage outline-none resize-none transition-all shadow-sm" />
                 </div>
 
@@ -722,12 +722,12 @@ function MyPageContent() {
             <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="relative w-full max-w-lg bg-white rounded-sm shadow-2xl p-16 overflow-y-auto max-h-[95vh]">
               <div className="flex justify-between items-center mb-12 pb-6 border-b-2 border-border-light"><h3 className="font-serif text-4xl font-bold tracking-tight">{editingAddrId ? t.mypage.editAddress : t.mypage.addAddress}</h3><button onClick={() => setIsAddrModalOpen(false)} className="p-2 hover:rotate-90 transition-transform bg-hanji-white rounded-full"><X className="w-8 h-8 text-charcoal" /></button></div>
               <form onSubmit={handleSaveAddress} className="space-y-10">
-                <div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{language === 'ko' ? '배송지 별칭' : 'Address Label'}</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder={t.mypage.addressName} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8"><div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.name}</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div><div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.phone}</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="01000000000" className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div></div>
+                <div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{language === 'ko' ? '배송지 별칭' : 'Address Label'}</label><input required value={newAddr.address_name} onChange={(e) => setNewAddr({...newAddr, address_name: e.target.value})} placeholder={t.mypage.addressName} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-8"><div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.name}</label><input required value={newAddr.receiver_name} onChange={(e) => setNewAddr({...newAddr, receiver_name: e.target.value})} className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div><div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.phone}</label><input required value={newAddr.receiver_phone} onChange={(e) => setNewAddr({...newAddr, receiver_phone: e.target.value})} placeholder="01000000000" className="w-full bg-hanji-white/30 border border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div></div>
                 <div className="space-y-6">
-                  <div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.postcode}</label><div className="flex gap-4"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-8 py-5 rounded-sm text-lg font-mono shadow-inner" /><button type="button" onClick={() => { if(typeof window !== 'undefined' && (window as any).daum) new (window as any).daum.Postcode({ oncomplete: (data:any) => setNewAddr(prev => ({ ...prev, postcode: data.zonecode, address: data.address })) }).open(); }} className="px-8 py-3 bg-charcoal text-white text-xs rounded-sm flex items-center gap-3 flex-shrink-0 hover:bg-deep-sage transition-all uppercase font-black tracking-widest shadow-xl">Search</button></div></div>
-                  <div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.address}</label><input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-8 py-5 rounded-sm text-lg opacity-80 shadow-inner" /></div>
-                  <div className="space-y-4"><label className="text-xs text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.detailAddress}</label><input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border-2 border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div>
+                  <div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.postcode}</label><div className="flex gap-4"><input readOnly required value={newAddr.postcode} placeholder="00000" className="w-full bg-hanji-white/50 border border-border-light px-8 py-5 rounded-sm text-lg font-mono shadow-inner" /><button type="button" onClick={() => { if(typeof window !== 'undefined' && (window as any).daum) new (window as any).daum.Postcode({ oncomplete: (data:any) => setNewAddr(prev => ({ ...prev, postcode: data.zonecode, address: data.address })) }).open(); }} className="px-8 py-3 bg-charcoal text-white text-sm rounded-sm flex items-center gap-3 flex-shrink-0 hover:bg-deep-sage transition-all uppercase font-black tracking-widest shadow-xl">Search</button></div></div>
+                  <div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.address}</label><input readOnly required value={newAddr.address} className="w-full bg-hanji-white/50 border border-border-light px-8 py-5 rounded-sm text-lg opacity-80 shadow-inner" /></div>
+                  <div className="space-y-4"><label className="text-sm text-muted uppercase font-black ml-1 tracking-widest">{t.checkout.detailAddress}</label><input required value={newAddr.detail_address} onChange={(e) => setNewAddr({...newAddr, detail_address: e.target.value})} placeholder={t.checkout.detailAddress} className="w-full border-2 border-border-light px-8 py-5 rounded-sm text-lg focus:border-deep-sage outline-none transition-all shadow-sm" /></div>
                 </div>
                 <div className="pt-6"><label className="flex items-center gap-4 cursor-pointer group"><input type="checkbox" checked={newAddr.is_default} onChange={(e) => setNewAddr({...newAddr, is_default: e.target.checked})} className="w-6 h-6 accent-deep-sage cursor-pointer" /><span className="text-base text-muted group-hover:text-charcoal transition-colors font-bold">{t.mypage.setDefault}</span></label></div>
                 <button type="submit" disabled={isSaving} className="w-full bg-charcoal text-white py-8 rounded-sm hover:bg-deep-sage transition-all font-serif text-2xl flex items-center justify-center gap-4 shadow-2xl mt-10 uppercase tracking-widest font-bold disabled:opacity-50 group">{isSaving ? <Loader2 className="w-8 h-8 animate-spin" /> : <><Save className="w-8 h-8 group-hover:scale-110 transition-transform" /> {t.mypage.saveBtn}</>}</button>

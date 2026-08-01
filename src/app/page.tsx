@@ -101,7 +101,7 @@ export default async function Home() {
               </>
             ) : heroTitle}
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 font-light tracking-wide max-w-3xl mx-auto leading-relaxed [text-shadow:0_1px_8px_rgb(0_0_0_/_60%)]">
+          <p className="text-xl md:text-2xl text-white/90 font-normal tracking-wide max-w-3xl mx-auto leading-relaxed [text-shadow:0_1px_8px_rgb(0_0_0_/_60%)]">
             {heroDesc}
           </p>
           
@@ -123,21 +123,21 @@ export default async function Home() {
             <ShieldCheck className="w-10 h-10" style={{ color: primaryColor }} />
             <div className="text-left">
               <p className="font-bold text-sm tracking-widest uppercase">Certified Origin</p>
-              <p className="text-xs text-muted">100% 연천군 생산 보장</p>
+              <p className="text-sm text-muted">100% 연천군 생산 보장</p>
             </div>
           </div>
           <div className="flex items-center justify-center gap-4 text-charcoal border-x border-border-light">
             <Award className="w-10 h-10" style={{ color: primaryColor }} />
             <div className="text-left">
               <p className="font-bold text-sm tracking-widest uppercase">Premium Quality</p>
-              <p className="text-xs text-muted">엄격한 선별 과정을 거친 특상품</p>
+              <p className="text-sm text-muted">엄격한 선별 과정을 거친 특상품</p>
             </div>
           </div>
           <div className="flex items-center justify-center gap-4 text-charcoal">
             <TrendingUp className="w-10 h-10" style={{ color: primaryColor }} />
             <div className="text-left">
               <p className="font-bold text-sm tracking-widest uppercase">Farm Direct</p>
-              <p className="text-xs text-muted">농장 직송으로 가장 신선하게</p>
+              <p className="text-sm text-muted">농장 직송으로 가장 신선하게</p>
             </div>
           </div>
         </div>
@@ -147,16 +147,16 @@ export default async function Home() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
         <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
           <div className="space-y-6 text-left">
-            <div className="flex items-center gap-3 font-bold tracking-[0.3em] text-[10px] uppercase" style={{ color: primaryColor }}>
+            <div className="flex items-center gap-3 font-bold tracking-[0.3em] text-[13px] uppercase" style={{ color: primaryColor }}>
               <Sparkles className="w-4 h-4" /> Seasonal Best
             </div>
             <h2 className="font-serif text-5xl md:text-6xl text-charcoal tracking-tight underline underline-offset-[12px]" style={{ textDecorationColor: `${primaryColor}33` }}>추천 농산물</h2>
-            <p className="text-muted text-lg font-light max-w-xl leading-relaxed">
+            <p className="text-muted text-lg font-normal max-w-xl leading-relaxed">
               지금 이 계절, 연천의 대지가 선사하는 가장 정직한 선물입니다.<br/>
               복이네 농장이 자신 있게 추천하는 명품 산물을 만나보세요.
             </p>
           </div>
-          <Link href="/shop" className="text-xs uppercase tracking-[0.3em] font-black border-b-2 border-charcoal/10 pb-3 hover:text-deep-sage transition-all duration-500" style={{ borderBottomColor: `${primaryColor}1a` }}>
+          <Link href="/shop" className="text-sm uppercase tracking-[0.3em] font-black border-b-2 border-charcoal/10 pb-3 hover:text-deep-sage transition-all duration-500" style={{ borderBottomColor: `${primaryColor}1a` }}>
             전체 상품 보기
           </Link>
         </div>
@@ -170,7 +170,7 @@ export default async function Home() {
         ) : (
           <div className="py-48 text-center bg-white/40 border border-dashed border-border-light rounded-sm backdrop-blur-sm">
             <div className="mb-6 opacity-20"><Leaf className="w-20 h-20 mx-auto" /></div>
-            <p className="text-muted italic font-light text-2xl">아직 등록된 상품이 없습니다.</p>
+            <p className="text-muted italic font-normal text-2xl">아직 등록된 상품이 없습니다.</p>
             <p className="text-muted/60 text-sm mt-4 font-sans italic">대지의 결실을 준비 중이오니 잠시만 기다려 주세요.</p>
           </div>
         )}
@@ -187,7 +187,7 @@ export default async function Home() {
             &quot;우리는 땅의 정직함을<br/>식탁으로 배달합니다&quot;
           </h2>
           <div className="w-px h-24 bg-hanji-white/20 mx-auto" />
-          <p className="text-xl md:text-2xl font-light text-hanji-white/70 leading-relaxed max-w-4xl mx-auto font-serif italic">
+          <p className="text-xl md:text-2xl font-normal text-hanji-white/70 leading-relaxed max-w-4xl mx-auto font-serif italic">
             복이네농장은 단순한 판매를 넘어, 자연과 사람을 잇는 가교가 되고자 합니다.<br/>
             인위적인 가공을 최소화하고, 시간이 빚어낸 결을 그대로 보존하는 것.<br/>
             그것이 우리가 지키는 농부의 자부심입니다.

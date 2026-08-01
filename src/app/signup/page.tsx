@@ -156,12 +156,12 @@ export default function SignupPage() {
             <>
               <h1 className="font-serif text-4xl text-charcoal mb-6 tracking-tight">이메일을 확인해 주세요</h1>
               <div className="space-y-4 mb-12">
-                <p className="text-muted leading-relaxed font-light">
+                <p className="text-muted leading-relaxed font-normal">
                   <span className="font-bold text-charcoal">{fullName}님</span>, <span className="font-bold text-charcoal">{email}</span>로<br/>
                   인증 메일을 보내드렸습니다.<br/>
                   메일함의 링크를 눌러야 로그인하실 수 있어요.
                 </p>
-                <p className="text-xs text-muted/60 italic font-light">메일이 안 보이면 스팸함도 확인해 주세요.</p>
+                <p className="text-sm text-muted/60 italic font-normal">메일이 안 보이면 스팸함도 확인해 주세요.</p>
               </div>
               <button
                 onClick={() => router.push('/login')}
@@ -174,11 +174,11 @@ export default function SignupPage() {
             <>
               <h1 className="font-serif text-4xl text-charcoal mb-6 tracking-tight">반갑습니다!</h1>
               <div className="space-y-4 mb-12">
-                <p className="text-muted leading-relaxed font-light">
+                <p className="text-muted leading-relaxed font-normal">
                   <span className="font-bold text-charcoal">{fullName}님</span>, 회원가입이 완료되었습니다.<br/>
                   자연의 결이 선사하는 정직한 결실을 만나보세요.
                 </p>
-                <p className="text-xs text-muted/60 italic font-light">잠시 후 로그인 페이지로 자동 이동합니다...</p>
+                <p className="text-sm text-muted/60 italic font-normal">잠시 후 로그인 페이지로 자동 이동합니다...</p>
               </div>
               <div className="flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-deep-sage/30" /></div>
             </>
@@ -209,7 +209,7 @@ export default function SignupPage() {
             </div>
           </Link>
           <h1 className="font-serif text-3xl text-charcoal mb-3 tracking-tight">새로운 인연의 시작</h1>
-          <p className="text-sm text-muted font-light">정직한 산물과 단아한 일상을 제안합니다.</p>
+          <p className="text-sm text-muted font-normal">정직한 산물과 단아한 일상을 제안합니다.</p>
         </div>
 
         <div className="bg-white p-12 border border-border-light rounded-sm shadow-xl relative">
@@ -219,19 +219,19 @@ export default function SignupPage() {
             <section className="space-y-6">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-1 h-4 bg-deep-sage" />
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-charcoal/60">Account Information</h3>
+                <h3 className="text-[13px] font-bold uppercase tracking-[0.2em] text-charcoal/60">Account Information</h3>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Full Name</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1 font-bold">Full Name</label>
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
                     <input required type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="성함" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm focus:outline-none focus:border-deep-sage transition-all text-sm" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Contact</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1 font-bold">Contact</label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
                     <input required type="tel" value={phone} onChange={handlePhoneChange} placeholder="010-0000-0000" maxLength={13} className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm focus:outline-none focus:border-deep-sage transition-all text-sm font-mono" />
@@ -240,7 +240,7 @@ export default function SignupPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Email Address</label>
+                <label className="text-[13px] uppercase tracking-widest text-muted ml-1 font-bold">Email Address</label>
                 <div className="relative">
                   <Mail className={`absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 transition-colors ${isEmailDuplicate ? 'text-terracotta' : 'text-muted/30'}`} />
                   <input 
@@ -260,7 +260,7 @@ export default function SignupPage() {
                 </div>
                 <AnimatePresence>
                   {isEmailChecked && isEmailDuplicate && (
-                    <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-[10px] text-terracotta font-medium italic ml-1 mt-1 leading-relaxed">
+                    <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="text-[13px] text-terracotta font-medium italic ml-1 mt-1 leading-relaxed">
                       이미 가입된 이메일입니다. 카카오/구글 등 간편 로그인이나 일반 로그인을 이용해 주세요.
                     </motion.p>
                   )}
@@ -269,14 +269,14 @@ export default function SignupPage() {
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Password</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1 font-bold">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
                     <input required type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6자 이상 입력" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm focus:outline-none focus:border-deep-sage transition-all text-sm" />
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <label className="text-[10px] uppercase tracking-widest text-muted ml-1 font-bold">Confirm Password</label>
+                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1 font-bold">Confirm Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/30" />
                     <input required type="password" value={confirmPassword} onChange={(e) => setPasswordConfirm(e.target.value)} placeholder="비밀번호 확인" className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-4 rounded-sm focus:outline-none focus:border-deep-sage transition-all text-sm" />
@@ -293,7 +293,7 @@ export default function SignupPage() {
             <section className="space-y-6 pt-4 border-t border-border-light/50">
               <div className="flex items-center gap-2 mb-4">
                 <span className="w-1 h-4 bg-deep-sage" />
-                <h3 className="text-[10px] font-bold uppercase tracking-[0.2em] text-charcoal/60">Terms & Agreements</h3>
+                <h3 className="text-[13px] font-bold uppercase tracking-[0.2em] text-charcoal/60">Terms & Agreements</h3>
               </div>
 
               <div className="space-y-4">
@@ -302,7 +302,7 @@ export default function SignupPage() {
                     <input type="checkbox" checked={agreements.all} onChange={(e) => handleAllAgreement(e.target.checked)} className="peer appearance-none w-5 h-5 border-2 border-muted/30 rounded-full checked:bg-deep-sage checked:border-deep-sage transition-all cursor-pointer" />
                     <Check className="absolute w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
                   </div>
-                  <span className="text-xs font-bold text-charcoal uppercase tracking-widest">전체 약관에 동의합니다</span>
+                  <span className="text-sm font-bold text-charcoal uppercase tracking-widest">전체 약관에 동의합니다</span>
                 </label>
 
                 <div className="grid grid-cols-1 gap-3 px-2">
@@ -317,11 +317,11 @@ export default function SignupPage() {
                           <input type="checkbox" checked={agreements[item.key]} onChange={(e) => handleSingleAgreement(item.key, e.target.checked)} className="peer appearance-none w-4 h-4 border border-muted/40 rounded-sm checked:bg-charcoal checked:border-charcoal transition-all cursor-pointer" />
                           <Check className="absolute w-2.5 h-2.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
                         </div>
-                        <span className={`text-xs ${item.required ? 'font-medium' : 'text-muted'}`}>
-                          {item.label} <span className="text-[9px] opacity-50">({item.required ? '필수' : '선택'})</span>
+                        <span className={`text-sm ${item.required ? 'font-medium' : 'text-muted'}`}>
+                          {item.label} <span className="text-[13px] opacity-50">({item.required ? '필수' : '선택'})</span>
                         </span>
                       </label>
-                      <button type="button" className="text-[10px] text-muted hover:text-charcoal flex items-center gap-1 transition-colors uppercase tracking-widest font-bold">View <ChevronRight className="w-3 h-3" /></button>
+                      <button type="button" className="text-[13px] text-muted hover:text-charcoal flex items-center gap-1 transition-colors uppercase tracking-widest font-bold">View <ChevronRight className="w-3 h-3" /></button>
                     </div>
                   ))}
                 </div>
@@ -329,7 +329,7 @@ export default function SignupPage() {
             </section>
 
             {errorMsg && (
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10 text-[11px] text-terracotta font-medium">
+              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex items-center gap-2 p-4 rounded-sm bg-terracotta/5 border border-terracotta/10 text-[13px] text-terracotta font-medium">
                 <AlertCircle className="w-4 h-4 flex-shrink-0" /> {errorMsg}
               </motion.div>
             )}
@@ -345,7 +345,7 @@ export default function SignupPage() {
         </div>
 
         <div className="text-center mt-12">
-          <p className="text-sm text-muted font-light">
+          <p className="text-sm text-muted font-normal">
             이미 회원이신가요?{' '}
             <Link href="/login" className="text-deep-sage border-b border-deep-sage/30 pb-0.5 font-medium hover:text-charcoal hover:border-charcoal transition-all">
               로그인하러 가기
