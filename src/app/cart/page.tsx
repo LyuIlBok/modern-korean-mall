@@ -53,7 +53,7 @@ export default function CartPage() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  key={item.id} 
+                  key={`${item.id}-${item.optionName || 'default'}`} 
                   className="flex flex-col sm:flex-row gap-8 pb-10 border-b border-border-light group"
                 >
                   <div className="relative w-full sm:w-40 aspect-[4/5] bg-white rounded-sm overflow-hidden flex-shrink-0 border border-border-light">
@@ -66,8 +66,13 @@ export default function CartPage() {
                         <div>
                           <span className="text-[10px] text-terracotta uppercase tracking-widest font-bold">{item.category}</span>
                           <h3 className="font-serif text-2xl text-charcoal mt-1">{item.name}</h3>
+                          {item.optionName && (
+                            <span className="inline-block mt-1 px-2 py-0.5 bg-hanji-white border border-border-light rounded-full text-[11px] text-muted font-bold">
+                              {item.optionName}
+                            </span>
+                          )}
                         </div>
-                        <button onClick={() => removeItem(item.id)} className="p-2 text-muted hover:text-terracotta transition-colors">
+                        <button onClick={() => removeItem(item.id, item.optionName)} className="p-2 text-muted hover:text-terracotta transition-colors">
                           <Trash2 className="w-5 h-5" />
                         </button>
                       </div>
@@ -79,11 +84,11 @@ export default function CartPage() {
 
                     <div className="flex items-center justify-between mt-8 sm:mt-0">
                       <div className="flex items-center border border-border-light rounded-sm bg-white shadow-sm">
-                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))} className="p-2.5 hover:bg-hanji-white transition-colors">
+                        <button onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1), item.optionName)} className="p-2.5 hover:bg-hanji-white transition-colors">
                           <Minus className="w-4 h-4" />
                         </button>
                         <span className="w-12 text-center text-sm font-medium">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, item.quantity + 1)} className="p-2.5 hover:bg-hanji-white transition-colors">
+                        <button onClick={() => updateQuantity(item.id, item.quantity + 1, item.optionName)} className="p-2.5 hover:bg-hanji-white transition-colors">
                           <Plus className="w-4 h-4" />
                         </button>
                       </div>
