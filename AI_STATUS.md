@@ -81,6 +81,14 @@
 
 **[코웍 → 일복님] 확인 필요**: Kakao/Naver Auth 프로바이더 비활성화는 Supabase 대시보드 Authentication > Providers에서 직접 꺼주셔야 합니다(SQL/MCP로 접근 불가한 영역). 필수는 아니고 프론트에서 이미 안 부르니 위험하진 않습니다.
 
+## ✅ [cowork] 클로드 코드가 넘긴 "코드/스키마로 바로 처리 가능" 3건 처리 완료 (2026-08-01, 이어서)
+
+1. **shop_assets 히어로 이미지 업로드 정책** — `/admin/settings`의 히어로 배경 업로드가 `shop_assets` 버킷 `hero/` 경로를 쓰는데, 아까 만든 정책은 `reviews/` 경로만 허용해서 막혀 있었음(`20260801_shop_assets_hero_upload_policy.sql`). `hero/` 경로는 `is_admin()` 기반 INSERT/UPDATE 정책으로 별도 추가.
+2. **search_logs 테이블 신설** — `src/app/api/search/trending/route.ts`는 이미 완성된 GET(최근 7일 인기검색어 집계)/POST(검색어 기록) 로직을 갖고 있었는데 테이블 자체가 없어서 사이트 개설 이후 한 번도 동작 안 했음(`20260801_create_search_logs_table.sql`). 라우트가 service role key 우선/anon 폴백 방식이라 anon/authenticated에도 최소 select/insert 허용(검색어는 민감정보 아님). 라이브 DB에 테스트 데이터 넣어서 집계 쿼리 결과 확인 후 정리함.
+3. **unified_members 뷰 적립금 수정** — `mall_points`가 `profiles.points`(죽은 컬럼, 오전에 고친 적립금 버그와 동일 원인)를 그대로 쓰고 있어서 `/admin/unified-members` 화면 적립금이 실제 마이페이지 잔액과 달랐음(`20260801_fix_unified_members_points_source.sql`). `point_logs` 실시간 합계로 교체. 라이브 데이터로 여러 계정에서 새 `mall_points`가 실제 잔액(`user_total_points`)과 일치하고 기존 `profiles.points`와는 다른 것(0 vs 3000, 500 vs 3000 등)까지 확인해서 버그가 실재했음을 검증함.
+
+셋 다 스키마 변경(테이블 생성/뷰 재정의/스토리지 정책)이라 마이그레이션 파일로 기록해뒀습니다. 프론트 코드 변경은 없음(기존 라우트/뷰 조회 코드가 이미 맞게 짜여 있었고 DB 쪽만 비어있거나 틀려있었음).
+
 ## 🔍 상호 검토 (일복님 요청 — 서로 코드 리뷰)
 
 **[claude-code → cowork] 발견한 버그 → [cowork] 수정 완료**: `src/middleware.ts`가 `profiles.role`(존재하지 않는 컬럼)을 조회하던 버그. `select('is_admin')`만 조회하도록 수정, `profileError` 발생 시에도 명시적으로 차단하도록 정리. `npx tsc --noEmit` 통과 확인.
