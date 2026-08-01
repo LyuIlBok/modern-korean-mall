@@ -92,3 +92,85 @@ export async function generateWithGemini({
 
   return text;
 }
+
+/**
+ * [AI 고도화 Phase 2] Gemini function-calling 지원 헬퍼.
+ *
+ * generateWithGemini()는 단순 텍스트 왕복이라 "장바구니에 담아줘" 같은 실제 동작
+ * 요청을 처리할 수 없었습니다. 이 헬퍼는 대화(contents)와 도구 목록(tools)을 받아
+ * Gemini가 텍스트 대신 함수 호출(functionCall)을 반환할 수 있게 합니다.
+ *
+ * 중요: 이 헬퍼는 "무엇을 하고 싶어하는지"만 알려줄 뿐, 실제 실행(DB 조회/장바구니
+ * 담기 등)은 절대 하지 않습니다. 호출자(각 API 라우트)가 functionCall.args를 반드시
+ * 서버가 신뢰하는 데이터(예: 실시간 상품 목록)와 대조 검증한 뒤에만 실행해야 합니다
+ * — Gemini가 반환한 args를 그대로 신뢰해서 실행하면 안 됩니다(모델 환각/오작동으로
+ * 존재하지 않는 상품이나 비정상적인 수량이 나올 수 있음).
+ */
+export interface GeminiPart {
+  text?: string;
+  thought?: boolean;
+  functionCall?: { name: string; args: Record<string, unknown> };
+  functionResponse?: { name: string; response: Record<string, unknown> };
+}
+
+export interface GeminiContent {
+  role: 'user' | 'model' | 'function';
+  parts: GeminiPart[];
+}
+
+export interface GeminiToolDeclaration {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export async function generateWithGeminiTools({
+  systemInstruction,
+  contents,
+  tools,
+  maxOutputTokens = 300,
+}: {
+  systemInstruction: string;
+  contents: GeminiContent[];
+  tools?: GeminiToolDeclaration[];
+  maxOutputTokens?: number;
+}): Promise<{ parts: GeminiPart[]; finishReason?: string }> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new GeminiConfigError('GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
+  }
+
+  const body: Record<string, unknown> = {
+    systemInstruction: { parts: [{ text: systemInstruction }] },
+    contents,
+    generationConfig: { maxOutputTokens },
+  };
+  if (tools && tools.length > 0) {
+    body.tools = [{ functionDeclarations: tools }];
+  }
+
+  const res = await fetch(`${GEMINI_API_URL}?key=${apiKey}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text().catch(() => '');
+    throw new GeminiApiError(`Gemini API 오류 (${res.status}): ${errText.slice(0, 300)}`);
+  }
+
+  const data = await res.json();
+  const finishReason = data?.candidates?.[0]?.finishReason;
+  const rawParts: GeminiPart[] = data?.candidates?.[0]?.content?.parts ?? [];
+  const parts = rawParts.filter((p) => !p.thought);
+
+  if (parts.length === 0) {
+    if (finishReason === 'SAFETY') {
+      throw new GeminiApiError('안전 정책에 의해 응답이 차단되었습니다.');
+    }
+    throw new GeminiApiError('Gemini API가 빈 응답을 반환했습니다.');
+  }
+
+  return { parts, finishReason };
+}

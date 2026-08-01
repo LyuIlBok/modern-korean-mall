@@ -30,10 +30,38 @@
 - 이 기능을 제대로 만들려면 먼저 **장바구니 추가/삭제/결제완료 시점마다 `cart_items`를 실시간으로 갱신하는 프론트 작업**(클코 영역, `useCartStore`의 각 액션에 서버 동기화 추가)이 선행돼야 합니다. 그 전까지는 데이터가 신뢰할 수 없어서 리마인드 발송 로직을 만들지 않았습니다.
 - 갱신 로직이 붙으면: 24시간 이상 미결제 상태인 `cart_items` 보유 사용자 → Resend로 리마인드 메일 → 중복 발송 방지용 `cart_abandonment_reminders(user_id, last_sent_at)` 테이블 → Vercel Cron(`vercel.json`)으로 매일 1회 실행. 코드는 다음 세션에 바로 만들 수 있게 설계만 완료.
 
-**4) AI 챗봇 Phase 2(대화로 실주문) — 설계만, 구현 안 함**
-- 현재 챗봇은 완전 읽기 전용입니다(상품/본인 주문 조회만, function-calling 자체가 없음, 시스템 프롬프트가 "실제 처리 필요한 요청은 안내만 하고 아무 동작 안 함"이라고 명시).
-- 다음 단계 설계: Gemini function-calling으로 `add_to_cart(product_id, option, quantity)` 도구 하나만 우선 노출 → AI가 "장바구니에 담아드릴까요?" 확인 후 호출 → 프론트는 실제 결제(PortOne 팝업)는 여전히 사람이 직접 누르게 함(결제는 자동화 대상에서 제외 — PG 규정/보안상 AI가 결제를 대신 트리거하는 건 안 하는 게 맞다고 판단). 즉 "장바구니 담기"까지만 대화로, 최종 결제 버튼은 항상 사람 몫.
-- 작업량이 커서(도구 스키마 설계, 프롬프트 인젝션으로 인한 오작동 방지, ChatWidget에 "담았습니다" 카드 UI) 별도 세션으로 분리하는 걸 권장드립니다.
+**4) AI 챗봇 Phase 2(대화로 장바구니 담기) — 백엔드 완료, 프론트 연동 필요 (2026-08-01 추가 진행)**
+
+일복님이 "장바구니 담는 것까지만이라도 진행하자"고 하셔서 바로 만들었습니다.
+
+- `src/lib/gemini.ts`에 `generateWithGeminiTools()` 추가 — function-calling 왕복(모델이 함수 호출 → 서버가 실행 → 결과를 다시 모델에 보내 최종 자연어 답변 받기)을 지원하는 저수준 헬퍼. 기존 `generateWithGemini()`(다른 2개 AI 라우트가 씀)는 그대로 둬서 회귀 위험 없음.
+- `/api/ai/chat`에 `add_to_cart` 도구 1개만 노출. 동작 순서:
+  1. Gemini가 "사과 2개 담아줘" 같은 명확한 요청에서만 `add_to_cart({product_name, quantity})`를 호출하도록 시스템 프롬프트에 명시(단순 문의에는 호출 안 하게).
+  2. **Gemini가 준 인자는 절대 그대로 믿지 않습니다.** 서버가 이 요청에서 이미 조회해둔 실시간 상품 목록과 상품명을 대조해서: 상품이 실제 존재하는지, 품절/재고 여부, 옵션이 있는 상품인지(있으면 채팅으로는 처리 안 하고 상품상세 페이지로 안내 — 어떤 옵션인지 대화로 특정하기 애매해서 v1 범위에서 제외)를 재검증.
+  3. 검증 통과하면 할인가 계산(화면과 동일 공식)까지 서버가 끝내고, 결과를 Gemini에 다시 넘겨 자연스러운 확인 문장("사과 2개를 장바구니에 담았어요!")을 받습니다.
+  4. **실제 결제(PortOne)는 여전히 사람이 직접 버튼을 눌러야 합니다** — AI가 결제를 트리거하는 기능은 만들지 않았습니다(의도적 범위 제한).
+- 응답 JSON에 `action` 필드 추가: 성공 시 `{ type:'add_to_cart', id, name, price, imageUrl, category, shipping_fee, quantity }` (실패/미해당이면 `null`). `price`는 이미 할인 적용된 값이라 그대로 `useCartStore.addItem()`에 넘기면 됩니다(`CartItem` 타입과 필드명 그대로 맞춰뒀습니다).
+
+**클코 몫 — `ChatWidget.tsx`에 다음만 추가하면 끝입니다:**
+```ts
+const res = await fetch('/api/ai/chat', { ... }); // 기존 그대로
+const data = await res.json();
+// data.reply, data.message는 기존과 동일하게 처리
+if (data.action?.type === 'add_to_cart') {
+  useCartStore.getState().addItem({
+    id: data.action.id,
+    name: data.action.name,
+    price: data.action.price,
+    imageUrl: data.action.imageUrl,
+    category: data.action.category,
+    shipping_fee: data.action.shipping_fee,
+    quantity: data.action.quantity,
+  });
+  // 선택: 토스트나 "장바구니에 담겼어요" 미니 카드 UI 추가하면 더 좋음
+}
+```
+- 옵션 상품(`reason:'has_options'`)/품절(`sold_out`)/상품 못 찾음(`not_found`) 실패 케이스는 이미 AI가 자연어로 안내하는 답변(`reply`)에 녹아있어서 프론트가 에러 케이스를 따로 처리할 필요는 없습니다(`action`이 `null`이면 그냥 아무 것도 안 하면 됨).
+- `npx tsc --noEmit` 통과. **실제 Gemini function-calling 왕복은 샌드박스 네트워크 차단으로 로컬에서 검증 못 했습니다** — 배포 후 실채팅으로 "OO 2개 담아줘" 테스트해서 정상 동작 확인 부탁드립니다(특히 상품명이 카탈로그와 정확히 일치 안 할 때 Gemini가 어떻게 반응하는지, 옵션 상품 케이스가 잘 안내되는지).
 
 이 섹션은 진행 상황 따라 계속 갱신합니다. Notion 요약 대시보드에도 반영해뒀습니다.
 
