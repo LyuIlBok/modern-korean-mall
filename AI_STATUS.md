@@ -60,10 +60,15 @@
 
 - `AdminDashboard.tsx`/`ProductForm.tsx` "AI 초안 생성" 버튼 → `adminFetch('/api/admin/ai/product-description', {method:'POST', body:{name, category, origin, producer, keywords}})` (ProductForm에는 Cowork가 테스트용 최소 버튼을 이미 얹어둠)
 - QnA 탭 "AI 초안" 버튼 → `adminFetch('/api/admin/ai/qna-draft', {method:'POST', body:{qnaId}})` (QnA 탭에도 테스트용 최소 버튼 있음)
-- `ChatWidget.tsx`의 `handleSend`에서 `/api/ai/chat` 호출 연동 — **아직 미착수**, Claude-Code 몫. 상세 스펙은 `AI_STATUS_ARCHIVE.md` "AI 고도화" 섹션 참고.
+- `ChatWidget.tsx`의 `handleSend` → `/api/ai/chat` 연동 — **[claude-code] 완료.** AI 응답 "AI 상담원" 배지로 구분 표시, 401/429는 낙관적 말풍선 제거 처리. 이제 백엔드 3개 API 전부 프론트까지 연결 완료.
+
+## ⚠️ git 이력 사고 원인 확인/수정 완료 (2026-08-01)
+
+클로드 코드가 발견한 "커밋 2개(`2a8d9df`,`7edb25f`) 이후 git이 파일 3개만 추적" 사고 — 원인은 Cowork의 `GIT_INDEX_FILE` 커스텀 커밋 워크플로우가 **빈 임시 인덱스에서 시작**해서 `write-tree`를 했기 때문에, 트리가 그때 `add`한 파일만 담고 나머지 전부 유실되는 구조적 결함이었습니다. 실제 디스크 파일은 무사했고 클로드 코드가 `db4bd32`로 이미 정상 복구/push했습니다. Cowork 쪽 워크플로우는 이제 항상 `git read-tree <parent>`로 부모 트리를 먼저 채운 뒤 변경 파일만 `add`하도록 고쳤고, `.git/index` 동기화도 `cp` 대신 `git read-tree`로 바꿨습니다(이번 커밋부터 적용, `git ls-tree`로 파일 개수 정상 확인함). 재발 방지 조치 완료.
 
 ## 최근 완료 (최신순 일부 — 전체 이력은 `AI_STATUS_ARCHIVE.md`)
 
+- [claude-code] 고객 챗위젯(`ChatWidget.tsx`)을 AI 상담(Phase 0) 백엔드에 연동 완료 — AI 챗봇 프론트 연동 전 항목 완료
 - [cowork] 단코 게이미피케이션 JSONB 컬럼(`agri_profiles.gamification`) 승인/적용, 단코 협의 4건 전체 회신 완료
 - [cowork] `unified_members` 뷰에 단어앱 학습 진척도 컬럼 추가 (졸업 카드 수/평균 단계/복습 대기/최근 복습일) + `/admin/unified-members` 화면 표시, 실데이터 검증
 - [cowork] 결제/재고 로직 회귀 재검증 — 정상/금액조작/재전송(idempotency) 시나리오 라이브 트랜잭션 테스트 전부 통과, 테스트 데이터 클린업 완료
