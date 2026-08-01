@@ -20,6 +20,7 @@ interface ChatMessage {
   is_admin: boolean;
   is_read: boolean;
   created_at: string;
+  sender?: 'user' | 'admin' | 'ai' | null;
   isOptimistic?: boolean;
 }
 
@@ -34,6 +35,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState('');
   const [chatUserId, setChatUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [aiThinking, setAiThinking] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -168,6 +170,7 @@ export default function ChatWidget() {
     const content = input.trim();
     setInput('');
     setLoading(true);
+    setAiThinking(true);
 
     // Optimistic UI update
     const optimisticMsg: ChatMessage = {
@@ -177,24 +180,44 @@ export default function ChatWidget() {
       is_admin: false,
       is_read: false,
       created_at: new Date().toISOString(),
+      sender: 'user',
       isOptimistic: true
     };
     setMessages(prev => [...prev, optimisticMsg]);
 
-    const { error } = await supabase
-      .from('chat_messages')
-      .insert([{
-        user_id: chatUserId,
-        message: content,
-        is_admin: false
-      }]);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('세션이 만료되었습니다. 다시 로그인해 주세요.');
 
-    if (error) {
-      console.error('Send error:', error.message);
+      const res = await fetch('/api/ai/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ message: content }),
+      });
+      const result = await res.json();
+
+      if (!res.ok) {
+        if (res.status === 401 || res.status === 429) {
+          // 이 두 경우는 서버가 사용자 메시지를 저장하기도 전에 막은 것이라
+          // 낙관적 말풍선을 제거해 "보낸 것처럼" 오해하지 않게 합니다.
+          setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
+        }
+        // 그 외(AI 응답 생성 실패 등)는 사용자 메시지 자체는 이미 저장됐으므로
+        // 낙관적 말풍선을 그대로 두고, 실시간 구독이 실제 행으로 교체하게 둡니다.
+        alert(result.error || 'AI 상담원 응답에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+      }
+    } catch (err) {
+      console.error('Send error:', err);
       setMessages(prev => prev.filter(m => m.id !== optimisticMsg.id));
-      alert('메시지 전송에 실패했습니다.');
+      alert('메시지 전송에 실패했습니다. 인터넷 연결을 확인해 주세요.');
+    } finally {
+      setLoading(false);
+      setAiThinking(false);
     }
-    setLoading(false);
   };
 
   const handleToggleChat = () => {
@@ -256,7 +279,7 @@ export default function ChatWidget() {
                   <User className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <h3 className="font-serif text-xl leading-none tracking-tight">실시간 1:1 상담</h3>
+                  <h3 className="font-serif text-xl leading-none tracking-tight">AI 상담 (담당자 연결 가능)</h3>
                   <p className="text-[13px] opacity-60 mt-2 uppercase tracking-[0.2em] font-bold">Nature&apos;s Essence Support</p>
                 </div>
               </div>
@@ -272,13 +295,18 @@ export default function ChatWidget() {
                   </div>
                   <div className="space-y-2">
                     <p className="text-sm text-charcoal font-medium">안녕하세요! 복이네 농장입니다.</p>
-                    <p className="text-[12px] text-muted leading-relaxed font-normal">최대한 빠르게 답변해 드릴게요.</p>
+                    <p className="text-[13px] text-muted leading-relaxed font-normal">AI 상담원이 먼저 빠르게 답변해 드리고,<br/>필요하면 담당자가 직접 이어받아요.</p>
                   </div>
                 </div>
               )}
               {messages.map((msg) => (
                 <div key={msg.id} className={`flex ${msg.is_admin ? 'justify-start' : 'justify-end'}`}>
                   <div className={`flex flex-col ${msg.is_admin ? 'items-start' : 'items-end'} max-w-[85%]`}>
+                    {msg.is_admin && (
+                      <span className={`flex items-center gap-1 text-[12px] font-bold mb-1 ml-1 ${msg.sender === 'ai' ? 'text-deep-sage' : 'text-charcoal/50'}`}>
+                        {msg.sender === 'ai' ? <><Sparkles className="w-3 h-3" /> AI 상담원</> : '담당자'}
+                      </span>
+                    )}
                     <div className={`p-4 rounded-2xl text-[14px] shadow-sm leading-relaxed ${msg.is_admin ? 'bg-white text-charcoal border border-border-light rounded-tl-none font-normal' : 'bg-deep-sage text-white rounded-tr-none font-medium'}`}>
                       {msg.message}
                     </div>
@@ -289,6 +317,20 @@ export default function ChatWidget() {
                   </div>
                 </div>
               ))}
+              {aiThinking && (
+                <div className="flex justify-start">
+                  <div className="flex flex-col items-start max-w-[85%]">
+                    <span className="flex items-center gap-1 text-[12px] font-bold mb-1 ml-1 text-deep-sage">
+                      <Sparkles className="w-3 h-3" /> AI 상담원
+                    </span>
+                    <div className="px-4 py-3.5 rounded-2xl rounded-tl-none bg-white border border-border-light shadow-sm flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-deep-sage/40 animate-bounce [animation-delay:-0.3s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-deep-sage/40 animate-bounce [animation-delay:-0.15s]" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-deep-sage/40 animate-bounce" />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Input Area */}
