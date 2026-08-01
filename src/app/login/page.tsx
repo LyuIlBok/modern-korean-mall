@@ -316,7 +316,7 @@ function LoginContent() {
           <h1 className="font-serif text-2xl text-charcoal mb-2">
             {isForgotPassword ? '비밀번호를 잊으셨나요?' : isFindId ? '아이디가 생각나지 않으세요?' : '다시 만나서 반가워요'}
           </h1>
-          <p className="text-sm text-muted">
+          <p className="text-base text-charcoal/70">
             {isForgotPassword ? '가입하신 이메일로 재설정 링크를 보내드립니다.' : isFindId ? '가입 시 입력한 이름과 연락처로 찾을 수 있습니다.' : '당신의 일상에 자연의 결을 더해보세요.'}
           </p>
         </div>
@@ -326,23 +326,23 @@ function LoginContent() {
             <>
               <form onSubmit={handleLogin} className="space-y-6">
                 <div className="space-y-2">
-                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                  <label className="text-[15px] font-bold uppercase tracking-wide text-charcoal/70 ml-1">Email Address</label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
-                    <input 
+                    <input
                       required
-                      type="email" 
+                      type="email"
                       disabled={isAnyLoading}
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       placeholder="example@email.com"
-                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-base placeholder:text-muted disabled:opacity-50"
                     />
                   </div>
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Password</label>
+                  <label className="text-[15px] font-bold uppercase tracking-wide text-charcoal/70 ml-1">Password</label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                     <input
@@ -352,29 +352,29 @@ function LoginContent() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="••••••••"
-                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                      className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-base placeholder:text-muted disabled:opacity-50"
                     />
                   </div>
                   <div className="flex flex-wrap justify-end items-center gap-x-3 gap-y-1.5 px-1 pt-1">
                     <button
                       type="button"
                       onClick={() => { setIsFindId(true); setErrorMsg(''); }}
-                      className="text-[13px] whitespace-nowrap text-muted hover:text-charcoal hover:underline"
+                      className="text-sm whitespace-nowrap font-medium text-charcoal/70 hover:text-charcoal hover:underline"
                     >
                       아이디 찾기
                     </button>
-                    <span className="text-[13px] text-border-light">|</span>
+                    <span className="text-sm text-border-light">|</span>
                     <button
                       type="button"
                       onClick={() => { setIsForgotPassword(true); setErrorMsg(''); }}
-                      className="text-[13px] whitespace-nowrap text-muted hover:text-charcoal hover:underline"
+                      className="text-sm whitespace-nowrap font-medium text-charcoal/70 hover:text-charcoal hover:underline"
                     >
                       비밀번호 찾기
                     </button>
-                    <span className="text-[13px] text-border-light">|</span>
+                    <span className="text-sm text-border-light">|</span>
                     <Link
                       href="/guest-order"
-                      className="text-[13px] whitespace-nowrap text-deep-sage font-bold hover:underline"
+                      className="text-sm whitespace-nowrap text-deep-sage font-bold hover:underline"
                     >
                       비회원 주문조회
                     </Link>
@@ -405,7 +405,7 @@ function LoginContent() {
 
               <div className="relative my-10 text-center">
                 <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-border-light"></div></div>
-                <span className="relative bg-white px-4 text-[13px] text-muted uppercase tracking-widest">Or Continue With</span>
+                <span className="relative bg-white px-4 text-sm font-semibold text-charcoal/60 uppercase tracking-wide">Or Continue With</span>
               </div>
 
               <button
@@ -454,7 +454,7 @@ function LoginContent() {
                 <form onSubmit={handleFindId} className="space-y-8">
                   <div className="space-y-6">
                     <div className="space-y-2">
-                      <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Full Name</label>
+                      <label className="text-[15px] font-bold uppercase tracking-wide text-charcoal/70 ml-1">Full Name</label>
                       <div className="relative">
                         <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                         <input 
@@ -464,12 +464,12 @@ function LoginContent() {
                           value={fullName}
                           onChange={(e) => setFullName(e.target.value)}
                           placeholder="성함"
-                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm"
+                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-base placeholder:text-muted"
                         />
                       </div>
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Phone Number</label>
+                      <label className="text-[15px] font-bold uppercase tracking-wide text-charcoal/70 ml-1">Phone Number</label>
                       <div className="relative">
                         <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                         <input 
@@ -480,7 +480,7 @@ function LoginContent() {
                           onChange={handlePhoneChange}
                           placeholder="010-0000-0000"
                           maxLength={13}
-                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm font-mono"
+                          className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-base font-mono placeholder:text-muted"
                         />
                       </div>
                     </div>
@@ -542,7 +542,7 @@ function LoginContent() {
               ) : (
                 <form onSubmit={handlePasswordReset} className="space-y-8">
                   <div className="space-y-2">
-                    <label className="text-[13px] uppercase tracking-widest text-muted ml-1">Email Address</label>
+                    <label className="text-[15px] font-bold uppercase tracking-wide text-charcoal/70 ml-1">Email Address</label>
                     <div className="relative">
                       <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted/40" />
                       <input 
@@ -552,7 +552,7 @@ function LoginContent() {
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         placeholder="example@email.com"
-                        className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-sm disabled:opacity-50"
+                        className="w-full bg-hanji-white/30 border border-border-light pl-11 pr-4 py-3.5 rounded-sm focus:outline-none focus:border-deep-sage transition-colors text-base placeholder:text-muted disabled:opacity-50"
                       />
                     </div>
                   </div>
@@ -593,7 +593,7 @@ function LoginContent() {
         </div>
 
         <div className="text-center mt-10">
-          <p className="text-sm text-muted">
+          <p className="text-base text-charcoal/70">
             아직 회원이 아니신가요?{' '}
             <Link href="/signup" className="text-deep-sage border-b border-deep-sage pb-0.5 font-medium hover:text-charcoal hover:border-charcoal transition-colors">
               30초만에 회원가입하기
