@@ -146,7 +146,7 @@ export default function Header() {
 
           <Link href="/" className="absolute left-1/2 -translate-x-1/2 md:static md:translate-x-0" aria-label="홈으로 이동">
             <div className="relative h-16 w-72 sm:w-80">
-              <Image src="/logo_main.png" alt="자연의 결 로고" fill className="object-contain" priority quality={100} unoptimized={true} />
+              <Image src="/logo_main.png" alt="자연의 결 로고" fill className="object-contain" priority unoptimized={true} />
             </div>
           </Link>
 

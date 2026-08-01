@@ -17,11 +17,11 @@ export default function Footer() {
           {/* Brand Column */}
           <div className="space-y-6">
             <div className="relative h-10 w-40">
-              <Link href="/" aria-label="홈으로 이동">
-                <Image 
-                  src="/logo_horizontal.jfif" 
-                  alt="자연의 결 로고" 
-                  fill 
+              <Link href="/" aria-label="홈으로 이동" className="relative block h-full w-full">
+                <Image
+                  src="/logo_horizontal.jfif"
+                  alt="자연의 결 로고"
+                  fill
                   className="object-contain filter grayscale"
                   unoptimized={true}
                 />
