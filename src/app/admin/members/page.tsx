@@ -19,6 +19,7 @@ interface Profile {
   total_spent: number;
   tier: string;
   points: number;
+  real_points: number;
   is_admin: boolean;
   phone?: string | null;
   marketing_consent?: boolean;
@@ -140,16 +141,14 @@ export default function AdminMembersPage() {
     if (!selectedMember) return;
     setActionLoading(true);
 
-    let newPoints = selectedMember.points || 0;
     const amount = parseInt(pointAmount) || 0;
-
+    // 적립금은 profiles.points가 아니라 point_logs 원장에 증감분(delta)만 기록합니다
+    // (실제 잔액은 원장 합계 — 위 real_points 참고). 차감이 잔액보다 크면 0원까지만.
+    let pointsDelta = 0;
     if (amount > 0) {
-      if (pointAction === 'add') {
-        newPoints += amount;
-      } else {
-        newPoints = Math.max(0, newPoints - amount);
-      }
+      pointsDelta = pointAction === 'add' ? amount : -Math.min(amount, selectedMember.real_points || 0);
     }
+    const newRealPoints = Math.max(0, (selectedMember.real_points || 0) + pointsDelta);
 
     try {
       const response = await adminFetch('/api/admin/members', {
@@ -158,7 +157,7 @@ export default function AdminMembersPage() {
         body: JSON.stringify({
           userId: selectedMember.id,
           targetTier: selectedTier,
-          targetPoints: newPoints,
+          pointsDelta,
         })
       });
 
@@ -168,9 +167,9 @@ export default function AdminMembersPage() {
         throw new Error(result.error || '업데이트 실패');
       }
 
-      setMembers(prev => prev.map(m => 
-        m.id === selectedMember.id 
-          ? { ...m, tier: selectedTier, points: newPoints }
+      setMembers(prev => prev.map(m =>
+        m.id === selectedMember.id
+          ? { ...m, tier: selectedTier, real_points: newRealPoints }
           : m
       ));
       alert(result.message || '회원 정보가 성공적으로 수정되었습니다.');
@@ -296,7 +295,7 @@ export default function AdminMembersPage() {
                       </td>
                       <td className="px-6 py-4 text-right">
                         <span className="text-deep-sage font-bold">
-                          {new Intl.NumberFormat('ko-KR').format(member.points || 0)} P
+                          {new Intl.NumberFormat('ko-KR').format(member.real_points || 0)} P
                         </span>
                       </td>
                       <td className="px-6 py-4 text-center">
@@ -402,7 +401,7 @@ export default function AdminMembersPage() {
                   {/* 3. 적립금 관리 */}
                   <section className="space-y-4">
                     <label className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted flex items-center gap-2">
-                      <DollarSign className="w-3.5 h-3.5" /> 적립금 관리 (현재: {selectedMember.points.toLocaleString()}P)
+                      <DollarSign className="w-3.5 h-3.5" /> 적립금 관리 (현재: {selectedMember.real_points.toLocaleString()}P)
                     </label>
                     <div className="flex gap-2">
                       <div className="flex bg-hanji-white rounded-xl p-1 border border-border-light shadow-inner">
@@ -436,9 +435,9 @@ export default function AdminMembersPage() {
                       <p className="text-[10px] text-right text-muted italic">
                         변경 후 예상: <span className="font-bold text-charcoal">
                           {new Intl.NumberFormat('ko-KR').format(
-                            pointAction === 'add' 
-                              ? (selectedMember.points || 0) + parseInt(pointAmount || '0')
-                              : Math.max(0, (selectedMember.points || 0) - parseInt(pointAmount || '0'))
+                            pointAction === 'add'
+                              ? (selectedMember.real_points || 0) + parseInt(pointAmount || '0')
+                              : Math.max(0, (selectedMember.real_points || 0) - parseInt(pointAmount || '0'))
                           )} P
                         </span>
                       </p>
