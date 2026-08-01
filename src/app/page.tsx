@@ -79,13 +79,13 @@ export default async function Home() {
           src={heroBgImage}
           alt="복이네농장 연천 농경지"
           fill
-          className="object-cover brightness-[0.55] scale-105"
+          className="object-cover brightness-[0.8] scale-105"
           priority
         />
-        {/* 배경 이미지가 밝을 때도 흰색 텍스트 가독성을 보장하기 위한 딤 레이어.
-            중앙(텍스트 영역)이 가장 어둡고 위/아래로 갈수록 옅어집니다. */}
-        <div className="absolute inset-0 bg-black/35" />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-hanji-white/80" />
+        {/* 배경 사진이 너무 잘 보이지 않을 정도로 어두워지지 않으면서도
+            흰색 텍스트 가독성은 유지하도록 하는 옅은 딤 레이어.
+            텍스트 자체에 text-shadow가 있어 대비 보정의 상당 부분을 담당함. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/5 to-hanji-white/85" />
 
         <div className="relative z-10 text-center px-4 space-y-8 max-w-5xl">
           <div className="flex justify-center mb-6">
