@@ -45,21 +45,28 @@ export const useWishlistStore = create<WishlistState>()(
         }
 
         // 로그인 상태면 Supabase와 동기화
+        // 주의: supabase-js는 쿼리 실패 시 reject가 아니라 {error}를 담아 resolve하므로,
+        // 반드시 error를 직접 확인해야 함(try/catch만으로는 RLS 거부 등을 못 잡음).
         if (userId) {
-          try {
-            if (isCurrentlyIn) {
-              await supabase
+          const { error } = isCurrentlyIn
+            ? await supabase
                 .from('wishlists')
                 .delete()
                 .eq('user_id', userId)
-                .eq('product_id', product.id);
-            } else {
-              await supabase
+                .eq('product_id', product.id)
+            : await supabase
                 .from('wishlists')
                 .insert([{ user_id: userId, product_id: product.id }]);
-            }
-          } catch (error) {
+
+          if (error) {
             console.error('Wishlist sync error:', error);
+            // 서버 반영이 실패했으니 낙관적으로 바꿨던 로컬 상태를 원래대로 되돌림
+            if (isCurrentlyIn) {
+              set({ items: [...get().items, product] });
+            } else {
+              set({ items: get().items.filter(item => item.id !== product.id) });
+            }
+            alert('관심 상품 저장에 실패했습니다. 잠시 후 다시 시도해 주세요.');
           }
         }
       },

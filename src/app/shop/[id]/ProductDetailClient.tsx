@@ -43,6 +43,7 @@ export default function ProductDetailClient({
   
   const [options, setOptions] = useState<ProductOption[]>(initialOptions);
   const [loadingOptions, setLoadingOptions] = useState(initialOptions.length === 0);
+  const [optionsFetchFailed, setOptionsFetchFailed] = useState(false);
   const [selectedOption, setSelectedOption] = useState<ProductOption | null>(null);
 
   const [userId, setUserId] = useState<string | null>(null);
@@ -64,8 +65,17 @@ export default function ProductDetailClient({
         .select('*')
         .eq('product_id', product.id)
         .order('created_at', { ascending: true });
-      
-      if (data) setOptions(data as ProductOption[]);
+
+      // 옵션 목록 조회가 실패했을 때 "옵션 없는 상품"으로 잘못 취급하면 옵션 선택 없이
+      // (그리고 옵션 추가금 없이) 구매가 가능해지므로, 실패 여부를 별도로 기억해서
+      // 구매 버튼을 막습니다.
+      if (error) {
+        console.error('상품 옵션 조회 실패:', error.message);
+        setOptionsFetchFailed(true);
+      } else if (data) {
+        setOptions(data as ProductOption[]);
+        setOptionsFetchFailed(false);
+      }
       setLoadingOptions(false);
     };
 
@@ -127,6 +137,10 @@ export default function ProductDetailClient({
 
   const handleAddToCart = () => {
     if (!product) return;
+    if (optionsFetchFailed) {
+      alert(language === 'ko' ? '옵션 정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.' : 'Failed to load product options. Please refresh and try again.');
+      return;
+    }
     if (options.length > 0 && !selectedOption) {
       alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
       return;
@@ -148,6 +162,10 @@ export default function ProductDetailClient({
 
   const handleBuyNow = () => {
     if (!product) return;
+    if (optionsFetchFailed) {
+      alert(language === 'ko' ? '옵션 정보를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.' : 'Failed to load product options. Please refresh and try again.');
+      return;
+    }
     if (options.length > 0 && !selectedOption) {
       alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
       return;
@@ -381,17 +399,27 @@ export default function ProductDetailClient({
                 </div>
               </div>
 
+              {optionsFetchFailed && (
+                <p className="text-sm text-terracotta font-medium">
+                  옵션 정보를 불러오지 못했습니다.{' '}
+                  <button type="button" onClick={() => window.location.reload()} className="underline font-bold">
+                    새로고침
+                  </button>
+                  {' '}후 다시 시도해 주세요.
+                </p>
+              )}
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <button 
+                <button
                   onClick={handleAddToCart}
-                  disabled={product.is_sold_out}
+                  disabled={product.is_sold_out || optionsFetchFailed}
                   className="flex items-center justify-center gap-4 py-6 bg-white border-2 border-charcoal text-charcoal hover:bg-hanji-white transition-all font-serif text-xl rounded-sm disabled:opacity-50 font-bold shadow-lg"
                 >
                   <ShoppingBag className="w-6 h-6" /> {t?.common?.addToCart || '장바구니 담기'}
                 </button>
-                <button 
+                <button
                   onClick={handleBuyNow}
-                  disabled={product.is_sold_out}
+                  disabled={product.is_sold_out || optionsFetchFailed}
                   className="flex items-center justify-center gap-4 py-6 bg-charcoal text-white hover:bg-deep-sage transition-all font-serif text-xl rounded-sm shadow-2xl disabled:opacity-50 font-bold group"
                 >
                   <CreditCard className="w-6 h-6 group-hover:scale-110 transition-transform" /> {t?.common?.buyNow || '바로 구매하기'}
