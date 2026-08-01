@@ -1,16 +1,39 @@
 'use client';
 
 import Link from 'next/link';
-import { Suspense } from 'react';
+import { Suspense, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CheckCircle, ArrowRight, ShoppingBag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { CONFIG } from '@/lib/config';
+import { useCartStore } from '@/store/useCartStore';
 
 function OrderSuccessContent() {
   const searchParams = useSearchParams();
   const method = searchParams.get('method');
+  const orderId = searchParams.get('orderId');
   const isTransfer = method === 'transfer';
+  const clearCart = useCartStore((s) => s.clearCart);
+  const hasFiredRef = useRef(false);
+
+  // 장바구니 비우기 + 주문완료 메일 발송을 여기서 한 곳에서 처리합니다.
+  // PortOne V2가 모바일에서는 REDIRECTION(전체 페이지 이동) 방식을 쓰기 때문에
+  // 체크아웃 페이지의 결제 요청 이후 코드가 실행되지 않는 경우가 있어(브라우저가
+  // 아예 PG 결제창으로 이동), 결제 수단/기기와 무관하게 항상 도달하는 이 페이지에서
+  // 처리하도록 통일했습니다. 메일 발송은 orderId만 보내고 실제 수신자/금액/상품은
+  // 서버가 DB에서 직접 조회합니다(클라이언트 값을 신뢰하지 않음).
+  useEffect(() => {
+    if (hasFiredRef.current || !orderId) return;
+    hasFiredRef.current = true;
+
+    clearCart();
+
+    fetch('/api/email/order-success', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ orderId }),
+    }).catch((err) => console.error('Order confirmation email trigger error:', err));
+  }, [orderId, clearCart]);
 
   return (
     <div className="bg-hanji-white min-h-screen flex items-center justify-center p-4">

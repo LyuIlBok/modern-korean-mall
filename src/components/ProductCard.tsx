@@ -40,8 +40,13 @@ export default function ProductCard({ product }: { product: ProductWithRating })
       return;
     }
 
+    // [수정] product를 그대로 spread하면 product.price(정가)가 그대로 들어가서,
+    // 목록 카드엔 할인가로 보이는데 실제 장바구니엔 정가로 담기는 버그가 있었습니다
+    // (ProductDetailClient.tsx의 상세페이지 담기와 동일한 원인). 카드에 표시 중인
+    // discountedPrice로 덮어써서 일치시킵니다.
     addItem({
       ...product,
+      price: discountedPrice,
       quantity: 1,
       shipping_fee: product.shipping_fee || 0
     });

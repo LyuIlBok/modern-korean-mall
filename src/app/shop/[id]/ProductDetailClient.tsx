@@ -145,11 +145,16 @@ export default function ProductDetailClient({
       alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
       return;
     }
-    addItem({ 
-      id: product.id, 
-      name: product.name, 
-      price: product.price, 
-      imageUrl: product.imageUrl, 
+    addItem({
+      id: product.id,
+      name: product.name,
+      // [수정] 할인율(discount_rate)이 있으면 정가가 아니라 화면에 표시된 할인가(basePrice)를
+      // 담아야 합니다. 예전엔 여기 product.price(정가)를 그대로 넘겨서, 상품상세엔 할인가로
+      // 보이는데 실제 장바구니/결제 금액은 정가로 청구되는 버그가 있었습니다. 서버 쪽
+      // process_payment_webhook도 같은 할인 공식(floor(price*(1-discount_rate/100)))으로
+      // 재계산하도록 같이 고쳤습니다.
+      price: basePrice,
+      imageUrl: product.imageUrl,
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,
@@ -170,11 +175,16 @@ export default function ProductDetailClient({
       alert(language === 'ko' ? '상품 옵션을 먼저 선택해 주세요.' : 'Please select a product option first.');
       return;
     }
-    addItem({ 
-      id: product.id, 
-      name: product.name, 
-      price: product.price, 
-      imageUrl: product.imageUrl, 
+    addItem({
+      id: product.id,
+      name: product.name,
+      // [수정] 할인율(discount_rate)이 있으면 정가가 아니라 화면에 표시된 할인가(basePrice)를
+      // 담아야 합니다. 예전엔 여기 product.price(정가)를 그대로 넘겨서, 상품상세엔 할인가로
+      // 보이는데 실제 장바구니/결제 금액은 정가로 청구되는 버그가 있었습니다. 서버 쪽
+      // process_payment_webhook도 같은 할인 공식(floor(price*(1-discount_rate/100)))으로
+      // 재계산하도록 같이 고쳤습니다.
+      price: basePrice,
+      imageUrl: product.imageUrl,
       category: product.category,
       description: product.description,
       shipping_fee: product.shipping_fee || 0,

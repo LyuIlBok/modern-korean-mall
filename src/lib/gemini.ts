@@ -66,16 +66,29 @@ export async function generateWithGemini({
   const data = await res.json();
 
   const finishReason = data?.candidates?.[0]?.finishReason;
-  const text: string | undefined = data?.candidates?.[0]?.content?.parts
-    ?.map((p: { text?: string }) => p.text || '')
-    .join('');
+  const parts: Array<{ text?: string; thought?: boolean }> = data?.candidates?.[0]?.content?.parts ?? [];
 
-  if (!text || !text.trim()) {
+  // [2026-08-01] gemini-3.6-flash로 교체한 뒤 채팅 응답에 "/Cancellation/Refund
+  // requests: State" 같은 깨진 조각이 저장되는 버그가 보고됨(클로드 코드 발견). 원인
+  // 후보로 파악한 것: Gemini 3.x 계열은 응답 parts에 최종 답변 외에 내부 사고 과정
+  // 조각(part.thought === true)이 섞여 올 수 있는데, 기존 코드는 이를 구분하지 않고
+  // 모든 part의 text를 그냥 이어붙이고 있었음. thought 파트를 제외하고 최종 답변
+  // 파트만 모으도록 방어적으로 수정.
+  const text = parts
+    .filter((p) => !p.thought && p.text)
+    .map((p) => p.text || '')
+    .join('')
+    .trim();
+
+  if (!text) {
     if (finishReason === 'SAFETY') {
       throw new GeminiApiError('안전 정책에 의해 응답이 차단되었습니다.');
+    }
+    if (finishReason && finishReason !== 'STOP') {
+      console.warn(`[Gemini] Unexpected finishReason with empty answer: ${finishReason}`);
     }
     throw new GeminiApiError('Gemini API가 빈 응답을 반환했습니다.');
   }
 
-  return text.trim();
+  return text;
 }

@@ -253,7 +253,15 @@ function MyPageContent() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ orderId })
       });
-      if (res.ok) { alert('주문이 취소되었습니다.'); fetchData(); }
+      const json = await res.json().catch(() => ({}));
+      if (res.ok) {
+        alert('주문이 취소되었습니다.');
+        fetchData();
+      } else {
+        // 실패 시 아무 안내 없이 조용히 끝나던 버그 수정 — 서버가 준 사유(본인 주문 아님/
+        // 이미 처리된 주문 등)를 그대로 보여줌
+        alert(json.error || '주문 취소에 실패했습니다.');
+      }
     } catch (err) { alert('오류가 발생했습니다.'); }
     finally { setCancellingId(null); }
   };

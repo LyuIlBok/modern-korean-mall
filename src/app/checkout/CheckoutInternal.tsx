@@ -33,7 +33,7 @@ interface Address {
 export default function CheckoutInternal() {
   const router = useRouter();
   const { t, language } = useLanguageStore();
-  const { items, getTotalPrice, getShippingFee, clearCart } = useCartStore();
+  const { items, getTotalPrice, getShippingFee } = useCartStore();
   const hasMounted = useHasMounted();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -327,47 +327,15 @@ export default function CheckoutInternal() {
         // PortOne에 결제금액을 재확인한 뒤 단독으로 처리합니다. 클라이언트가 직접
         // "결제완료"를 기록하면 결제 없이도 위조될 수 있어 제거했습니다(RLS도 이를 막음).
 
-        // 4. Send Order Confirmation Email (Async, fail silently)
-        fetch('/api/email/order-success', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: order.id,
-            email: formData.email,
-            buyerName: formData.name,
-            totalAmount: finalAmount,
-            items: items.map(i => ({
-              name: i.name,
-              quantity: i.quantity,
-              price: i.price + (i.optionPrice || 0),
-              optionName: i.optionName
-            }))
-          })
-        }).catch(err => console.error('Email trigger error:', err));
-
-        clearCart();
+        // 주문완료 메일 발송/장바구니 비우기는 여기서 하지 않고 /order-success 페이지에서
+        // 처리합니다. PortOne V2는 모바일에서 팝업이 아니라 REDIRECTION(전체 페이지 이동)
+        // 방식을 쓰기 때문에, 이 지점(await 이후) 코드가 모바일 카드결제에서는 아예
+        // 실행되지 않는 경우가 있었습니다(브라우저가 PG 결제창으로 이동해버림). 두 처리를
+        // 항상 도달하는 order-success 페이지로 옮겨서 결제 수단/기기와 무관하게 동작하도록
+        // 통일했습니다.
         router.push(`/order-success?orderId=${order.id}&method=card`);
       } else {
-        // 무통장 입금 등 다른 수단 처리
-        // For transfer, we also send confirmation email
-        fetch('/api/email/order-success', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            orderId: order.id,
-            email: formData.email,
-            buyerName: formData.name,
-            totalAmount: finalAmount,
-            items: items.map(i => ({
-              name: i.name,
-              quantity: i.quantity,
-              price: i.price + (i.optionPrice || 0),
-              optionName: i.optionName
-            }))
-          })
-        }).catch(err => console.error('Email trigger error:', err));
-
-        clearCart();
+        // 무통장 입금 등 다른 수단 처리 (order-success 페이지에서 메일 발송/장바구니 비우기 처리)
         router.push(`/order-success?orderId=${order.id}&method=transfer`);
       }
 
