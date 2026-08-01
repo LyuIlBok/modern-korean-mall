@@ -50,6 +50,9 @@ export default function ProductDetailClient({
   const [isRestockRequested, setIsRestockRequested] = useState(false);
   const [isRestockSubmitting, setIsRestockSubmitting] = useState(false);
 
+  const [frequentlyBoughtTogether, setFrequentlyBoughtTogether] = useState<Product[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Product[]>([]);
+
   const isWished = (hasMounted && product) ? isInWishlist(product.id) : false;
   const galleryImages = product.images && product.images.length > 0 ? product.images : [product.imageUrl];
 
@@ -81,6 +84,41 @@ export default function ProductDetailClient({
 
     fetchOptions();
   }, [product.id, initialOptions]);
+
+  // [개인화 추천] "함께 구매한 상품"은 로그인 여부와 무관하게 공개 조회.
+  // "최근 본 상품" 기록/조회는 로그인 사용자 전용(코웍의 /api/products/recently-viewed
+  // 설계 — 비로그인 세션 트래킹은 범위 밖).
+  useEffect(() => {
+    fetch(`/api/products/${product.id}/frequently-bought-together`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (json.success) setFrequentlyBoughtTogether(json.data ?? []);
+      })
+      .catch((err) => console.error('함께 구매한 상품 조회 실패:', err));
+
+    const recordViewAndFetchRecent = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
+
+      // 조회 기록은 부가 기능이라 실패해도 사용자 경험을 막지 않음(await 안 함).
+      fetch('/api/products/recently-viewed', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ productId: product.id }),
+      }).catch((err) => console.error('최근 본 상품 기록 실패:', err));
+
+      const res = await fetch('/api/products/recently-viewed?limit=8', { headers });
+      const json = await res.json();
+      if (json.success) {
+        // 방금 이 페이지 조회 기록으로 자기 자신이 포함될 수 있어 제외.
+        setRecentlyViewed((json.data ?? []).filter((p: Product) => p.id !== product.id));
+      }
+    };
+    recordViewAndFetchRecent();
+  }, [product.id]);
 
   useEffect(() => {
     if (!product.is_sold_out) return;
@@ -463,6 +501,19 @@ export default function ProductDetailClient({
         {/* 2. Detail Tabs (Details, Reviews, Q&A) */}
         <ProductTabs product={product} />
 
+        {/* 2.5. Frequently Bought Together */}
+        {frequentlyBoughtTogether.length > 0 && (
+          <div className="mt-48 pt-24 border-t border-border-light">
+            <div className="mb-16">
+              <h2 className="font-serif text-4xl text-charcoal">함께 구매하면 좋아요</h2>
+              <p className="text-muted mt-2 font-normal italic">다른 고객님들이 이 상품과 함께 담은 상품입니다.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {frequentlyBoughtTogether.map((p: any) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+        )}
+
         {/* 3. Related Products */}
         <div className="mt-48 pt-24 border-t border-border-light">
           <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
@@ -476,6 +527,19 @@ export default function ProductDetailClient({
             {relatedProducts.map((p: any) => <ProductCard key={p.id} product={p} />)}
           </div>
         </div>
+
+        {/* 4. Recently Viewed (logged-in only) */}
+        {recentlyViewed.length > 0 && (
+          <div className="mt-48 pt-24 border-t border-border-light">
+            <div className="mb-16">
+              <h2 className="font-serif text-4xl text-charcoal">최근 본 상품</h2>
+              <p className="text-muted mt-2 font-normal italic">회원님이 최근 살펴보신 상품입니다.</p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+              {recentlyViewed.map((p: any) => <ProductCard key={p.id} product={p} />)}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
