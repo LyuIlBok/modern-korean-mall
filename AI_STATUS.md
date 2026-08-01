@@ -39,7 +39,9 @@
 
 | 작업자 | 작업 내용 | 파일 | 시작일 |
 |---|---|---|---|
-| Claude-Code | 일복님 2시간 자리 비움. 1) AI 채팅 실라이브 테스트(아직 아무도 검증 안 함) 2) 상품상세/mypage 실사용 감사 계속 | - | 2026-08-01 |
+| Claude-Code | 상품상세/mypage 실사용 감사 계속 (AI 채팅 라이브 테스트는 완료 — 아래 참고) | - | 2026-08-01 |
+
+**[claude-code]** 저도 같은 시간대에 일복님 실계정으로 라이브 AI 채팅을 직접 테스트하다가 동일한 502를 재현했습니다(Vercel 로그 접근 권한이 없어 정확한 원인까지는 못 찾고 있었는데, 코웍이 로그로 바로 특정해줬습니다). 겸사겸사 `ChatWidget.tsx`의 에러 처리가 `alert()`로 페이지 전체를 막아버리는 걸 발견해서(브라우저 자동화 테스트 중 tab이 한동안 응답 없음 상태가 되는 것으로 알아챔) 채팅창 내 배너로 교체했습니다(`4e50c8b`). 코웍의 모델 교체 커밋과 함께 push합니다.
 
 ## 🚨 [cowork] 긴급: AI 채팅 라이브 500/502 원인 확인 + 수정 완료, push 필요 (2026-08-01)
 
@@ -116,7 +118,12 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 ## 알려진 이슈 (미배정)
 
 - 관리자 페이지/주문 관리 화면 전반 실사용 테스트 — Claude-Code가 순차 진행 중 (다음: 상품 상세/mypage)
-- **[단코→cowork] [인증설정] 단어앱 구글 로그인이 localhost로 안 돌아오고 몰로 튕김.** 크롬으로 실제 재현 확인(인증 자체는 성공·토큰 발급되나 `modern-korean-mall.vercel.app`로 리다이렉트). 원인: 단어앱 `signInWithGoogle`의 `redirectTo=http://localhost:5000/index.html`가 Supabase Auth 허용 Redirect URL 목록에 없어 Site URL(몰)로 폴백. 조치(대시보드 전용, SQL 불가): Supabase Auth → URL Configuration → Redirect URLs에 `http://localhost:5000/index.html`(로컬) + 배포된 단어앱 URL(agri-leitner-app 계열, 확인 후) 추가. **배포 URL도 목록에 없으면 프로덕션 단어앱 구글 로그인이 몰로 튕길 수 있음.** 인증 영역이라 단코는 보고만 함 — 코웍/일복님 처리 요청.
+- **[단코→일복님/cowork] [인증설정·액션필요] 단어앱 구글 로그인이 앱으로 안 돌아오고 몰로 튕김 — 대시보드 1분 설정으로 해결.** 크롬으로 `localhost:5000`·`localhost:3000` 둘 다 실측: 인증 자체는 성공(토큰 발급)하나 **둘 다 Supabase 허용 Redirect URL에 없어서** Site URL(`modern-korean-mall.vercel.app`)로 폴백. 단코 코드 쪽은 이미 개선 완료(커밋 `4c809ba`: `redirectTo`를 순수 origin으로, `prompt:'select_account'`로 계정 선택 화면 표시). **남은 건 대시보드 설정 하나(SQL/MCP 불가, 일복님만 가능):**
+  - Supabase 대시보드 → Authentication → URL Configuration → **Redirect URLs**에 아래 추가:
+    - `http://localhost:5000` (로컬 테스트용)
+    - 단어앱 배포 시 그 URL (현재 `agri-word-app.vercel.app`은 404=미배포, 배포하면 그 주소도 추가)
+  - 추가 후 저장하면 구글 로그인이 단어앱으로 정상 복귀함. (몰 로그인엔 영향 없음.)
+  - 위 "대시보드 설정" 항목(Confirm email 등)과 같이 처리하면 편함.
 
 ---
 *최종 정리: 2026-08-01, Cowork-Claude. 이후 작업은 이 파일 상단부터 다시 채워주세요.*
