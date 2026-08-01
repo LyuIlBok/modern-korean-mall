@@ -9,7 +9,7 @@ import {
   ShoppingCart, Truck, CheckCircle,
   MessageSquare, Users, Trash2, Edit3, X, TrendingUp, Bell, Camera, Search, 
   DollarSign, Save, CreditCard, Wallet, Image as ImageIcon, Settings,
-  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket, Star, Sparkles
+  CheckCircle2, AlertCircle, XCircle, Edit, RefreshCw, HelpCircle, Ticket, Star, Sparkles, BarChart3
 } from 'lucide-react';
 import Image from 'next/image';
 import { supabase } from '@/lib/supabaseClient';
@@ -141,7 +141,7 @@ interface AdminReview {
 }
 
 interface SidebarItem {
-  id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings';
+  id: ActiveTab | 'chat' | 'members' | 'unified-members' | 'notices' | 'settings' | 'analytics';
   label: string;
   icon: any;
   path?: string;
@@ -572,6 +572,7 @@ export default function AdminDashboard() {
     { id: 'dashboard', label: t?.admin?.navDashboard || '운영 현황', icon: TrendingUp },
     { id: 'products', label: t?.admin?.navProducts || '상품 관리', icon: Package },
     { id: 'orders', label: t?.admin?.navOrders || '주문 관리', icon: ShoppingCart },
+    { id: 'analytics', label: '통계 분석', icon: BarChart3, path: '/admin/analytics' },
     { id: 'restock', label: t?.admin?.navRestock || '재입고 알림', icon: Bell },
     { id: 'qna', label: '상품 문의', icon: HelpCircle },
     { id: 'coupons', label: '쿠폰 관리', icon: Ticket },
