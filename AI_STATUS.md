@@ -185,4 +185,25 @@ API 키만 발급되면 저(클로드 코드)가 회원가입 폼에 "인증번�
 
 **[cowork] `/admin/members` 적립금 델타 방식 수정 리뷰 완료** — 클로드 코드가 독립적으로 발견/수정한 건 확인했습니다. `PATCH`가 `point_logs`에 `reason: 'ADMIN_ADJUSTMENT'`로 증감분만 insert하고, `GET`이 `point_logs` 합계를 `real_points`로 내려주고, 프론트(`admin/members/page.tsx`)도 전부 `real_points` 기준으로 통일된 것까지 코드 확인했습니다. 제가 고친 결제완료 적립/체크아웃 즉시지급 제거 건과 원리가 같고 서로 충돌 없이 잘 맞물립니다. 추가 수정 필요 없음.
 
+## 📌 [cowork] 일복님 결정 반영: AI 고도화 + 회원가입 이메일 인증 도입 (2026-08-01)
+
+일복님이 두 가지를 "도입해야 한다"고 확정하셨고, 질문 결과:
+- Anthropic API 키: **아직 없음, 발급부터 필요**
+- 이메일 인증: **Supabase 기본 템플릿 말고 디자인/문구 커스텀 원함**
+- 휴대폰 SMS 인증: **당장은 보류**, 이메일 인증부터
+
+**AI 고도화 — 진행한 것**
+- `chat_messages`에 `sender` 컬럼 추가(`'user'|'admin'|'ai'`), 기존 데이터는 `is_admin` 기준으로 채워 넣음 (`20260801_chat_messages_add_sender_column.sql`). 이제 AI 발화를 구분할 스키마 준비 끝. `is_admin` 컬럼은 하위호환 위해 당장 유지.
+- **막힌 부분**: `ANTHROPIC_API_KEY` 발급이 먼저입니다. 일복님이 console.anthropic.com에서 계정 생성 + 결제수단 등록 + API 키 발급을 하셔야 합니다. 발급 후: (1) 저나 클로드 코드에게 키를 전달하시거나, (2) Vercel 프로젝트 Settings → Environment Variables에 직접 `ANTHROPIC_API_KEY`로 등록해주시면 그 다음부터 Phase 0(AI 상담 + 상품설명 초안) 코드 작업을 시작할 수 있습니다. (참고: 지금 제 세션엔 Vercel MCP 연결이 끊겨 있어서 제가 직접 Vercel 환경변수를 등록할 수는 없는 상태입니다 — 일복님이나 클로드 코드가 등록해주셔야 합니다.)
+
+**회원가입 이메일 인증 — 진행한 것**
+- `signup/page.tsx`는 이미 예전에(누가 했는지 불명, 아마 클로드 코드) 이메일 인증 필요/불필요 두 케이스를 다 올바르게 분기 처리하도록 짜여 있는 것 확인함(추가 코드 작업 불필요).
+- 사이트 브랜드(hanji-white/deep-sage/terracotta, 세리프 헤딩)에 맞춘 커스텀 인증 메일 HTML을 만들어뒀습니다: `supabase/email-templates/confirm-signup.html`.
+- **일복님이 하실 일 (대시보드, 5분 정도)**:
+  1. Supabase 대시보드 → Authentication → Providers → Email → **"Confirm email" 켜기** (이게 꺼져 있으면 지금처럼 인증 없이 바로 가입됨)
+  2. Authentication → Email Templates → **Confirm signup** 선택 → `confirm-signup.html` 내용(파일 안 주석 제외 `<!DOCTYPE html>`부터 끝까지) 복사해서 붙여넣기 → 저장
+  3. (선택) 제목(Subject)도 "[자연의 결] 회원가입을 완료해 주세요" 정도로 변경
+
+이 세 가지 다 SQL/MCP로 접근 불가한 Auth 서비스 설정이라 저는 대신 못 누릅니다 — 유출된 비밀번호 보호, Kakao/Naver 프로바이더 비활성화랑 같이 한 번에 처리하시면 편할 것 같습니다.
+
 - [claude-code] **고객 화면 전체 가독성 개선 (일복님 요청)** — 주 고객층이 어린이·어르신이라 텍스트가 잘 보이는 게 최우선이라고 하셔서, 관리자 화면 제외 고객용 32개 화면을 일괄 조정: `text-[9~11px]`(거의 안 보임) → `text-[13px]`, `text-xs`(12px) → `text-sm`(14px), `font-light`(저시력에 불리한 얇은 글씨) → `font-normal`. className 문자열만 바꾼 순수 스타일 변경(로직 변화 없음). 데스크톱/모바일 뷰포트 모두 가로 스크롤·배지 넘침 없음, 콘솔 에러 없음, `tsc`/`lint` 통과 확인. 관리자 화면(사장님용)은 다른 사용자층이라 이번 범위에서 제외했습니다.

@@ -1,0 +1,96 @@
+<!--
+  [자연의 결] 회원가입 인증 메일 템플릿
+
+  적용 방법:
+  1. Supabase 대시보드 접속 → 해당 프로젝트 선택
+  2. Authentication → Email Templates → "Confirm signup" 선택
+  3. 아래 <body> 안의 내용을 그대로 복사해서 에디터에 붙여넣기 (이 주석 블록은 제외)
+  4. Subject(제목)는 "[자연의 결] 회원가입을 완료해 주세요" 정도로 설정
+  5. 저장 후 Authentication → Providers → Email에서 "Confirm email"이 켜져 있는지 확인
+     (꺼져 있으면 이 메일 자체가 발송되지 않습니다)
+
+  {{ .ConfirmationURL }}은 Supabase가 자동으로 실제 인증 링크로 치환해주는 변수라
+  그대로 두면 됩니다. 사이트 색상(hanji-white/deep-sage/terracotta)과 서체
+  스타일(세리프 헤딩 + 산세리프 본문)을 실제 사이트와 맞췄습니다.
+-->
+<!DOCTYPE html>
+<html lang="ko">
+<body style="margin:0; padding:0; background-color:#FAF9F6; font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', -apple-system, sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#FAF9F6; padding: 40px 16px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="background-color:#FFFFFF; border:1px solid #E8E5DF; border-radius:2px; overflow:hidden; max-width:480px; width:100%;">
+
+          <!-- 상단 브랜드 바 -->
+          <tr>
+            <td style="background-color:#4A5D4E; padding:28px 40px; text-align:center;">
+              <span style="color:#FAF9F6; font-size:13px; letter-spacing:4px; text-transform:uppercase; font-weight:600;">NATURE TEXTURE</span>
+            </td>
+          </tr>
+
+          <!-- 본문 -->
+          <tr>
+            <td style="padding:48px 40px 32px 40px; text-align:center;">
+              <h1 style="margin:0 0 20px 0; font-family: Georgia, 'Noto Serif KR', serif; font-size:26px; color:#2A2A2A; font-weight:700; letter-spacing:-0.5px;">
+                자연의 결에 오신 것을<br/>환영합니다
+              </h1>
+              <p style="margin:0 0 32px 0; font-size:15px; line-height:1.7; color:#6E6D6A;">
+                농부의 정성을 그대로 전하는 자연의 결입니다.<br/>
+                아래 버튼을 눌러 이메일 인증을 완료하시면<br/>
+                바로 로그인하실 수 있어요.
+              </p>
+
+              <!-- CTA 버튼 -->
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 auto;">
+                <tr>
+                  <td style="border-radius:2px; background-color:#4A5D4E;">
+                    <a href="{{ .ConfirmationURL }}"
+                       style="display:inline-block; padding:16px 48px; font-size:14px; font-weight:700; color:#FAF9F6; text-decoration:none; letter-spacing:1px;">
+                      이메일 인증하기
+                    </a>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin:32px 0 0 0; font-size:12px; line-height:1.6; color:#A9A8A4;">
+                버튼이 눌리지 않는다면 아래 링크를 브라우저 주소창에 붙여넣어 주세요.<br/>
+                <a href="{{ .ConfirmationURL }}" style="color:#A55D4E; word-break:break-all;">{{ .ConfirmationURL }}</a>
+              </p>
+            </td>
+          </tr>
+
+          <!-- 구분선 -->
+          <tr>
+            <td style="padding:0 40px;">
+              <div style="border-top:1px solid #E8E5DF;"></div>
+            </td>
+          </tr>
+
+          <!-- 안내 문구 -->
+          <tr>
+            <td style="padding:24px 40px 40px 40px; text-align:center;">
+              <p style="margin:0; font-size:12px; line-height:1.7; color:#A9A8A4;">
+                본인이 가입 요청을 하지 않으셨다면 이 메일을 무시하셔도 됩니다.<br/>
+                이 링크는 일정 시간이 지나면 만료됩니다.
+              </p>
+            </td>
+          </tr>
+        </table>
+
+        <!-- 푸터 -->
+        <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="max-width:480px; width:100%; margin-top:24px;">
+          <tr>
+            <td style="text-align:center; padding:0 20px;">
+              <p style="margin:0; font-size:11px; color:#A9A8A4; line-height:1.6;">
+                자연의 결 (Nature Texture) · 농업회사법인복이네농장(주)<br/>
+                문의: support@nature-texture.com
+              </p>
+            </td>
+          </tr>
+        </table>
+
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
