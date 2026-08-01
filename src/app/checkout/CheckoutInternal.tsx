@@ -235,7 +235,12 @@ export default function CheckoutInternal() {
           total_price: finalAmount,
           status: '결제대기',
           payment_method: paymentMethod,
-          memo: formData.memo
+          memo: formData.memo,
+          // 서버(process_payment_webhook)가 결제완료 처리 시 이 코드로 쿠폰을 다시 조회해서
+          // 할인액을 독립적으로 재계산합니다. discount_amount는 화면 표시/감사용으로만
+          // 저장하고, 실제 금액 검증에는 이 값 자체를 신뢰하지 않습니다.
+          coupon_code: isCouponApplied ? couponCode.trim().toUpperCase() : null,
+          discount_amount: discountAmount,
         }])
         .select()
         .single();
@@ -281,17 +286,12 @@ export default function CheckoutInternal() {
         return;
       }
 
-      // 2.5. Record Purchase Reward Points (1% of finalAmount)
-      if (session?.user?.id) {
-        const rewardPoints = Math.floor(finalAmount * 0.01);
-        if (rewardPoints > 0) {
-          await supabase.from('point_logs').insert([{
-            user_id: session.user.id,
-            amount: rewardPoints,
-            reason: 'PURCHASE_REWARD'
-          }]);
-        }
-      }
+      // [제거됨] 예전엔 여기서 결제 성공 여부와 무관하게(재고 확인보다도 전에) 적립금을
+      // 즉시 지급했습니다. 실제 화면에 보이는 적립금 잔액(마이페이지)은 point_logs 합산 뷰를
+      // 쓰는데, 결제완료 시 지급되는 정상 적립(process_payment_webhook, 상품별 reward_points
+      // 기준)은 point_logs에 기록되지 않고 있어서 안 보이고, 대신 여기서 조기 지급한 값만
+      // 보이는 상태였습니다. 결제완료가 확정된 뒤 웹훅에서만 point_logs에 적립하도록
+      // 통일했습니다 (supabase/migrations/20260801_payment_amount_server_verification.sql).
 
       // 3. Trigger PortOne V2
       if (paymentMethod === 'card') {

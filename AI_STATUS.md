@@ -67,6 +67,20 @@
 |---|---|---|---|
 | Claude-Code | 마이페이지(배송지/프로필)·관리자 화면 감사 계속 (일복님 3시간 자리 비움, 최대한 진행) | `src/app/mypage/*`, `src/app/admin/*` | 2026-08-01 |
 
+## ✅ [cowork] 클로드 코드가 넘긴 4건 처리 완료 (2026-08-01)
+
+클로드 코드가 VS Code 세션 사용량 한도로 넘긴 표(결제금액 서버검증/리뷰이미지 스토리지/유출비번보호/죽은파일)를 전부 처리했습니다.
+
+1. **[높음] 결제 금액 서버 검증 추가** — `supabase/migrations/20260801_payment_amount_server_verification.sql`. `orders`에 `coupon_code`/`discount_amount` 컬럼 추가(감사용, 실제 검증엔 `discount_amount` 자체를 신뢰하지 않고 `coupon_code`로 쿠폰을 다시 조회해 독립 재계산). `process_payment_webhook`을 재작성해서 기존 "PortOne 승인액 vs orders.total_price" 검증에 더해, **order_items를 products/product_options의 실시간 가격으로 서버가 재계산해서 orders.total_price와 대조**하는 검증을 추가(상품가+옵션가×수량+배송비-쿠폰할인). 존재하지 않는 옵션명을 지어내서 옵션 추가금을 회피하는 경로도 막음(매칭 실패 시 무조건 실패 처리). 웹훅 재전송 시 이미 완료된 주문이 재검증 때문에 뒤집히지 않도록 idempotency 체크 순서를 금액검증보다 앞으로 옮김. 라이브 DB에서 정상결제 시나리오/금액조작 시나리오/가짜옵션 시나리오 3가지를 트랜잭션으로 직접 실행해서 의도대로 통과/차단되는 것 확인 후 테스트 데이터 정리함. `CheckoutInternal.tsx`가 주문 생성 시 `coupon_code`/`discount_amount`를 같이 저장하도록 수정.
+   - **부수 발견 및 수정**: 위 작업 중 적립금이 **결제 여부와 무관하게 주문 생성 즉시(재고 확인보다도 전에) 1% 지급**되고 있었고, 반대로 결제완료 시 정상 지급되는 상품별 적립금(`product.reward_points`)은 화면에 쓰이는 `point_logs` 원장에 기록되지 않아 실제로는 안 보이고 있었던 것을 발견. `CheckoutInternal.tsx`의 즉시 지급 코드를 제거하고, `process_payment_webhook`이 결제완료 시점에만 `point_logs`에 기록하도록 통일(같은 마이그레이션에 포함).
+2. **[중간] review-images/shop_assets 스토리지 업로드 정책 추가** — `supabase/migrations/20260801_review_upload_storage_policies.sql`. 실제 업로드 코드 2군데(`mypage/page.tsx`→`review-images` 버킷, `ProductTabs.tsx`→`shop_assets` 버킷)를 확인해서 각각에 맞는 INSERT 정책 추가(review-images는 파일명에 본인 uid 필수, shop_assets는 `reviews/` 폴더로 범위 제한).
+3. **[낮음] 유출된 비밀번호 보호** — SQL로 처리 불가, 대시보드 토글 필요(이미 안내드린 항목, 그대로 대기).
+4. **[낮음] 죽은 파일 삭제** — `AddToCartButton.tsx`, `api/auth/naver-profile/route.ts` 삭제 완료(둘 다 grep으로 참조 없음 재확인).
+
+`npx tsc --noEmit` 통과 확인.
+
+**[코웍 → 일복님] 확인 필요**: Kakao/Naver Auth 프로바이더 비활성화는 Supabase 대시보드 Authentication > Providers에서 직접 꺼주셔야 합니다(SQL/MCP로 접근 불가한 영역). 필수는 아니고 프론트에서 이미 안 부르니 위험하진 않습니다.
+
 ## 🔍 상호 검토 (일복님 요청 — 서로 코드 리뷰)
 
 **[claude-code → cowork] 발견한 버그 → [cowork] 수정 완료**: `src/middleware.ts`가 `profiles.role`(존재하지 않는 컬럼)을 조회하던 버그. `select('is_admin')`만 조회하도록 수정, `profileError` 발생 시에도 명시적으로 차단하도록 정리. `npx tsc --noEmit` 통과 확인.
