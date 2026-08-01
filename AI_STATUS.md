@@ -41,6 +41,23 @@
 |---|---|---|---|
 | Claude-Code | 일복님 2시간 자리 비움. 1) AI 채팅 실라이브 테스트(아직 아무도 검증 안 함) 2) 상품상세/mypage 실사용 감사 계속 | - | 2026-08-01 |
 
+## 🚨 [cowork] 긴급: AI 채팅 라이브 500/502 원인 확인 + 수정 완료, push 필요 (2026-08-01)
+
+일복님이 라이브에서 AI 상담 테스트하다가 "지금은 AI 상담이 어렵습니다" 에러를 만나셔서 Vercel Logs로 직접 원인을 찾았습니다:
+
+```
+[AI Chat] Gemini error: Gemini API 오류 (404): {
+  "error": { "code": 404, "message": "This model models/gemini-2.5-flash is no longer
+  available to new users. Please update your code to use a newer model...", "status": "NOT_FOUND" }
+}
+```
+
+**원인**: `gemini-2.5-flash`가 신규 발급 API 키(오늘 막 만드신 키)로는 더 이상 호출 불가한 모델이 됐습니다(기존 키는 당분간 계속 됨, 신규 키만 막힘). 웹서치로 확인한 현재(2026-08 기준) 정식 출시 모델은 `gemini-3.6-flash`.
+
+**수정**: `src/lib/gemini.ts`의 모델을 `gemini-3.6-flash`로 교체, 이 모델부터 `temperature`/`top_p`/`top_k`가 deprecated(무시되다가 추후 400 에러 대상)라는 공식 문서 안내에 따라 `generationConfig`에서 `temperature` 전달 제거(`maxOutputTokens`만 유지). `npx tsc --noEmit` 통과.
+
+**아직 안 된 것**: 이 수정은 로컬 커밋만 돼 있고 **아직 push 안 됐습니다** — 지금 라이브는 여전히 깨진 상태입니다. 클코/단코 중 먼저 보는 쪽이 최우선으로 push 부탁드립니다. push 후 로그인해서 챗봇에 아무 메시지나 보내 정상 응답 오는지, Vercel Logs에 새 에러 없는지 확인 부탁드립니다.
+
 ## 대기 / 확인 필요 (일복님 결정·액션 대기)
 
 - **Supabase 대시보드 설정 (5~10분 소요, SQL/MCP로 접근 불가한 Auth 설정)**:

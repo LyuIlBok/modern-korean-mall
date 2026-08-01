@@ -13,7 +13,10 @@
  *   각 라우트(특히 로그인 사용자 누구나 부를 수 있는 채팅 라우트)에서 별도로 합니다.
  */
 
-const GEMINI_MODEL = 'gemini-2.5-flash';
+// [2026-08-01] gemini-2.5-flash가 "신규 사용자에게 더 이상 제공되지 않음"(404 NOT_FOUND)
+// 상태가 되어 라이브에서 전량 실패하고 있던 것을 발견 — 새로 발급받은 API 키(신규 사용자
+// 취급)로는 이 모델을 호출할 수 없음. 현재 GA(정식 출시)인 gemini-3.6-flash로 교체.
+const GEMINI_MODEL = 'gemini-3.6-flash';
 const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`;
 
 interface GenerateOptions {
@@ -22,6 +25,7 @@ interface GenerateOptions {
   /** 사용자/DB에서 온 데이터. 프롬프트 인젝션 방어를 위해 반드시 데이터로만 취급됩니다. */
   userContent: string;
   maxOutputTokens?: number;
+  /** @deprecated gemini-3.6-flash부터 temperature/top_p/top_k는 API가 무시합니다. 하위 호환을 위해 인자는 남겨두되 실제 요청 바디에는 더 이상 포함하지 않습니다. */
   temperature?: number;
 }
 
@@ -32,7 +36,6 @@ export async function generateWithGemini({
   systemInstruction,
   userContent,
   maxOutputTokens = 500,
-  temperature = 0.6,
 }: GenerateOptions): Promise<string> {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
@@ -47,7 +50,8 @@ export async function generateWithGemini({
       contents: [{ role: 'user', parts: [{ text: userContent }] }],
       generationConfig: {
         maxOutputTokens,
-        temperature,
+        // temperature/top_p/top_k는 gemini-3.6-flash부터 deprecated(전달해도 무시되며,
+        // 향후 모델에서는 400 에러 대상) — 의도적으로 보내지 않음.
       },
       // 안전 설정: 기본값 사용(과도한 차단 방지), 다만 명백히 위험한 카테고리는
       // Gemini 기본 정책을 그대로 따릅니다. 별도 완화 없음.
