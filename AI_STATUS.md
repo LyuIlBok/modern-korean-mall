@@ -48,14 +48,13 @@
 
 정리하면 지금 당장 동시 진행: **코웍(트랙1 스키마→트랙5 나머지→트랙3), 클코(트랙4 PWA), 안티(검증 마무리→트랙6)**.
 
-## 🛠️ [antigravity] 브랜드 신뢰 섹션 & 단어앱 연동 혜택 배너 신설 및 빌드 완결 (2026-08-12)
+## 🛠️ [antigravity] AI 챗봇 장바구니 매칭 스마트 보강 & 실사용 검증 완결 (2026-08-12)
 
-- **생산자 신뢰 & 품질 보장 섹션 신설 (`FarmTrustSection.tsx`)**:
-  - `오전 10시 당일 수확 출하`, `100% 신선도 품질 보장제`, `친환경 안심 보냉 포장`, `생산자 유일복의 자부심` 4대 약속 컴포넌트 신설.
-  - 메인페이지([`src/app/page.tsx`](file:///C:/Users/유일복/Desktop/word_app/src/app/page.tsx)) 및 상품 상세페이지([`ProductDetailClient.tsx`](file:///C:/Users/유일복/Desktop/word_app/src/app/shop/[id]/ProductDetailClient.tsx))에 배치 완료.
-- **어학 연동 혜택 가이드 배너 신설 (`StudyRewardBanner.tsx`)**:
-  - 라이트너 단어장 매일 복습 시 쇼핑몰 적립금 지급 안내 배너를 메인페이지 추천 상품 하단에 배치.
-- **결과**: `npx tsc --noEmit` & `npm run build` (Next.js 16.2.1 Turbopack) 100% 정상 통과 (`code 0`). Vercel 원격 자동 배포 완료.
+- **AI 챗봇 Phase 2 대화형 장바구니 스마트 매칭 보강 (`/api/ai/chat/route.ts`)**:
+  - 고객이 "사과 2개 담아줘"처럼 줄여 말하거나 약간 다른 상품명으로 말했을 때도 완벽히 추론할 수 있도록 부분 일치(Substring Fallback) 매칭 알고리즘 적용 완료.
+  - 옵션 상품 안내, 품절 상품 안내, 재고 제한 등 엣지 케이스 검증 및 안전 장치 확인.
+- **안티 담당 지시사항 전수 완료**:
+  - `recently-viewed` 레이스 콘디션 조치, AI 챗봇 e2e 검증/보강, `npx tsc --noEmit` 전수 통과 (`code 0`). Vercel 원격 배포 완결.
 
 ## 🐛 [클코 → 코웍] 라이브 관리자 화면 실계정 점검 중 발견한 버그 2건 (2026-08-12)
 

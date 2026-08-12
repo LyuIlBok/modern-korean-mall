@@ -263,9 +263,18 @@ export async function POST(request: Request) {
         const requestedQty = Number(args.quantity);
         const quantity = Number.isFinite(requestedQty) && requestedQty >= 1 ? Math.min(Math.floor(requestedQty), 20) : 1;
 
-        const matched = (products ?? []).find(
+        let matched = (products ?? []).find(
           (p) => p.name.trim().toLowerCase() === requestedName.toLowerCase()
         );
+
+        // 완전 일치가 없을 경우 부분 일치(includes)로 스마트 매칭
+        if (!matched && requestedName.length >= 2) {
+          matched = (products ?? []).find(
+            (p) =>
+              p.name.toLowerCase().includes(requestedName.toLowerCase()) ||
+              requestedName.toLowerCase().includes(p.name.toLowerCase())
+          );
+        }
 
         let functionResponsePayload: Record<string, unknown>;
 
