@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { ArrowRight, Leaf, Sparkles, TrendingUp, ShieldCheck, Award } from 'lucide-react';
 import { supabase } from '@/lib/supabaseClient';
 import ProductCard from '@/components/ProductCard';
+import FarmTrustSection from '@/components/FarmTrustSection';
+import StudyRewardBanner from '@/components/StudyRewardBanner';
 import { Category } from '@/types';
 
 export const dynamic = 'force-dynamic';
@@ -143,8 +145,11 @@ export default async function Home() {
         </div>
       </section>
 
+      {/* Farm Trust & Quality Assurance Section */}
+      <FarmTrustSection />
+
       {/* Product Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-32">
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
         <div className="flex flex-col md:flex-row justify-between items-end mb-24 gap-8">
           <div className="space-y-6 text-left">
             <div className="flex items-center gap-3 font-bold tracking-[0.3em] text-[13px] uppercase" style={{ color: primaryColor }}>
@@ -174,6 +179,11 @@ export default async function Home() {
             <p className="text-muted/60 text-sm mt-4 font-sans italic">대지의 결실을 준비 중이오니 잠시만 기다려 주세요.</p>
           </div>
         )}
+
+        {/* Leitner Study Reward Integration Banner */}
+        <div className="mt-20">
+          <StudyRewardBanner />
+        </div>
       </section>
 
       {/* Brand Ethos */}

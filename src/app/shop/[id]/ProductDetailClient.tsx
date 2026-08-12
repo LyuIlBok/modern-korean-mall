@@ -17,6 +17,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import ProductCard from '@/components/ProductCard';
 import ProductTabs from './ProductTabs';
+import FarmTrustSection from '@/components/FarmTrustSection';
 import Breadcrumb from '@/components/ui/Breadcrumb';
 import { Product, ProductOption } from '@/types';
 import { supabase } from '@/lib/supabaseClient';
@@ -504,6 +505,11 @@ export default function ProductDetailClient({
 
         {/* 2. Detail Tabs (Details, Reviews, Q&A) */}
         <ProductTabs product={product} />
+
+        {/* 2.2. Farm Trust Section */}
+        <div className="mt-24">
+          <FarmTrustSection />
+        </div>
 
         {/* 2.5. Frequently Bought Together */}
         {frequentlyBoughtTogether.length > 0 && (

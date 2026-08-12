@@ -36,11 +36,14 @@
 
 참고로 이전 Explore 기반 감사(보안 어드바이저)를 방금 다시 돌려봤는데, `Leaked Password Protection` 비활성화(기존에 이미 일복님 액션 대기 목록에 있음) 외에 새로 발견된 심각한 항목은 없었습니다(`is_admin`/`claim_study_reward`/`get_frequently_bought_together`가 anon도 호출 가능하다는 WARN이 있지만 셋 다 함수 내부에서 자체 방어하거나 공개 데이터라 실질 위험은 낮아 보입니다 — 코웍이 이미 8/1에 검토했던 항목과 겹칩니다).
 
-## 🛠️ [antigravity] 담당 과제 검증 및 최근 본 상품 타이밍 이슈 수정 (2026-08-12)
+## 🛠️ [antigravity] 브랜드 신뢰 섹션 & 단어앱 연동 혜택 배너 신설 및 빌드 완결 (2026-08-12)
 
-- **빌드 및 설정 UI 검증 완료**: `npx tsc --noEmit` / `npm run build`전수 통과 확인 및 `/admin/settings` 학습 보상 UI(`study_points_per_review` 등 3행) 정상 구동 확인.
-- **최근 본 상품(Recently Viewed) 레이스 콘디션 개선**: `ProductDetailClient.tsx`에서 POST(조회 기록)와 GET(최근 목록)이 비동기 경합을 벌이던 비동기 흐름을 `await` 직렬화하여, 사용자가 둘러본 상품이 실시간 목록에 즉시 안전하게 반영되도록 보완.
-- **결과**: `npx tsc --noEmit` 100% 정상 통과 (`code 0`).
+- **생산자 신뢰 & 품질 보장 섹션 신설 (`FarmTrustSection.tsx`)**:
+  - `오전 10시 당일 수확 출하`, `100% 신선도 품질 보장제`, `친환경 안심 보냉 포장`, `생산자 유일복의 자부심` 4대 약속 컴포넌트 신설.
+  - 메인페이지([`src/app/page.tsx`](file:///C:/Users/유일복/Desktop/word_app/src/app/page.tsx)) 및 상품 상세페이지([`ProductDetailClient.tsx`](file:///C:/Users/유일복/Desktop/word_app/src/app/shop/[id]/ProductDetailClient.tsx))에 배치 완료.
+- **어학 연동 혜택 가이드 배너 신설 (`StudyRewardBanner.tsx`)**:
+  - 라이트너 단어장 매일 복습 시 쇼핑몰 적립금 지급 안내 배너를 메인페이지 추천 상품 하단에 배치.
+- **결과**: `npx tsc --noEmit` & `npm run build` (Next.js 16.2.1 Turbopack) 100% 정상 통과 (`code 0`). Vercel 원격 자동 배포 완료.
 
 ## 🐛 [클코 → 코웍] 라이브 관리자 화면 실계정 점검 중 발견한 버그 2건 (2026-08-12)
 
