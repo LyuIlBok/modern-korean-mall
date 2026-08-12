@@ -165,6 +165,7 @@ export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(false);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -215,9 +216,28 @@ export default function AdminDashboard() {
       if (userCountRes.count !== null) setUserCount(userCountRes.count);
       if (qnaRes.data) setQnaList(qnaRes.data as AdminQna[]);
       if (reviewsRes.data) setReviewList(reviewsRes.data as AdminReview[]);
-      
-    } catch (err) { 
+
+      // 이전엔 각 쿼리의 error를 확인하지 않고 data 유무만 봤음 — 조회가 실패해도
+      // (RLS 거부, 네트워크 오류 등) data가 null이라 그냥 조용히 건너뛰어서 화면엔
+      // "데이터가 0건"처럼 보이는 무음 실패였음. 하나라도 실패하면 배너로 알림.
+      const failedLabels = ([
+        ['상품', productsRes.error],
+        ['주문', ordersRes.error],
+        ['재입고 알림', alertsRes.error],
+        ['회원 수', userCountRes.error],
+        ['QnA', qnaRes.error],
+        ['리뷰', reviewsRes.error],
+      ] as const).filter(([, error]) => error).map(([label]) => label);
+
+      if (failedLabels.length > 0) {
+        console.error('Admin data partial fetch failure:', failedLabels);
+        setFetchError(`다음 데이터를 불러오지 못했습니다: ${failedLabels.join(', ')}. 새로고침 후 다시 시도해 주세요.`);
+      } else {
+        setFetchError(null);
+      }
+    } catch (err) {
       console.error('Admin data fetch failed:', err);
+      setFetchError('관리자 데이터를 불러오지 못했습니다. 새로고침 후 다시 시도해 주세요.');
     } finally {
       setIsCheckingAuth(false);
     }
@@ -616,6 +636,11 @@ export default function AdminDashboard() {
       </aside>
 
       <main className="flex-1 p-12 overflow-y-auto">
+        {fetchError && (
+          <div className="mb-8 bg-terracotta/5 border border-terracotta/20 text-terracotta text-sm font-medium rounded-sm px-6 py-4">
+            {fetchError}
+          </div>
+        )}
         <AnimatePresence mode="wait">
           {activeTab === 'dashboard' && (
             <motion.div key="dashboard" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="space-y-12">

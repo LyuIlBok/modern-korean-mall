@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabaseClient';
-import { Save, Loader2, Settings, ArrowLeft, Camera, Palette } from 'lucide-react';
+import { Save, Loader2, Settings, ArrowLeft, Camera, Palette, GraduationCap } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useToastStore } from '@/store/useToastStore';
 import Button from '@/components/ui/Button';
@@ -20,6 +20,9 @@ export default function SiteSettingsPage() {
     hero_description: '',
     hero_bg_image: '',
     primary_color: '#4A5D4E',
+    study_points_per_review: '2',
+    study_daily_point_cap: '20',
+    study_reward_mode: 'points',
   });
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSubmitting] = useState(false);
@@ -226,6 +229,51 @@ export default function SiteSettingsPage() {
                       <p className="text-[10px] text-muted">브랜드 메인 색상 (버튼, 아이콘 등)</p>
                     </div>
                   </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Study Reward Config (단코 라이트너 단어앱 연동) */}
+            <div className="space-y-6">
+              <h2 className="font-serif text-2xl border-b border-border-light pb-4 text-charcoal flex items-center gap-3">
+                <GraduationCap className="w-6 h-6 text-deep-sage" /> 학습 보상 설정 (단어앱 연동)
+              </h2>
+              <p className="text-xs text-muted -mt-4">
+                라이트너 단어앱에서 오늘 복습을 마친 사용자가 받는 몰 포인트 지급 기준입니다. 저장 즉시 <code className="font-mono">claim_study_reward()</code>에 반영됩니다.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-8 bg-hanji-white/30 rounded-sm border border-border-light">
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted ml-1">복습 1장당 지급 포인트</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={settings.study_points_per_review}
+                    onChange={e => setSettings({ ...settings, study_points_per_review: e.target.value })}
+                    className="w-full bg-white border border-border-light px-6 py-4 rounded-sm focus:border-deep-sage outline-none transition-all font-medium"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted ml-1">일일 지급 상한 (포인트)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={settings.study_daily_point_cap}
+                    onChange={e => setSettings({ ...settings, study_daily_point_cap: e.target.value })}
+                    className="w-full bg-white border border-border-light px-6 py-4 rounded-sm focus:border-deep-sage outline-none transition-all font-medium"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-xs font-black uppercase tracking-widest text-muted ml-1">보상 방식</label>
+                  <select
+                    value={settings.study_reward_mode}
+                    onChange={e => setSettings({ ...settings, study_reward_mode: e.target.value })}
+                    className="w-full bg-white border border-border-light px-6 py-4 rounded-sm focus:border-deep-sage outline-none transition-all font-medium cursor-pointer"
+                  >
+                    <option value="points">포인트 지급</option>
+                    <option value="coupon">쿠폰 지급 (준비 중 — 지급 로직 미구현)</option>
+                  </select>
                 </div>
               </div>
             </div>

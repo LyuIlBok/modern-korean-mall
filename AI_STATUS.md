@@ -36,10 +36,11 @@
    - 최근 본 상품 섹션: 로그인 상태로 상품 2개 이상 둘러본 뒤 상품상세에 정상 노출되는지
    - `/admin/analytics`: 배포 환경에서 실데이터로 카테고리별 매출/고객 세그먼트가 나오는지 (로컬은 서비스롤 키 이슈로 확인 못 했음)
    - AI 챗봇 "OO 담아줘" 대화형 장바구니 담기: 실제 Gemini 왕복 e2e 테스트(상품명이 카탈로그와 정확히 안 맞을 때 반응, 옵션 상품 안내 문구)
-2. **주문 상태 변경 UI 보강**: 위 3번 항목대로 서버가 이제 취소류 주문의 상태 변경을 막고 `409 + message`를 반환합니다. 관리자 화면에서 이 메시지를 그대로 보여주고(현재 실패 처리 방식대로 alert/배너), 가능하면 드롭다운 자체에서도 취소류 상태인 주문은 변경 옵션을 비활성화해주면 관리자 입장에서 더 명확합니다. 급하지 않음(서버가 이미 차단하므로 데이터 사고는 안 남).
+2. ✅ **완료 — 주문 상태 변경 UI 보강**: `OrderDetailModal.tsx`의 기존 `catch`/`alert(err.message)` 경로가 API의 `409 + {error: message}` 응답을 이미 그대로 보여주고 있었습니다(별도 수정 불필요, 확인만 함). 추가로 주문이 취소류 상태(`주문취소`/`취소됨`/`환불완료`/`재고부족취소`)일 때 상태 드롭다운과 저장 버튼을 아예 비활성화하고 안내 문구를 넣어, 관리자가 저장을 시도했다가 거부당하는 일 자체가 없게 했습니다.
 3. ✅ **완료 — 장바구니 이탈 리마인드 선행 작업**: `useCartStore`의 담기/삭제/옵션변경/비우기 액션 + 결제 완료 시점(`clearCart` 재사용) 전부에 `cart_items` 서버 동기화 추가했습니다(아래 "최근 완료" 섹션 참고). 이제 `cart_items` 테이블이 실시간 서버 장바구니로 신뢰 가능하니, 리마인드 발송 로직(Resend + `cart_abandonment_reminders` + Vercel Cron) 바로 붙이시면 됩니다.
-4. **단코의 학습 보상 설정값(`site_settings` category=`reward`, 3개 키)을 관리자가 UI로 편집할 수 있게** — 기존 사이트 설정 관리 화면이 있다면 거기 3행만 노출하면 됩니다. 없으면 간단한 폼 하나로 충분합니다(급하지 않음, 지금은 SQL 기본값 2/20/points로 동작 중).
-5. (참고, 우선순위 낮음) 예전에 리포트하셨던 `AdminDashboard.tsx`의 `fetchData` 콘솔 무음 실패 패턴, `product_options` RLS 옛날 이메일 allowlist 잔재 — 시간 날 때 정리해도 좋습니다.
+4. ✅ **완료 — 학습 보상 설정값 관리자 UI**: `/admin/settings`(기존 사이트 설정 화면)에 "학습 보상 설정" 섹션 추가 — `study_points_per_review`/`study_daily_point_cap`/`study_reward_mode` 3개 키를 기존 `site_settings` upsert 패턴 그대로 편집 가능. 새 화면/API 불필요.
+5. ✅ **확인 완료 — `product_options` RLS**: 라이브 DB 직접 조회 결과, 옛날 이메일 하드코딩 정책은 이미 없고 현재 `product_options_admin_write`(`profiles.is_admin` 기준)/`product_options_select_public` 2개 정책만 존재합니다. 언제 누가 교체했는지는 이 파일에 기록이 없지만(아마 코웍의 이전 정리 작업 중 하나), 현재 상태는 안전하므로 추가 조치 불필요 — 리포트 항목 종료합니다.
+   또한 `AdminDashboard.tsx`의 `fetchData` 무음 실패 패턴도 수정: 병렬 조회(상품/주문/재입고알림/회원수/QnA/리뷰) 중 하나라도 `.error`가 나면 이제 콘솔 로그 + 화면 상단 배너로 알립니다(기존엔 `data`만 확인해서 실패해도 "0건"처럼 보였음).
 
 ### 📋 단코에게 지시
 
@@ -239,6 +240,7 @@ Phase 0에서 미뤄뒀던 "실시간 상품 추천/재고 연동"을 구현했�
 
 ## 최근 완료 (최신순 일부 — 전체 이력은 `AI_STATUS_ARCHIVE.md`)
 
+- [claude-code] **코웍 지시 "급하지 않음" 항목 4건 일괄 처리** — (1) 주문 상세 모달: 취소류 상태(주문취소/취소됨/환불완료/재고부족취소) 주문은 상태 드롭다운·저장 버튼 비활성화 + 안내 문구(`OrderDetailModal.tsx`). 409 에러 메시지 노출은 기존 코드가 이미 처리 중이었음을 확인. (2) `/admin/settings`에 학습 보상 설정(`study_points_per_review`/`study_daily_point_cap`/`study_reward_mode`) 섹션 추가 — 기존 `site_settings` upsert 패턴 재사용. (3) `AdminDashboard.tsx`의 `fetchData` 병렬 조회 6건에 `.error` 체크 추가, 실패 시 상단 배너 노출(이전엔 무음 실패). (4) `product_options` RLS를 라이브 DB에서 직접 확인 — 옛날 이메일 allowlist는 이미 사라졌고 `profiles.is_admin` 기반 정책만 존재함을 확인, 조치 불필요. `tsc`/`eslint` 클린(신규 에러 없음, 기존 파일의 사전 존재 warning들은 그대로).
 - [claude-code] **`cart_items` 실시간 서버 동기화 완료 — 장바구니 이탈 리마인드(로드맵 3번 트랙) 선행 작업** (코웍 지시 항목 3번). `useCartStore.ts`의 `addItem`/`removeItem`/`updateQuantity`/`updateOption`/`clearCart` 전부에 로그인 사용자 기준 `cart_items` 동기화 추가 (`syncCartItemToServer` 헬퍼 — `product_options`에서 `option_id` 조회 후 있으면 update, 없으면 insert, 로컬에서 사라졌으면 delete; `login/page.tsx`의 `syncGuestData`와 동일한 제약·패턴 재사용). `clearCart`는 주문 완료(`order-success/page.tsx`)에서도 이미 호출되고 있어 결제 완료 시점 동기화도 자동으로 커버됨. `userId`는 `Header.tsx`의 `onAuthStateChange` 리스너가 이미 두 스토어(cart/wishlist) 모두에 배선해두고 있어 별도 배선 작업은 불필요했음(처음엔 grep 패턴이 좁아서 못 찾았던 것으로 확인). `tsc`/`eslint` 클린, 게스트 모드 회귀 테스트(로그인 없이 장바구니 담기) 정상 동작 확인. **코웍은 이제 이 위에 리마인드 발송 로직(Resend + `cart_abandonment_reminders` 테이블 + Vercel Cron)을 바로 붙이면 됩니다.**
 - [claude-code] 관리자 주문 관리 실사용 감사 — 결제 미확인 주문(입금대기/결제실패/금액불일치_확인필요)이 상태 변경 드롭다운에선 "결제완료"처럼 보이던 표시 버그 수정 + 경고 문구 추가, 상태 필터 누락분 추가, 주문 조회 실패 무음 처리 → 에러 배너로 변경. 상태 전이 미검증/취소시 적립금 미회수는 코웍에게 리포트(위 섹션).
 - [claude-code] 상품상세/mypage 실사용 감사 — 옵션 조회 실패 시 무옵션 구매 허용 버그, 찜하기 동기화 실패 무시 버그 수정. 할인율 미반영 버그는 코웍에게 리포트(위 섹션, 해결 완료). mypage 쿠폰함/배송지 탭은 이상 없음 확인.

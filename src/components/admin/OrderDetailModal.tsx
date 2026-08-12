@@ -53,6 +53,12 @@ const STATUS_OPTIONS = [
 // 착각하고 다음 단계로 넘기지 않도록 별도로 경고 표시합니다.
 const NEEDS_REVIEW_STATUSES = ['입금대기', '결제실패', '금액불일치_확인필요'];
 
+// admin_update_order_status RPC(supabase/migrations/20260801_..._rpc.sql)가 서버에서
+// 이 그룹 밖으로의 전이를 차단하는 상태들과 동일한 목록. 서버가 어차피 막으므로,
+// 관리자가 드롭다운에서 다른 상태를 골랐다가 저장 시점에야 거부 메시지를 보는 대신
+// 애초에 변경 불가능하다는 걸 드롭다운 자체에서 알 수 있도록 비활성화합니다.
+const CANCELLED_GROUP_STATUSES = ['주문취소', '취소됨', '환불완료', '재고부족취소'];
+
 export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDetailModalProps) {
   const [status, setStatus] = useState(order.status);
   const [trackingNumber, setTrackingNumber] = useState(order.tracking_number || '');
@@ -63,6 +69,7 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
   const selectOptions = STATUS_OPTIONS.includes(order.status)
     ? STATUS_OPTIONS
     : [order.status, ...STATUS_OPTIONS];
+  const isCancelledGroup = CANCELLED_GROUP_STATUSES.includes(order.status);
 
   const handleSave = async () => {
     setIsLoading(true);
@@ -208,10 +215,16 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
                       ⚠ 현재 상태가 &quot;{order.status}&quot;입니다 — 결제가 정상 확인되지 않은 주문일 수 있으니, 실제 입금/결제 여부를 먼저 확인한 뒤 상태를 변경해 주세요.
                     </p>
                   )}
+                  {isCancelledGroup && (
+                    <p className="text-[13px] text-muted font-bold bg-hanji-white border border-border-light rounded-sm px-3 py-2">
+                      이미 &quot;{order.status}&quot; 처리된 주문은 다른 상태로 되돌릴 수 없습니다. 필요하면 고객에게 재주문을 안내해 주세요.
+                    </p>
+                  )}
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
-                    className="w-full bg-white border border-border-light p-4 rounded-sm text-sm focus:outline-none focus:border-deep-sage transition-all appearance-none cursor-pointer"
+                    disabled={isCancelledGroup}
+                    className="w-full bg-white border border-border-light p-4 rounded-sm text-sm focus:outline-none focus:border-deep-sage transition-all appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-hanji-white"
                   >
                     {selectOptions.map(opt => (
                       <option key={opt} value={opt}>{opt}</option>
@@ -252,10 +265,10 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
           >
             취소
           </button>
-          <button 
+          <button
             onClick={handleSave}
-            disabled={isLoading}
-            className="flex-1 py-4 text-sm font-bold text-white bg-charcoal rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 uppercase tracking-widest"
+            disabled={isLoading || isCancelledGroup}
+            className="flex-1 py-4 text-sm font-bold text-white bg-charcoal rounded-sm hover:bg-deep-sage transition-all flex items-center justify-center gap-3 shadow-xl disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
           >
             {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className="w-5 h-5" />}
             변경사항 저장하기
