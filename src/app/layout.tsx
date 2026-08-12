@@ -6,6 +6,8 @@ import CartSidebar from "@/components/CartSidebar";
 import ToastContainer from "@/components/Toast";
 import ChatWidget from "@/components/ChatWidget";
 import AnnouncementPopup from "@/components/layout/AnnouncementPopup";
+import PwaRegister from "@/components/pwa/PwaRegister";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import Script from "next/script";
 import { Metadata } from 'next';
 import { GoogleTagManager, GoogleAnalytics } from '@next/third-parties/google';
@@ -58,6 +60,7 @@ export const metadata: Metadata = {
 export const viewport = {
   width: 'device-width',
   initialScale: 1,
+  themeColor: '#4A5D4E',
 };
 
 export default function RootLayout({
@@ -77,8 +80,10 @@ export default function RootLayout({
         />
 
         <link rel="icon" href="/favicon.ico" />
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
       </head>
       <body className={`${notoSerif.variable} ${notoSans.variable} font-sans antialiased bg-hanji-white text-charcoal flex flex-col min-h-screen selection:bg-deep-sage selection:text-white`}>
+        <PwaRegister />
         <AnnouncementPopup />
         <Header />
         <main className="flex-1 flex flex-col">
@@ -88,6 +93,7 @@ export default function RootLayout({
         <CartSidebar />
         <ToastContainer />
         <ChatWidget />
+        <InstallPrompt />
       </body>
     </html>
   );
