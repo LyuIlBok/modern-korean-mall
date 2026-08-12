@@ -14,3 +14,16 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 작업 시작/종료 시 `AI_STATUS.md`를 갱신하고 커밋하는 것이 필수입니다.
 <!-- END:multi-agent-coordination -->
+
+<!-- BEGIN:ai-wiki -->
+# AI 위키 참조 안내
+
+일복님의 지식 베이스가 `C:\Users\유일복\Desktop\AI-Wiki`에 있습니다 (옵시디언 볼트, 마크다운).
+
+- **읽기**: 작업 중 배경지식이 필요하면 위키를 참조하세요. 시작점은 `Home.md`,
+  용어(코웍/클코/단코/안티 등)는 `용어사전.md`, 협업 규칙은 `30_활용/멀티 AI 세션 협업.md`.
+- **쓰기**: 작업 중 얻은 교훈·해법·팁 중 "다음에 또 쓸 것 같은 지식"이 나오면
+  `AI-Wiki\00_인박스`에 메모 파일로 남기세요 (예: `클코_git충돌해법_메모.md`).
+  위키 본문을 직접 수정할 때는 반드시 `AI-Wiki\WIKI_GUIDE.md`의 규칙을 먼저 읽고 따르세요.
+- **금지**: 비밀값(API 키 등)은 위키에 절대 기록하지 않습니다.
+<!-- END:ai-wiki -->
