@@ -1,6 +1,53 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { CartItem } from '@/types';
+import { supabase } from '@/lib/supabaseClient';
+
+// cart_items는 option_name이 아니라 product_options.id를 참조하는 option_id 컬럼을 쓰고,
+// (user_id, product_id, option_id)에 대한 unique 제약조건도 없습니다(login/page.tsx의
+// syncGuestData와 동일한 제약). 그래서 로컬 상태 변경 후 해당 상품(+옵션)의 "최종 상태"를
+// 조회해 있으면 update/insert, 로컬에서 사라졌으면(삭제/병합) delete하는 방식으로 맞춥니다.
+async function syncCartItemToServer(userId: string, productId: string, optionName: string | undefined) {
+  try {
+    let optionId: string | null = null;
+    if (optionName) {
+      const { data: optionRow } = await supabase
+        .from('product_options')
+        .select('id')
+        .eq('product_id', productId)
+        .eq('option_name', optionName)
+        .maybeSingle();
+      optionId = optionRow?.id ?? null;
+    }
+
+    let existingQuery = supabase
+      .from('cart_items')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('product_id', productId);
+    existingQuery = optionId ? existingQuery.eq('option_id', optionId) : existingQuery.is('option_id', null);
+    const { data: existing, error: selectError } = await existingQuery.maybeSingle();
+    if (selectError) throw selectError;
+
+    const localItem = useCartStore
+      .getState()
+      .items.find((item) => item.id === productId && item.optionName === optionName);
+
+    if (localItem) {
+      const { error } = existing
+        ? await supabase.from('cart_items').update({ quantity: localItem.quantity }).eq('id', existing.id)
+        : await supabase
+            .from('cart_items')
+            .insert({ user_id: userId, product_id: productId, option_id: optionId, quantity: localItem.quantity });
+      if (error) throw error;
+    } else if (existing) {
+      const { error } = await supabase.from('cart_items').delete().eq('id', existing.id);
+      if (error) throw error;
+    }
+  } catch (error) {
+    console.error('Cart server sync error:', error);
+  }
+}
 
 interface CartState {
   items: CartItem[];
@@ -41,6 +88,9 @@ export const useCartStore = create<CartState>()(
         } else {
           set({ items: [...currentItems, { ...newItem, quantity: newItem.quantity || 1 }] });
         }
+
+        const userId = get().userId;
+        if (userId) syncCartItemToServer(userId, newItem.id, newItem.optionName);
       },
 
       removeItem: (id, optionName) => {
@@ -49,6 +99,9 @@ export const useCartStore = create<CartState>()(
             (item) => !(item.id === id && item.optionName === optionName)
           ),
         });
+
+        const userId = get().userId;
+        if (userId) syncCartItemToServer(userId, id, optionName);
       },
 
       updateQuantity: (id, quantity, optionName) => {
@@ -58,6 +111,9 @@ export const useCartStore = create<CartState>()(
             item.id === id && item.optionName === optionName ? { ...item, quantity } : item
           ),
         });
+
+        const userId = get().userId;
+        if (userId) syncCartItemToServer(userId, id, optionName);
       },
 
       updateOption: (id, oldOptionName, newOptionName, newOptionPrice) => {
@@ -91,9 +147,27 @@ export const useCartStore = create<CartState>()(
         }
 
         set({ items: updatedItems });
+
+        const userId = get().userId;
+        if (userId) {
+          syncCartItemToServer(userId, id, oldOptionName);
+          syncCartItemToServer(userId, id, newOptionName);
+        }
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => {
+        const userId = get().userId;
+        set({ items: [] });
+        if (userId) {
+          supabase
+            .from('cart_items')
+            .delete()
+            .eq('user_id', userId)
+            .then(({ error }) => {
+              if (error) console.error('Cart clear sync error:', error);
+            });
+        }
+      },
 
       toggleCart: (open) => set((state) => ({ 
         isOpen: open !== undefined ? open : !state.isOpen 
