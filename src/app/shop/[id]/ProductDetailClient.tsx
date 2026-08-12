@@ -103,18 +103,22 @@ export default function ProductDetailClient({
 
       const headers = { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 
-      // 조회 기록은 부가 기능이라 실패해도 사용자 경험을 막지 않음(await 안 함).
-      fetch('/api/products/recently-viewed', {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ productId: product.id }),
-      }).catch((err) => console.error('최근 본 상품 기록 실패:', err));
+      // 먼저 조회 기록을 DB에 기록(await)한 후, 최근 본 상품 목록을 가져와
+      // 방금 본 상품이 결과에 바로 반영되도록(그리고 filter로 자기 자신만 깔끔히 제거) 합니다.
+      try {
+        await fetch('/api/products/recently-viewed', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ productId: product.id }),
+        });
 
-      const res = await fetch('/api/products/recently-viewed?limit=8', { headers });
-      const json = await res.json();
-      if (json.success) {
-        // 방금 이 페이지 조회 기록으로 자기 자신이 포함될 수 있어 제외.
-        setRecentlyViewed((json.data ?? []).filter((p: Product) => p.id !== product.id));
+        const res = await fetch('/api/products/recently-viewed?limit=8', { headers });
+        const json = await res.json();
+        if (json.success) {
+          setRecentlyViewed((json.data ?? []).filter((p: Product) => p.id !== product.id));
+        }
+      } catch (err) {
+        console.error('최근 본 상품 처리 실패:', err);
       }
     };
     recordViewAndFetchRecent();
