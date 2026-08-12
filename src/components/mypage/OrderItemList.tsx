@@ -6,10 +6,15 @@ import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { 
   Package, Truck, ShoppingBag, MessageSquare, 
-  Box, Camera, Clock, ExternalLink, AlertCircle, Loader2,
-  Star, StarHalf
+  Box, Camera, Clock, ExternalLink, AlertCircle, Loader2
 } from 'lucide-react';
 import { useChatStore } from '@/store/useChatStore';
+
+interface OrderItemProduct {
+  id: string;
+  name: string;
+  imageUrl: string;
+}
 
 interface OrderItem {
   product_id: string;
@@ -17,11 +22,7 @@ interface OrderItem {
   price: number;
   product_name?: string;
   product_price?: number;
-  products: {
-    id: string;
-    name: string;
-    imageUrl: string;
-  } | null;
+  products: OrderItemProduct | null;
 }
 
 interface Order {
@@ -35,7 +36,7 @@ interface Order {
 
 interface OrderItemListProps {
   orders: Order[];
-  onOpenReview: (product: any) => void;
+  onOpenReview: (product: OrderItemProduct) => void;
   onCancelOrder: (orderId: string) => void;
   cancellingId: string | null;
 }
@@ -61,7 +62,7 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
     );
   }
 
-  const handleInquiry = (product: any, orderId: string) => {
+  const handleInquiry = (product: OrderItemProduct | null, orderId: string) => {
     if (!product) return;
     
     const metadata = {
@@ -168,9 +169,9 @@ export default function OrderItemList({ orders, onOpenReview, onCancelOrder, can
                     <h4 className="text-xl font-serif text-charcoal tracking-tight leading-tight">{item.product_name || item.products?.name}</h4>
                     <p className="text-sm text-muted font-normal">{item.quantity}개 / ₩{((item.product_price || item.price)).toLocaleString()}</p>
                     <div className="pt-4 flex gap-3">
-                      {order.status === '배송완료' && (
+                      {order.status === '배송완료' && item.products && (
                         <button 
-                          onClick={() => onOpenReview(item.products)} 
+                          onClick={() => onOpenReview(item.products!)} 
                           className="text-[13px] bg-charcoal text-white px-4 py-2 rounded-sm flex items-center gap-2 hover:bg-deep-sage transition-all font-bold uppercase tracking-widest shadow-lg"
                         >
                           <Camera className="w-3.5 h-3.5" /> 리뷰 작성하기

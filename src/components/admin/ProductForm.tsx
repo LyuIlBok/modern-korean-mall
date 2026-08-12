@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import {
-  X, Plus, Loader2, CheckCircle, Save, Camera,
+  Plus, Loader2, Save, Camera,
   Image as ImageIcon, Trash2, Package, Settings, ChevronLeft, Sparkles
 } from 'lucide-react';
 import Image from 'next/image';
@@ -184,9 +184,10 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
       alert(isEditMode ? '상품과 옵션이 수정되었습니다.' : '상품과 옵션이 등록되었습니다.');
       router.push('/admin');
       router.refresh();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Submission failed:', err);
-      alert(err.message || '처리 중 오류가 발생했습니다.');
+      const message = err instanceof Error ? err.message : '처리 중 오류가 발생했습니다.';
+      alert(message);
     } finally {
       setIsLoading(false);
     }
@@ -201,7 +202,7 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
     }]);
   };
 
-  const updateOptionRow = (index: number, field: keyof ProductOption, value: any) => {
+  const updateOptionRow = <K extends keyof ProductOption>(index: number, field: K, value: ProductOption[K]) => {
     const updated = [...options];
     updated[index] = { ...updated[index], [field]: value };
     setOptions(updated);
@@ -431,7 +432,7 @@ export default function ProductForm({ initialData }: { initialData?: AdminProduc
                 {options.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="px-8 py-24 text-center text-sm text-muted italic font-medium">
-                      등록된 옵션이 없습니다. 우측 상단의 '옵션 추가' 버튼을 눌러주세요.
+                      등록된 옵션이 없습니다. 우측 상단의 &quot;옵션 추가&quot; 버튼을 눌러주세요.
                     </td>
                   </tr>
                 ) : (

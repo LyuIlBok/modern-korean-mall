@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  X, Truck, CreditCard, ShoppingBag, Clock, 
-  User, MapPin, Hash, Loader2, Save, CheckCircle
+  X, CreditCard, ShoppingBag, Clock, 
+  User, MapPin, Hash, Loader2, Save
 } from 'lucide-react';
 import Image from 'next/image';
 import { adminFetch } from '@/lib/adminFetch';
@@ -89,8 +89,9 @@ export default function OrderDetailModal({ order, onClose, onUpdate }: OrderDeta
       onUpdate({ ...order, status, tracking_number: trackingNumber });
       alert('주문 정보가 업데이트되었습니다.');
       onClose();
-    } catch (err: any) {
-      alert(`수정 실패: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : '알 수 없는 오류가 발생했습니다.';
+      alert(`수정 실패: ${message}`);
     } finally {
       setIsLoading(false);
     }
