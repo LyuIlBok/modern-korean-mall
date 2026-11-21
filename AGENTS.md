@@ -27,3 +27,12 @@ This version has breaking changes — APIs, conventions, and file structure may 
   위키 본문을 직접 수정할 때는 반드시 `AI-Wiki\WIKI_GUIDE.md`의 규칙을 먼저 읽고 따르세요.
 - **금지**: 비밀값(API 키 등)은 위키에 절대 기록하지 않습니다.
 <!-- END:ai-wiki -->
+
+<!-- BEGIN:release-checklist -->
+# 출시 전 검토사항
+
+로그인·검색·업로드·결제·패키지·입력 양식·홍보 문구를 건드리거나 배포하기 전에는
+`docs/RELEASE_CHECKLIST.md`(보안 5 + 법적·소비자 보호 20)의 해당 항목을 읽고,
+보고 끝에 `체크리스트: A-1 ✅ …` 한 줄을 붙이세요.
+**이 저장소는 공개입니다.** 점검에서 찾은 취약 지점은 파일·커밋에 적지 말고 일복님께 직접 보고하세요.
+<!-- END:release-checklist -->
